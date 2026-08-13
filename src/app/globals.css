@@ -1,26 +1,384 @@
 @import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ==========================================================================
+   CAQUI TREKKING — camada de tokens
+   ==========================================================================
+   Documentação e justificativa: docs/06-design-system.md
+   Vitrine de todos os componentes em todos os estados: /dev/styleguide
+
+   Três regras que este arquivo existe para impor:
+
+   1. NÃO EXISTE MODO ESCURO. O briefing pede modo claro, e o template do Next
+      trazia um bloco `prefers-color-scheme: dark` que trocava o fundo por
+      #0a0a0a. Ele saiu daqui. Meia paleta escura é pior que nenhuma.
+
+   2. NÃO EXISTE RAIO DE PÍLULA. Nenhum `border-radius: 9999px` no projeto.
+      É a regra que sozinha mais afasta do template de SaaS — o chip de status
+      arredondado é a assinatura visual dele.
+
+   3. LARANJA NÃO É COR DE TEXTO CORRIDO. Medido: #F26522 sobre branco dá
+      3,15:1 e REPROVA no AA para texto normal (mínimo 4,5:1). Passa em texto
+      grande (≥24px, mínimo 3:1) e em elemento de interface (3:1). O ESLint
+      recusa `text-caqui-orange-*` em className — ver eslint.config.mjs.
+   ========================================================================== */
+
+@theme {
+  /* ── Cor ────────────────────────────────────────────────────────────────
+     Nomes vindos do briefing do cliente. Os valores são fixos: a decisão de
+     design aqui não é QUAIS cores, é ONDE cada uma pode aparecer.
+
+     Tabela de contraste medida (WCAG 2.x, sRGB) — as combinações liberadas:
+
+       ink-900   sobre branco ........ 19,44:1  AAA
+       ink-700   sobre branco ........ 14,16:1  AAA
+       forest-800 sobre branco ....... 11,08:1  AAA
+       forest-600 sobre branco .......  6,39:1  AA
+       danger    sobre branco ........  6,22:1  AA
+       ink-900   sobre orange-500 ....  6,16:1  AA   ← rótulo do botão primary
+       ink-900   sobre forest-300 .... 11,51:1  AAA  ← badge "vagas abertas"
+       branco    sobre danger ........  6,22:1  AA
+       branco    sobre forest-600 ....  6,39:1  AA
+
+     E as que estão PROIBIDAS, com o número que as reprova:
+
+       branco    sobre orange-500 ....  3,15:1  ← o botão laranja com rótulo
+                                                  branco, que é o reflexo
+                                                  automático de todo mundo
+       orange-500 sobre branco .......  3,15:1  ← só ≥24px
+       orange-500 sobre sand-100 .....  2,80:1  ← nem grande. Nunca.
+       orange-400 sobre branco .......  2,34:1  ← decorativo apenas
+       forest-300 sobre branco .......  1,69:1  ← preenchimento, nunca texto
+       sand-100  sobre branco ........  1,13:1  ← precisa de filete para existir
+  */
+  --color-caqui-orange-400: #ff8a47;
+  --color-caqui-orange-500: #f26522;
+  --color-caqui-orange-600: #e04e12;
+
+  --color-caqui-ink-900: #0d0d0d;
+  --color-caqui-ink-700: #2b2b2b;
+  --color-caqui-ink-500: #6b6b6b;
+
+  --color-caqui-forest-300: #95d5b2;
+  --color-caqui-forest-600: #2d6a4f;
+  --color-caqui-forest-800: #1b4332;
+
+  --color-caqui-sand-100: #f5f1ea;
+  --color-caqui-sand-200: #e8e0d3;
+
+  --color-caqui-danger: #c1121f;
+
+  /* Filete de cabelo. É o que dá existência à areia (1,13:1 contra branco não
+     delimita nada sozinho) e substitui a sombra difusa no fluxo da página. */
+  --color-caqui-rule: rgba(13, 13, 13, 0.16);
+  --color-caqui-rule-forte: #0d0d0d;
+
+  /* ── Tipografia ─────────────────────────────────────────────────────────
+     Display: ARCHIVO BLACK.
+
+     O briefing escrito pede "pesada e condensada" e sugere Anton, Archivo
+     Black ou Bebas Neue. A logo REAL — recuperada da marca d'água das fotos
+     da marca — desmente a primeira metade: o wordmark "CAQUI" é pesadíssimo e
+     LARGO, com terminações levemente arredondadas. Anton e Bebas ao lado dele
+     no header brigariam com a própria marca.
+
+     Archivo Black está na lista do cliente, é o mais pesado dos três e é o
+     único de largura normal. Escolhido por bater com o ativo real, não com a
+     descrição dele. Ver docs/06-design-system.md, "Onde o briefing e a logo
+     divergem".
+
+     Corpo: DM SANS (da lista do cliente). Geométrica de terminais macios,
+     ecoando o "trekking" arredondado da logo. Inter, a outra opção, é neutra
+     demais para uma marca que é um brasão desenhado à mão.
+
+     Dados: DM MONO. Par de projeto do DM Sans. Carrega a camada técnica —
+     distância, cota, duração, Cadastur, data — com alinhamento tabular entre
+     cards diferentes de uma lista, sem tabela. É o registro de legenda de
+     mapa e de etiqueta de equipamento. */
+  --font-display: var(--fonte-display), 'Arial Black', system-ui, sans-serif;
+  --font-sans: var(--fonte-corpo), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--fonte-dados), ui-monospace, 'SF Mono', monospace;
+
+  /* Escala de tipo. Razão ~1,5 no display, ~1,2 no corpo.
+     `clamp` nos dois maiores: o hero precisa caber em 320px sem quebrar a
+     palavra "EXPEDIÇÕES" no meio. */
+  --text-display-xl: clamp(2.5rem, 1.2rem + 6.5vw, 5.5rem);
+  --text-display-xl--line-height: 0.92;
+  --text-display-xl--letter-spacing: -0.02em;
+
+  --text-display-l: clamp(2rem, 1.2rem + 3.4vw, 3.25rem);
+  --text-display-l--line-height: 0.96;
+  --text-display-l--letter-spacing: -0.015em;
+
+  --text-display-m: 1.75rem;
+  --text-display-m--line-height: 1;
+  --text-display-m--letter-spacing: -0.01em;
+
+  --text-display-s: 1.25rem;
+  --text-display-s--line-height: 1.1;
+  --text-display-s--letter-spacing: 0;
+
+  --text-corpo-lg: 1.125rem;
+  --text-corpo-lg--line-height: 1.6;
+
+  --text-corpo: 1rem;
+  --text-corpo--line-height: 1.65;
+
+  --text-corpo-sm: 0.875rem;
+  --text-corpo-sm--line-height: 1.55;
+
+  /* Camada de dados, em mono. `dado` é o número que se lê; `rotulo` é o que
+     o nomeia; `micro` é informação de margem (Cadastur, coordenada). */
+  --text-dado-lg: 1.375rem;
+  --text-dado-lg--line-height: 1.1;
+
+  --text-dado: 1rem;
+  --text-dado--line-height: 1.2;
+
+  --text-rotulo: 0.75rem;
+  --text-rotulo--line-height: 1.2;
+  --text-rotulo--letter-spacing: 0.08em;
+
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.3;
+  --text-micro--letter-spacing: 0.06em;
+
+  /* ── Forma ──────────────────────────────────────────────────────────────
+     Raios pequenos e um chanfro. O chanfro é a geometria da logo: o brasão é
+     um hexágono, e cortar o canto de um retângulo é a menor citação possível
+     dessa forma. Ver `--corte-*` abaixo. */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+
+  /* ── Profundidade ───────────────────────────────────────────────────────
+     Sombra difusa é o sotaque de SaaS. Aqui a profundidade é DESLOCAMENTO
+     SÓLIDO, como impressão fora de registro — e existe em exatamente três
+     doses, mais UMA exceção nomeada para camadas flutuantes de verdade
+     (modal, drawer, toast), onde o navegador precisa dizer "isto está acima
+     da página" e o deslocamento sólido não dá conta. */
+  --shadow-corte-1: 2px 2px 0 0 var(--color-caqui-ink-900);
+  --shadow-corte-2: 4px 4px 0 0 var(--color-caqui-ink-900);
+  --shadow-corte-3: 6px 6px 0 0 var(--color-caqui-ink-900);
+  --shadow-flutuante:
+    0 16px 40px -12px rgba(13, 13, 13, 0.3), 0 2px 8px -2px rgba(13, 13, 13, 0.14);
+
+  /* ── Ritmo ──────────────────────────────────────────────────────────────
+     Base 4px (padrão do Tailwind). Os breakpoints ganham um `xs` porque a
+     Caqui opera no celular e 375px é o piso real de tráfego. */
+  --breakpoint-xs: 23.4375rem;
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+
+  /* ── Movimento ──────────────────────────────────────────────────────────
+     Curvas curtas. Nada acima de 240ms: animação longa em interface de
+     compra é atraso disfarçado de charme. */
+  --ease-saida: cubic-bezier(0.2, 0, 0, 1);
+  --ease-padrao: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ==========================================================================
+   BASE
+   ========================================================================== */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* Compensa o header fixo quando alguém chega por âncora. */
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    background-color: #ffffff;
+    color: var(--color-caqui-ink-700);
+    font-family: var(--font-sans);
+    font-size: var(--text-corpo);
+    line-height: 1.65;
+    /* Números alinhados por padrão no site inteiro: preço, distância e cota
+       aparecem em coluna dentro de listas, e sem `tnum` cada dígito tem
+       largura própria e a coluna dança. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    color: var(--color-caqui-ink-900);
+    text-wrap: balance;
+  }
+
+  /* Anti-viúva em parágrafos curtos. */
+  p {
+    text-wrap: pretty;
+  }
+
+  /* ── Anel de foco universal ───────────────────────────────────────────
+     DOIS anéis concêntricos, claro por dentro e escuro por fora.
+
+     Um anel preto único some sobre superfície preta ou verde-escura — medido:
+     #0D0D0D sobre #1B4332 dá 1,75:1, e o WCAG 2.4.11 pede 3:1 contra as cores
+     adjacentes. A aba ativa e o badge "esgotado" ficariam sem foco visível
+     para quem navega por teclado.
+
+     Com o par branco-dentro/preto-fora, pelo menos um dos dois contrasta
+     contra QUALQUER fundo da paleta.
+
+     ⚠️ ARMADILHA, encontrada medindo e não lendo: esta regra vive na camada
+     `base`, e as utilitárias `shadow-*` do Tailwind vivem numa camada de maior
+     precedência. Em qualquer componente com sombra própria — Button, Card — a
+     `box-shadow` daqui é SUBSTITUÍDA, e o anel branco simplesmente não existe.
+     O foco continuava visível em fundo claro, então o defeito passava
+     despercebido; sobre superfície escura, ele apagaria o anel inteiro.
+
+     Por isso esses componentes declaram `focus-visible:ring-2 ring-white`: a
+     utilitária `ring` do Tailwind ocupa um SLOT PRÓPRIO na `box-shadow` e
+     compõe com a sombra em vez de brigar com ela. */
+  :focus-visible {
+    outline: 2px solid var(--color-caqui-ink-900);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px #ffffff;
+    border-radius: var(--radius-xs);
+  }
+
+  /* O mouse não precisa de anel; o teclado precisa. */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  ::selection {
+    background-color: var(--color-caqui-orange-500);
+    color: var(--color-caqui-ink-900);
+  }
+
+  /* `<dialog>` nativo cuida de foco, Escape e camada superior sozinho.
+     O backdrop é sólido translúcido, sem `backdrop-filter`: o blur custa
+     composição em celular antigo e não acrescenta nada aqui. */
+  dialog::backdrop {
+    background-color: rgba(13, 13, 13, 0.72);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ==========================================================================
+   UTILITÁRIOS DA MARCA
+   ========================================================================== */
+
+/* Chanfro hexagonal — a citação da logo.
+
+   O brasão da Caqui é um hexágono. Cortar o canto superior direito de um
+   retângulo é a menor forma possível de repetir essa geometria sem desenhar
+   o brasão inteiro em cada card. É o que dá SILHUETA à peça: sem isso, um
+   card com filete e sombra dura é só o template neobrutalista de 2022.
+
+   `clip-path` corta o conteúdo, então quem usa precisa deixar respiro no
+   canto — os componentes já fazem isso. */
+@utility chanfro-sm {
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+}
+
+@utility chanfro-md {
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+}
+
+/* Preço. O ÚNICO lugar do site onde laranja é texto.
+
+   Só sobrevive porque é grande: em ≥24px o AA exige 3:1 e #F26522 sobre
+   branco dá 3,15:1. Por isso `font-size` está travado no utilitário em vez de
+   ficar a cargo de quem usa — o dia em que alguém aplicar isto num
+   `text-sm` a regra quebra em silêncio. */
+@utility preco {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--color-caqui-orange-500);
+}
+
+/* Trama diagonal. Marca superfície indisponível (saída esgotada, variante em
+   falta) sem depender de cor — quem não distingue vermelho de verde vê a
+   textura. */
+@utility trama-indisponivel {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 5px,
+    rgba(13, 13, 13, 0.14) 5px,
+    rgba(13, 13, 13, 0.14) 6px
+  );
+}
+
+/* Superfície de seção. Areia sozinha não delimita (1,13:1); o filete é o que
+   faz a seção existir. */
+@utility secao-areia {
+  background-color: var(--color-caqui-sand-100);
+  border-block: 1px solid var(--color-caqui-rule);
+}
+
+/* ==========================================================================
+   MOVIMENTO
+   ==========================================================================
+   O bloco nuclear `*{transition-duration:0.01ms!important}` é tentador e está
+   errado: com `!important` ele também mata as transições que DEVERIAM
+   sobreviver com duração zero (feedback de estado) e impede qualquer
+   alternativa em fade. Aqui a redução é escopada e cada componente tem
+   alternativa própria declarada.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+  }
+
+  /* Sem `!important` acima, isto vale: o revelar por scroll não pode deixar
+     conteúdo invisível para sempre se a transição não roda. */
+  [data-revelar] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes caqui-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes caqui-drawer {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* Pulso da hachura do skeleton.
+   Anima `opacity` (composto pela GPU) e não `background-position`, que é
+   paint-bound e repinta a lista inteira a cada frame. */
+@keyframes caqui-pulso {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }

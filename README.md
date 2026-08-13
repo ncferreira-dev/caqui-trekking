@@ -137,7 +137,8 @@ da Fase B.
 
 **Fase B — Frontend** _(só começa com a Fase A validada)_
 
-- [ ] **06** — Design system · **07** — Shell e navegação · **08** — Catálogo Trekking
+- [x] **06** — Design system → [`docs/06-design-system.md`](docs/06-design-system.md) · vitrine em `/dev/styleguide`
+- [ ] **07** — Shell e navegação · **08** — Catálogo Trekking
 - [ ] **09** — Caqui Wear, carrinho e handoff pro WhatsApp
 - [ ] **10** — CRM · **11** — SEO, performance e deploy
 
@@ -166,13 +167,14 @@ está em [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md).
 
 ## Documentação
 
-| Documento                                              | Conteúdo                                                                                                                      |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md) | Análise do projeto de referência: stack, modelagem, carrinho, auth, imagens, SEO, e as decisões arquiteturais que saíram dela |
-| [`docs/01-estrutura.md`](docs/01-estrutura.md)         | Estrutura de pastas e a convenção por trás dela                                                                               |
-| [`docs/02-modelagem.md`](docs/02-modelagem.md)         | Trip vs Departure, disponibilidade manual, MediaAsset, e o bug de fuso que o seed revelou                                     |
-| [`docs/03-api.md`](docs/03-api.md)                     | Os 11 endpoints públicos, códigos de erro e o contrato de `POST /api/cart/validate`                                           |
-| [`docs/04-permissoes.md`](docs/04-permissoes.md)       | Matriz de permissões, sessão em cookie, bloqueio de conta e a varredura que exige guard em toda rota admin                    |
-| [`docs/05-midia.md`](docs/05-midia.md)                 | Cloudinary corrigido, validação por bytes, variantes por URL, ciclo de vida sem órfão e a convenção de importação em lote     |
-| [`docs/relatorio-fase-a.md`](docs/relatorio-fase-a.md) | Estado do backend ao fim da Fase A, dívida técnica consciente e a decisão em aberto sobre foto por cor                        |
-| [`assets/README.md`](assets/README.md)                 | A convenção de nome de arquivo para a importação em lote                                                                      |
+| Documento                                              | Conteúdo                                                                                                                       |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md) | Análise do projeto de referência: stack, modelagem, carrinho, auth, imagens, SEO, e as decisões arquiteturais que saíram dela  |
+| [`docs/01-estrutura.md`](docs/01-estrutura.md)         | Estrutura de pastas e a convenção por trás dela                                                                                |
+| [`docs/02-modelagem.md`](docs/02-modelagem.md)         | Trip vs Departure, disponibilidade manual, MediaAsset, e o bug de fuso que o seed revelou                                      |
+| [`docs/03-api.md`](docs/03-api.md)                     | Os 11 endpoints públicos, códigos de erro e o contrato de `POST /api/cart/validate`                                            |
+| [`docs/04-permissoes.md`](docs/04-permissoes.md)       | Matriz de permissões, sessão em cookie, bloqueio de conta e a varredura que exige guard em toda rota admin                     |
+| [`docs/05-midia.md`](docs/05-midia.md)                 | Cloudinary corrigido, validação por bytes, variantes por URL, ciclo de vida sem órfão e a convenção de importação em lote      |
+| [`docs/relatorio-fase-a.md`](docs/relatorio-fase-a.md) | Estado do backend ao fim da Fase A, dívida técnica consciente e a decisão em aberto sobre foto por cor                         |
+| [`docs/06-design-system.md`](docs/06-design-system.md) | Onde o briefing e a logo real divergem, a tabela de contraste que governa a paleta, e por que o botão laranja tem rótulo preto |
+| [`assets/README.md`](assets/README.md)                 | A convenção de nome de arquivo para a importação em lote                                                                       |

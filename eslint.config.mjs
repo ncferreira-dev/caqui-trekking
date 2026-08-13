@@ -30,6 +30,35 @@ const eslintConfig = defineConfig([
     },
   },
 
+  {
+    // Escopado ao código-fonte: sem isso, a própria regra abaixo casa com o
+    // texto da sua mensagem e este arquivo se auto-reprova.
+    files: ['src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          // O laranja da marca REPROVA como cor de texto: #F26522 sobre branco
+          // dá 3,15:1, e o AA exige 4,5:1. A única exceção sancionada é o
+          // preço, e ela vive no utilitário `.preco`, que trava o tamanho em
+          // 28px — onde o mínimo cai para 3:1 e a combinação passa.
+          //
+          // Documentar isso não basta: `text-caqui-orange-500` é a coisa mais
+          // natural do mundo de se escrever, e o erro é invisível para quem
+          // enxerga bem. Ver docs/06-design-system.md.
+          selector: 'Literal[value=/text-caqui-orange-/]',
+          message:
+            'Laranja como cor de texto reprova no WCAG AA (3,15:1 sobre branco). Use a classe `.preco` para o preço, ou text-caqui-ink-900 / text-caqui-orange-600 sobre fundo escuro.',
+        },
+        {
+          selector: 'TemplateElement[value.raw=/text-caqui-orange-/]',
+          message:
+            'Laranja como cor de texto reprova no WCAG AA (3,15:1 sobre branco). Use a classe `.preco` para o preço.',
+        },
+      ],
+    },
+  },
+
   globalIgnores([
     '.next/**',
     'out/**',

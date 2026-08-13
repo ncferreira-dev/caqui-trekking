@@ -126,7 +126,7 @@ nunca para a resposta.
 - [x] **01** — Bootstrap → [`docs/01-estrutura.md`](docs/01-estrutura.md)
 - [x] **02** — Schema e seed → [`docs/02-modelagem.md`](docs/02-modelagem.md)
 - [x] **03** — API do catálogo → [`docs/03-api.md`](docs/03-api.md)
-- [ ] **04** — Auth e API do CRM
+- [x] **04** — Auth e API do CRM → [`docs/04-permissoes.md`](docs/04-permissoes.md)
 - [ ] **05** — Mídia e uploads
 
 **Fase B — Frontend** _(só começa com a Fase A validada)_

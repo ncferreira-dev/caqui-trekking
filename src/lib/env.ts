@@ -33,6 +33,11 @@ const envSchema = z.object({
     .string()
     .url('NEXT_PUBLIC_SITE_URL precisa ser uma URL completa (com http:// ou https://)')
     .refine((url) => !url.endsWith('/'), 'NEXT_PUBLIC_SITE_URL não pode terminar com barra'),
+
+  // Autenticação
+  AUTH_SECRET: z
+    .string()
+    .min(32, 'AUTH_SECRET precisa ter pelo menos 32 caracteres. Gere com: openssl rand -base64 48'),
 })
 
 export type Env = z.infer<typeof envSchema>

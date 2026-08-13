@@ -489,6 +489,22 @@ model User {
 
   lastLoginAt DateTime? @db.Timestamptz(3)
 
+  /// Bloqueio de login PERSISTIDO no banco, não em memória.
+  ///
+  /// O projeto de referência anunciava "3 tentativas → bloqueio de 10 min" com
+  /// o contador no localStorage do NAVEGADOR: um `curl` em loop nunca o via, e
+  /// `localStorage.clear()` o zerava. Aqui o contador vive do lado que o
+  /// atacante não controla, e sobrevive a restart e a troca de instância —
+  /// diferente do rate limit por IP, que é em memória por processo.
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime? @db.Timestamptz(3)
+
+  /// Invalidação de sessão. O logout incrementa esta versão e todo token
+  /// emitido antes para de valer. Sem isso, "Sair" é mentira: no projeto de
+  /// referência o logout apenas apagava o token do localStorage, e o mesmo
+  /// token continuava aceito pelo servidor por até 7 dias.
+  tokenVersion Int @default(0)
+
   auditLogs           AuditLog[]
   availabilityChanges DepartureAvailabilityChange[]
 

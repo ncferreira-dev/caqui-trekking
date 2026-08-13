@@ -16,8 +16,19 @@ export const ErrorCode = {
   VALIDATION_FAILED: 'VALIDATION_FAILED',
   INVALID_PARAM: 'INVALID_PARAM',
   NOT_FOUND: 'NOT_FOUND',
+  CONFLICT: 'CONFLICT',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+
+  // Autenticação e autorização.
+  // 401 e 403 são coisas DIFERENTES: `UNAUTHENTICATED` é "não sei quem você
+  // é" e o front desloga; `FORBIDDEN` é "sei quem você é e você não pode" e o
+  // front mostra falta de permissão. No projeto de referência os dois
+  // devolviam 403, e por isso o front limpava o token em qualquer falha.
+  UNAUTHENTICATED: 'UNAUTHENTICATED',
+  FORBIDDEN: 'FORBIDDEN',
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
 
   // Domínio
   TRIP_NOT_FOUND: 'TRIP_NOT_FOUND',
@@ -72,6 +83,15 @@ function statusPadrao(code: ErrorCode): number {
     case ErrorCode.VALIDATION_FAILED:
     case ErrorCode.INVALID_PARAM:
       return 400
+    case ErrorCode.UNAUTHENTICATED:
+    case ErrorCode.INVALID_CREDENTIALS:
+      return 401
+    case ErrorCode.FORBIDDEN:
+      return 403
+    case ErrorCode.CONFLICT:
+      return 409
+    case ErrorCode.ACCOUNT_LOCKED:
+      return 423
     case ErrorCode.NOT_FOUND:
     case ErrorCode.TRIP_NOT_FOUND:
     case ErrorCode.DEPARTURE_NOT_FOUND:

@@ -208,8 +208,8 @@ duplicação, e o template do WhatsApp recusando placeholder desconhecido.
    troca por contador compartilhado (Upstash Redis) fica para o deploy, no PROMPT 11.
 2. **Sem refresh token.** A sessão dura 8 horas e expira; não há renovação silenciosa. Para
    um CRM operado em turnos, é aceitável — e mais simples significa menos superfície.
-3. **Sem CRUD de galeria e de tags** nas rotas admin. Entra no PROMPT 05, junto com o upload
-   de mídia, que é onde a galeria faz sentido.
+3. ~~**Sem CRUD de galeria e de tags** nas rotas admin.~~ **Quitada no PROMPT 05** — ver
+   [`05-midia.md`](05-midia.md).
 4. **Sem troca de senha nem recuperação.** O OWNER cria usuários com senha definida. Fluxo
    de "esqueci minha senha" exige envio de e-mail, que não está no escopo da Fase A.
 
@@ -222,4 +222,6 @@ duplicação, e o template do WhatsApp recusando placeholder desconhecido.
 - [x] **02** — Schema e seed
 - [x] **03** — API do catálogo
 - [x] **04** — Auth e API do CRM _(este documento)_
-- [ ] **05** — Mídia e uploads
+- [x] **05** — Mídia e uploads
+
+**Fase A encerrada.** Relatório em [`relatorio-fase-a.md`](relatorio-fase-a.md).

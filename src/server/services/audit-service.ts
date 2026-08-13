@@ -15,7 +15,15 @@ import { prisma } from '@/lib/prisma'
  */
 
 export type EntidadeAuditavel =
-  'Trip' | 'Departure' | 'Product' | 'ProductVariant' | 'SiteSetting' | 'Guide' | 'User'
+  | 'Trip'
+  | 'Departure'
+  | 'Product'
+  | 'ProductVariant'
+  | 'SiteSetting'
+  | 'Guide'
+  | 'User'
+  | 'MediaAsset'
+  | 'ActivityTag'
 
 export type RegistroAuditoria = {
   userId: number

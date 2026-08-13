@@ -24,11 +24,19 @@ import { centavosParaDecimal } from '@/lib/money'
  */
 
 export type MediaDTO = {
+  /**
+   * URL CANÔNICA, sem transformação. As variantes responsivas saem de
+   * `srcsetDe(url, width)` em `@/lib/media/urls` — mandar seis URLs por imagem
+   * dentro de uma listagem de catálogo engordaria a resposta sem necessidade,
+   * já que a construção é determinística.
+   */
   url: string
   alt: string
   width: number
   height: number
   blurDataUrl: string | null
+  /** Primeira da galeria. Vem resolvido, para o front não derivar posição. */
+  principal: boolean
 }
 
 export type GuiaDTO = {
@@ -130,10 +138,18 @@ type MediaRow = {
   width: number
   height: number
   blurDataUrl: string | null
+  sortOrder: number
 }
 
 export function paraMediaDTO(m: MediaRow): MediaDTO {
-  return { url: m.url, alt: m.alt, width: m.width, height: m.height, blurDataUrl: m.blurDataUrl }
+  return {
+    url: m.url,
+    alt: m.alt,
+    width: m.width,
+    height: m.height,
+    blurDataUrl: m.blurDataUrl,
+    principal: m.sortOrder === 0,
+  }
 }
 
 type DecimalLike = { toNumber(): number } | number | null

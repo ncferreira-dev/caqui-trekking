@@ -119,6 +119,63 @@ export const leadSchema = z
     path: ['email'],
   })
 
+// ─── Mídia ───────────────────────────────────────────────────────────────────
+
+/**
+ * Quem é o dono da imagem.
+ *
+ * Exatamente UM dos três. O banco já tem o CHECK
+ * `media_assets_exatamente_um_dono`, mas o CHECK responde com erro de
+ * constraint; aqui a recusa vira 400 com uma frase que o CRM mostra.
+ */
+export const donoDeMidiaSchema = z
+  .object({
+    tripId: idSchema.optional(),
+    productId: idSchema.optional(),
+    guideId: idSchema.optional(),
+  })
+  .refine(
+    (d) => [d.tripId, d.productId, d.guideId].filter((v) => v !== undefined).length === 1,
+    'Informe exatamente um dono: tripId, productId ou guideId.',
+  )
+  .transform((d) => {
+    if (d.tripId !== undefined) return { tipo: 'trip' as const, id: d.tripId }
+    if (d.productId !== undefined) return { tipo: 'product' as const, id: d.productId }
+    return { tipo: 'guide' as const, id: d.guideId as number }
+  })
+
+/**
+ * Texto alternativo. Obrigatório estar PRESENTE; pode ser vazio.
+ *
+ * String vazia é a marcação correta para imagem decorativa (`alt=""` faz o
+ * leitor de tela pular). O que não pode é o campo faltar — aí o leitor de tela
+ * lê o nome do arquivo. No projeto de referência o campo nem existia no model.
+ */
+export const altSchema = z.string().max(300, 'O texto alternativo tem no máximo 300 caracteres.')
+
+export const reordenarMidiaSchema = z.object({
+  tripId: idSchema.optional(),
+  productId: idSchema.optional(),
+  guideId: idSchema.optional(),
+  /** Manifesto COMPLETO da galeria. O primeiro id é a imagem principal. */
+  ids: z.array(idSchema).min(1).max(100),
+})
+
+export const atualizarAltSchema = z.object({ alt: altSchema })
+
+// ─── Tags ────────────────────────────────────────────────────────────────────
+
+export const criarTagSchema = z.object({
+  slug: slugSchema,
+  label: z.string().trim().min(2).max(80),
+  icone: z.string().trim().max(60).nullable().optional(),
+})
+
+export const atualizarTagSchema = z.object({
+  label: z.string().trim().min(2).max(80).optional(),
+  icone: z.string().trim().max(60).nullable().optional(),
+})
+
 /** Converte `URLSearchParams` em objeto simples para o Zod. */
 export function queryParaObjeto(url: URL): Record<string, string> {
   return Object.fromEntries(url.searchParams.entries())

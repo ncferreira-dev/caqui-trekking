@@ -35,6 +35,21 @@ export const ErrorCode = {
   DEPARTURE_NOT_FOUND: 'DEPARTURE_NOT_FOUND',
   PRODUCT_NOT_FOUND: 'PRODUCT_NOT_FOUND',
   VARIANT_NOT_FOUND: 'VARIANT_NOT_FOUND',
+  GUIDE_NOT_FOUND: 'GUIDE_NOT_FOUND',
+  TAG_NOT_FOUND: 'TAG_NOT_FOUND',
+
+  // Mídia — códigos separados porque a UI de upload reage diferente a cada um:
+  // arquivo grande demais pede outro arquivo, tipo inválido pede outro
+  // formato, e storage desconfigurado é problema do servidor, não de quem
+  // está subindo a foto. O projeto de referência devolvia "Erro ao cadastrar
+  // o produto" para os três.
+  MEDIA_NOT_FOUND: 'MEDIA_NOT_FOUND',
+  MEDIA_INVALID_FILE: 'MEDIA_INVALID_FILE',
+  MEDIA_TOO_LARGE: 'MEDIA_TOO_LARGE',
+  MEDIA_TOO_SMALL: 'MEDIA_TOO_SMALL',
+  MEDIA_OWNER_INVALID: 'MEDIA_OWNER_INVALID',
+  MEDIA_STORAGE_UNCONFIGURED: 'MEDIA_STORAGE_UNCONFIGURED',
+  MEDIA_STORAGE_FAILED: 'MEDIA_STORAGE_FAILED',
 
   // Carrinho — usados como motivo POR ITEM na revalidação, não como erro
   // da requisição inteira.
@@ -82,6 +97,7 @@ function statusPadrao(code: ErrorCode): number {
   switch (code) {
     case ErrorCode.VALIDATION_FAILED:
     case ErrorCode.INVALID_PARAM:
+    case ErrorCode.MEDIA_OWNER_INVALID:
       return 400
     case ErrorCode.UNAUTHENTICATED:
     case ErrorCode.INVALID_CREDENTIALS:
@@ -97,9 +113,25 @@ function statusPadrao(code: ErrorCode): number {
     case ErrorCode.DEPARTURE_NOT_FOUND:
     case ErrorCode.PRODUCT_NOT_FOUND:
     case ErrorCode.VARIANT_NOT_FOUND:
+    case ErrorCode.GUIDE_NOT_FOUND:
+    case ErrorCode.TAG_NOT_FOUND:
+    case ErrorCode.MEDIA_NOT_FOUND:
       return 404
+    case ErrorCode.MEDIA_INVALID_FILE:
+      // 415: o servidor entendeu o pedido e recusa o formato do conteúdo.
+      return 415
+    case ErrorCode.MEDIA_TOO_LARGE:
+      return 413
+    case ErrorCode.MEDIA_TOO_SMALL:
+      // 422: o formato é aceito, o conteúdo é que não serve.
+      return 422
     case ErrorCode.RATE_LIMITED:
       return 429
+    case ErrorCode.MEDIA_STORAGE_UNCONFIGURED:
+    case ErrorCode.MEDIA_STORAGE_FAILED:
+      // 503, não 500: é indisponibilidade de dependência externa, e o cliente
+      // pode tentar de novo depois. 500 diria "o pedido está errado".
+      return 503
     default:
       return 500
   }

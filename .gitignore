@@ -52,3 +52,10 @@ next-env.d.ts
 # Cliente gerado pelo Prisma (recriado por `npm run db:generate`, que roda no
 # postinstall). Versionar código gerado só cria conflito de merge.
 /src/generated
+
+# Material bruto da marca: 29 MB de fotos que já vivem no Drive da Caqui e,
+# depois da importação, no storage. Versionar binário grande incha o histórico
+# para sempre — clonar o repo passaria a baixar as fotos de 2024 mesmo depois
+# de elas serem trocadas.
+/assets/*
+!/assets/README.md

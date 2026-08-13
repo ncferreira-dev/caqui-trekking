@@ -115,6 +115,8 @@ nunca para a resposta.
 | `npm run db:deploy`               | Aplica migrations pendentes (produção)                             |
 | `npm run db:generate`             | Regenera o cliente Prisma                                          |
 | `npm run db:studio`               | Prisma Studio                                                      |
+| `npm run media:importar`          | Importa imagens de `assets/` — **confere sem escrever** por padrão |
+| `npm run media:orfaos`            | Compara storage e banco, lista o que não tem par                   |
 
 ---
 
@@ -127,7 +129,11 @@ nunca para a resposta.
 - [x] **02** — Schema e seed → [`docs/02-modelagem.md`](docs/02-modelagem.md)
 - [x] **03** — API do catálogo → [`docs/03-api.md`](docs/03-api.md)
 - [x] **04** — Auth e API do CRM → [`docs/04-permissoes.md`](docs/04-permissoes.md)
-- [ ] **05** — Mídia e uploads
+- [x] **05** — Mídia e uploads → [`docs/05-midia.md`](docs/05-midia.md)
+
+**Fase A encerrada** → [`docs/relatorio-fase-a.md`](docs/relatorio-fase-a.md): estado do
+backend, dívida técnica consciente e a decisão de modelagem que precisa ser tomada antes
+da Fase B.
 
 **Fase B — Frontend** _(só começa com a Fase A validada)_
 
@@ -166,3 +172,7 @@ está em [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md).
 | [`docs/01-estrutura.md`](docs/01-estrutura.md)         | Estrutura de pastas e a convenção por trás dela                                                                               |
 | [`docs/02-modelagem.md`](docs/02-modelagem.md)         | Trip vs Departure, disponibilidade manual, MediaAsset, e o bug de fuso que o seed revelou                                     |
 | [`docs/03-api.md`](docs/03-api.md)                     | Os 11 endpoints públicos, códigos de erro e o contrato de `POST /api/cart/validate`                                           |
+| [`docs/04-permissoes.md`](docs/04-permissoes.md)       | Matriz de permissões, sessão em cookie, bloqueio de conta e a varredura que exige guard em toda rota admin                    |
+| [`docs/05-midia.md`](docs/05-midia.md)                 | Cloudinary corrigido, validação por bytes, variantes por URL, ciclo de vida sem órfão e a convenção de importação em lote     |
+| [`docs/relatorio-fase-a.md`](docs/relatorio-fase-a.md) | Estado do backend ao fim da Fase A, dívida técnica consciente e a decisão em aberto sobre foto por cor                        |
+| [`assets/README.md`](assets/README.md)                 | A convenção de nome de arquivo para a importação em lote                                                                      |

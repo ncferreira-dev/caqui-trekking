@@ -19,17 +19,21 @@
     "postinstall": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
+    "media:importar": "tsx scripts/importar-midia.ts",
+    "media:orfaos": "tsx scripts/orfaos.ts",
     "db:test:setup": "DATABASE_URL=$(grep ^DATABASE_URL .env | cut -d= -f2- | tr -d \"'\" | sed s/caqui_trekking_dev/caqui_trekking_test/) prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.0",
     "jose": "^6.2.8",
     "next": "16.3.0",
     "prisma": "^7.9.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "sharp": "^0.35.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

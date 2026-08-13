@@ -10,12 +10,19 @@
  * pergunta "o que exatamente esta API expõe?".
  */
 
+/**
+ * `publicId` está deliberadamente FORA: é identificador interno do provedor de
+ * storage e não serve para nada no navegador. O que sai é a URL de entrega.
+ */
 export const SELECT_MEDIA = {
   url: true,
   alt: true,
   width: true,
   height: true,
   blurDataUrl: true,
+  // Sai para o DTO derivar `principal`, e nunca cru: o front recebe o booleano
+  // pronto, não a posição para interpretar por conta própria.
+  sortOrder: true,
 } as const
 
 /**

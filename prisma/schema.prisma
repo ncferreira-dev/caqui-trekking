@@ -1,7 +1,33 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// =============================================================================
+// Caqui Trekking — schema do domínio
+// =============================================================================
+// Regras transversais, aplicadas sem exceção neste arquivo:
+//
+//  1. DINHEIRO é sempre Int de centavos (`priceCents`). Nunca Float, nunca
+//     Decimal. No projeto de referência o dinheiro era Float e o helper de
+//     arredondamento errava sistematicamente acima de R$ 8.192,00.
+//     Ver docs/00-analise-dalia.md, seção 3.6.
+//
+//  2. DATAS são gravadas em UTC (`@db.Timestamptz`). A exibição converte para
+//     America/Sao_Paulo na borda da UI, num helper único. O projeto de
+//     referência não tinha UM `timeZone` no código inteiro e dependia do fuso
+//     do aparelho. Aqui a data É o produto: errar o dia da saída é fatal.
+//
+//  3. SOFT DELETE (`deletedAt`) em Trip, Product e Guide. Saída passada é
+//     registro histórico, não lixo.
+//
+//  4. createdAt/updatedAt em TODOS os models, com o mesmo vocabulário.
+//
+//  5. ÍNDICE em toda coluna usada em filtro ou ordenação.
+//
+//  6. ENUM do Prisma, nunca String solta. No Dália, `category` era String
+//     livre — e um produto salvo com categoria fora da lista ficava
+//     ineditável, com 'anéis' e 'aneis' virando duas linhas no relatório.
+//
+//  7. MEDIDAS que não são dinheiro mas precisam de exatidão (distância,
+//     coordenada) usam Decimal, que no Postgres é `numeric` — exato. Float
+//     não entra neste schema em lugar nenhum.
+// =============================================================================
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +36,536 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum Difficulty {
+  FACIL
+  MODERADO
+  DIFICIL
+  EXTREMO
+}
+
+/// Ciclo de vida de conteúdo (Trip, Product).
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Ciclo de vida de uma saída.
+/// NÃO existe estado "encerrada": isso é derivado de `startAt < now()`.
+/// Um campo gravado exigiria alguém atualizando na mão toda semana, e a
+/// primeira vez que esquecessem o site mentiria.
+enum DepartureStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
+/// Disponibilidade de vagas. MANUAL, sem contagem.
+/// Decisão de produto: a Caqui controla vaga na conversa do WhatsApp, não no
+/// site. O projeto de referência tinha contagem de estoque, mantinha o
+/// decremento automático DESLIGADO por flag, e ainda assim carregava um método
+/// dormente que nunca rodou — dívida com aparência de previdência.
+enum Availability {
+  AVAILABLE
+  LAST_SPOTS
+  SOLD_OUT
+}
+
+enum ProductCategory {
+  CAMISETA
+  REGATA
+  MOCHILA
+  BONE
+  ACESSORIO
+}
+
+enum VariantSize {
+  PP
+  P
+  M
+  G
+  GG
+  XG
+  UNICO
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+}
+
+// =============================================================================
+// INSTITUCIONAL
+// =============================================================================
+
+/// Singleton: sempre exatamente uma linha, com id = 1.
+/// A migration acrescenta um CHECK (id = 1) — sem ele, "singleton" é só uma
+/// combinação que alguém quebra num INSERT distraído.
+///
+/// O `whatsappMessageTemplate` é o coração operacional do projeto: o texto do
+/// pedido é editável aqui, no CRM, sem deploy. No Dália, trocar o número de
+/// WhatsApp exigia editar 4 arquivos e publicar.
+model SiteSetting {
+  id Int @id @default(1)
+
+  whatsappNumber          String @db.VarChar(20)
+  /// Template com placeholders ({{itens}}, {{total}}, {{cliente}}…),
+  /// renderizado por uma função pura. Nunca hardcoded no front.
+  whatsappMessageTemplate String @db.Text
+
+  instagramTrekking String? @db.VarChar(100)
+  instagramWear     String? @db.VarChar(100)
+  linktree          String? @db.VarChar(255)
+  email             String? @db.VarChar(255)
+
+  cadasturNumber  String? @db.VarChar(50)
+  pesmCredentials String? @db.VarChar(255)
+
+  heroTitle    String? @db.VarChar(200)
+  heroSubtitle String? @db.VarChar(300)
+  aboutText    String? @db.Text
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("site_settings")
+}
+
+model Guide {
+  id Int @id @default(autoincrement())
+
+  name            String  @db.VarChar(150)
+  bio             String? @db.Text
+  cadasturNumber  String? @db.VarChar(50)
+  pesmCredential  String? @db.VarChar(100)
+  active          Boolean @default(true)
+  sortOrder       Int     @default(0)
+
+  photos     MediaAsset[]
+  departures DepartureGuide[]
+
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+
+  @@index([active, sortOrder])
+  @@index([deletedAt])
+  @@map("guides")
+}
+
+// =============================================================================
+// EXPEDIÇÕES — Trip (roteiro reutilizável) ≠ Departure (saída com data)
+// =============================================================================
+
+/// O roteiro base, escrito UMA vez. "Pedra Grande de Quatinga".
+/// Sem esta separação, cada agenda nova viraria duplicação de conteúdo:
+/// o mesmo texto, as mesmas fotos e as mesmas specs copiados todo mês, e o
+/// CRM insuportável de usar.
+///
+/// É a Trip que tem URL indexável (`/expedicoes/[slug]`). A Departure NÃO
+/// ganha página própria — 12 saídas do mesmo roteiro seriam 12 páginas quase
+/// idênticas se canibalizando no Google.
+model Trip {
+  id   Int    @id @default(autoincrement())
+  /// Gerado UMA vez na criação e editável só de propósito. Nunca derivado do
+  /// título em tempo de render: renomear a expedição mudaria a URL canônica
+  /// em silêncio e mataria o ranking.
+  slug String @unique @db.VarChar(120)
+
+  title       String  @db.VarChar(200)
+  subtitle    String? @db.VarChar(300)
+  description String  @db.Text
+
+  region String? @db.VarChar(120)
+  city   String  @db.VarChar(120)
+  state  String  @db.VarChar(2)
+
+  difficulty         Difficulty
+  /// Decimal (numeric no Postgres), exato. Ex.: 8.50 km.
+  distanceKm         Decimal?   @db.Decimal(6, 2)
+  elevationGainM     Int?
+  maxAltitudeM       Int?
+  durationMinutes    Int?
+  minAge             Int?
+  requiresExperience Boolean    @default(false)
+
+  /// Arrays nativos do Postgres. Conteúdo editorial que muda toda temporada
+  /// vive no banco, editável no CRM — não em módulo JS exigindo deploy.
+  highlights   String[]
+  included     String[]
+  notIncluded  String[]
+  whatToBring  String[]
+
+  cancellationPolicy String? @db.Text
+
+  status    ContentStatus @default(DRAFT)
+  featured  Boolean       @default(false)
+  sortOrder Int           @default(0)
+
+  departures      Departure[]
+  activityTags    TripActivityTag[]
+  images          MediaAsset[]
+  contactMessages ContactMessage[]
+
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+
+  @@index([status, featured, sortOrder])
+  @@index([difficulty])
+  @@index([deletedAt])
+  @@map("trips")
+}
+
+model ActivityTag {
+  id    Int    @id @default(autoincrement())
+  slug  String @unique @db.VarChar(60)
+  label String @db.VarChar(80)
+  /// Nome do ícone no design system, não um caminho de arquivo.
+  icon  String? @db.VarChar(60)
+
+  trips TripActivityTag[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("activity_tags")
+}
+
+model TripActivityTag {
+  tripId        Int
+  activityTagId Int
+
+  trip        Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  activityTag ActivityTag @relation(fields: [activityTagId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, activityTagId])
+  @@index([activityTagId])
+  @@map("trip_activity_tags")
+}
+
+/// A saída concreta: "Pedra Grande, 15/08/2026, R$ 90,00".
+/// Data, preço e disponibilidade próprios.
+model Departure {
+  id     Int  @id @default(autoincrement())
+  tripId Int
+
+  /// UTC. A exibição converte para America/Sao_Paulo.
+  startAt DateTime  @db.Timestamptz(3)
+  endAt   DateTime? @db.Timestamptz(3)
+
+  meetingPoint String?  @db.VarChar(300)
+  meetingLat   Decimal? @db.Decimal(10, 7)
+  meetingLng   Decimal? @db.Decimal(10, 7)
+  /// Horário de encontro como rótulo de parede ("06:00") em
+  /// America/Sao_Paulo. Deliberadamente NÃO é timestamp: é o que vai escrito
+  /// no card e na mensagem do WhatsApp, e não deve sofrer conversão de fuso.
+  meetingTimeLocal String? @db.VarChar(5)
+
+  /// Int de centavos. R$ 199,90 = 19990.
+  priceCents          Int
+  /// Preço "de", riscado. Opcional.
+  compareAtPriceCents Int?
+
+  /// MANUAL. Alterado por endpoint dedicado, com histórico em
+  /// DepartureAvailabilityChange. É o campo mais mexido do sistema.
+  availability Availability    @default(AVAILABLE)
+  status       DepartureStatus @default(DRAFT)
+
+  /// NUNCA sai na API pública. Sem exceção, sem "só neste caso".
+  internalNotes String? @db.Text
+
+  trip                Trip                          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  guides              DepartureGuide[]
+  availabilityChanges DepartureAvailabilityChange[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  /// Impede duas saídas do mesmo roteiro no mesmo instante — o erro clássico
+  /// de clicar duas vezes em "duplicar para o mês seguinte".
+  @@unique([tripId, startAt])
+  /// A consulta central do site: agenda cronológica das saídas publicadas.
+  @@index([status, startAt])
+  @@index([tripId, startAt])
+  @@index([availability])
+  @@map("departures")
+}
+
+model DepartureGuide {
+  departureId Int
+  guideId     Int
+
+  departure Departure @relation(fields: [departureId], references: [id], onDelete: Cascade)
+  guide     Guide     @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@id([departureId, guideId])
+  @@index([guideId])
+  @@map("departure_guides")
+}
+
+/// Histórico de mudança de disponibilidade.
+///
+/// Não estava no briefing original; entrou porque `availability` é o campo
+/// mais alterado do sistema e, sem log, "por que essa saída ficou esgotada no
+/// dia 3?" não tem resposta. O projeto de referência acertou nisso com o
+/// ledger de estoque (docs/00-analise-dalia.md, B5) e a lição transfere.
+///
+/// A gravação da mudança e a criação deste registro acontecem na MESMA
+/// transação — no Dália eram duas escritas soltas que podiam divergir.
+model DepartureAvailabilityChange {
+  id          Int @id @default(autoincrement())
+  departureId Int
+
+  from   Availability
+  to     Availability
+  reason String?      @db.VarChar(300)
+
+  /// Quem mudou. Nulo quando a origem é um script/seed, não uma pessoa.
+  userId Int?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  departure Departure @relation(fields: [departureId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([departureId, createdAt])
+  @@map("departure_availability_changes")
+}
+
+// =============================================================================
+// CAQUI WEAR
+// =============================================================================
+
+model Product {
+  id   Int    @id @default(autoincrement())
+  slug String @unique @db.VarChar(120)
+
+  name        String  @db.VarChar(200)
+  description String? @db.Text
+
+  category   ProductCategory
+  /// Preço base em centavos. A variante pode sobrescrever.
+  priceCents Int
+
+  status    ContentStatus @default(DRAFT)
+  featured  Boolean       @default(false)
+  sortOrder Int           @default(0)
+
+  variants ProductVariant[]
+  images   MediaAsset[]
+
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+
+  @@index([status, category, sortOrder])
+  @@index([featured])
+  @@index([deletedAt])
+  @@map("products")
+}
+
+/// Combinação de tamanho e cor.
+///
+/// ATENÇÃO: `available` é um liga/desliga MANUAL. Não existe quantidade, não
+/// existe decremento, não existe reserva. Combinação indisponível continua
+/// aparecendo na UI, visivelmente desabilitada — a pessoa precisa saber que
+/// existe.
+///
+/// O Dália modelava variação de cor como PRODUTOS SEPARADOS unidos por uma
+/// string livre `colorGroup`, resolvida baixando o catálogo inteiro no
+/// navegador. Um acento diferente separava a variante do grupo em silêncio, e
+/// não havia dimensão de tamanho nenhuma — o modelo quebraria na primeira
+/// camiseta. Aqui a variante é entidade própria, com FK de verdade.
+model ProductVariant {
+  id        Int @id @default(autoincrement())
+  productId Int
+
+  size      VariantSize
+  colorName String      @db.VarChar(60)
+  /// Hex com #, para a bolinha de cor na UI.
+  colorHex  String?     @db.VarChar(7)
+
+  /// Sobrescreve o preço do produto quando presente.
+  priceCents Int?
+
+  available Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([productId, size, colorName])
+  @@index([productId, sortOrder])
+  @@map("product_variants")
+}
+
+// =============================================================================
+// MÍDIA
+// =============================================================================
+
+/// Imagem de Trip, Product ou Guide.
+///
+/// DECISÃO (o briefing pedia para escolher e justificar): três FKs anuláveis
+/// numa tabela só, com CHECK garantindo que exatamente uma está preenchida —
+/// em vez de `ownerType` + `ownerId` polimórfico.
+///
+/// Motivo: o polimórfico por string joga fora a integridade referencial, que
+/// é justamente o motivo de termos escolhido Postgres. No Dália (MongoDB),
+/// apagar um produto deixava StockMovement e Favorite órfãos apontando para
+/// um id que não existe mais. Com FK + ON DELETE CASCADE isso é impossível
+/// por construção, e o CHECK impede o terceiro estado inválido (nenhuma dona,
+/// ou duas).
+///
+/// `publicId` também não estava no briefing. Sem ele não há como apagar a
+/// imagem do Cloudinary: no Dália o public_id era descartado no upload e
+/// NENHUMA imagem jamais foi removida — nem no delete, nem na troca de foto.
+/// Ver docs/00-analise-dalia.md, seção 7.6.
+model MediaAsset {
+  id Int @id @default(autoincrement())
+
+  url      String @db.VarChar(500)
+  /// Identificador no provedor de storage. Sem ele, deletar é impossível.
+  publicId String @db.VarChar(255)
+
+  /// Obrigatório: acessibilidade e SEO local. É onde entram "trilha",
+  /// "Serra do Mar", "cachoeira", "Mogi das Cruzes".
+  /// Imagem puramente decorativa usa string vazia, de propósito e explícito.
+  alt String @db.VarChar(300)
+
+  /// Dimensões intrínsecas: evitam CLS e permitem montar srcset sem adivinhar.
+  width       Int
+  height      Int
+  /// Placeholder LQIP em data URI.
+  blurDataUrl String? @db.Text
+
+  sortOrder Int @default(0)
+
+  /// Exatamente UMA das três é preenchida (garantido por CHECK na migration).
+  tripId    Int?
+  productId Int?
+  guideId   Int?
+
+  trip    Trip?    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  guide   Guide?   @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([tripId, sortOrder])
+  @@index([productId, sortOrder])
+  @@index([guideId, sortOrder])
+  @@map("media_assets")
+}
+
+// =============================================================================
+// ACESSO E AUDITORIA
+// =============================================================================
+
+/// Usuário do CRM.
+///
+/// O Dália não tinha model de usuário: o login era `username === process.env
+/// .ADMINLOGIN && password === process.env.ADMINPASSWORD`, comparação de
+/// string em texto puro, sem hash, sem role, com o bcrypt instalado e nunca
+/// importado. Aqui: bcrypt de verdade (cost ≥ 12) e role desde o dia 1 —
+/// retrofitar papel depois exige reemitir todos os tokens.
+model User {
+  id Int @id @default(autoincrement())
+
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @db.VarChar(255)
+  name         String   @db.VarChar(150)
+  role         UserRole @default(ADMIN)
+  active       Boolean  @default(true)
+
+  lastLoginAt DateTime? @db.Timestamptz(3)
+
+  auditLogs           AuditLog[]
+  availabilityChanges DepartureAvailabilityChange[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([active])
+  @@map("users")
+}
+
+/// Toda mutação em Trip, Departure, Product e SiteSetting grava aqui, com
+/// before/after. Sem exceção.
+model AuditLog {
+  id Int @id @default(autoincrement())
+
+  userId     Int?
+  action     String @db.VarChar(60)
+  entityType String @db.VarChar(60)
+  entityId   String @db.VarChar(60)
+
+  before Json?
+  after  Json?
+  ip     String? @db.VarChar(45)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+// =============================================================================
+// CAPTURA
+// =============================================================================
+
+model Lead {
+  id Int @id @default(autoincrement())
+
+  email  String? @db.VarChar(255)
+  phone  String? @db.VarChar(20)
+  name   String? @db.VarChar(150)
+  /// De onde veio: 'avise-me', 'newsletter', 'rodape'…
+  source String  @db.VarChar(60)
+
+  /// Consentimento explícito (LGPD). Nulo = sem consentimento registrado, e
+  /// nesse caso o contato NÃO pode ser usado em campanha.
+  consentAt DateTime? @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([source, createdAt])
+  @@index([email])
+  @@map("leads")
+}
+
+model ContactMessage {
+  id Int @id @default(autoincrement())
+
+  name    String  @db.VarChar(150)
+  email   String? @db.VarChar(255)
+  phone   String? @db.VarChar(20)
+  message String  @db.Text
+
+  /// Sobre qual roteiro, quando a mensagem veio de uma página de expedição.
+  tripId Int?
+
+  read Boolean @default(false)
+
+  trip Trip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([read, createdAt])
+  @@index([tripId])
+  @@map("contact_messages")
 }

@@ -1,6 +1,5 @@
-import { PrismaPg } from '@prisma/adapter-pg'
-
 import { PrismaClient } from '@/generated/prisma/client'
+import { createPgAdapter } from '@/lib/db-adapter'
 import { env } from '@/lib/env'
 
 /**
@@ -19,9 +18,9 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 // Prisma 7 removeu o engine embutido: a conexão passa por um driver adapter
-// explícito. Para PostgreSQL isso é o `PrismaPg`, que recebe a connection
-// string já validada pelo env.ts.
-const adapter = new PrismaPg({ connectionString: env.DATABASE_URL })
+// explícito. O `createPgAdapter` fixa a sessão em UTC — ver o comentário lá,
+// é o que impede a data de sair 3 horas errada no banco.
+const adapter = createPgAdapter(env.DATABASE_URL)
 
 export const prisma =
   globalForPrisma.prisma ??

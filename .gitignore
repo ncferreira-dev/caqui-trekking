@@ -1,0 +1,54 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+/src/generated/prisma
+
+# ---------------------------------------------------------------------------
+# Caqui Trekking
+# ---------------------------------------------------------------------------
+# O .env* acima ignora TUDO que começa com .env — inclusive o .env.example,
+# que precisa ser versionado para o setup ser reproduzível.
+!.env.example
+
+# Cliente gerado pelo Prisma (recriado por `npm run db:generate`, que roda no
+# postinstall). Versionar código gerado só cria conflito de merge.
+/src/generated

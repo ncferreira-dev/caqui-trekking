@@ -100,19 +100,21 @@ nunca para a resposta.
 
 ## Comandos
 
-| Comando                           | O que faz                                                       |
-| --------------------------------- | --------------------------------------------------------------- |
-| `npm run dev`                     | Servidor de desenvolvimento                                     |
-| `npm run build`                   | Build de produção                                               |
-| `npm run start`                   | Serve o build                                                   |
-| `npm run check`                   | **lint + typecheck + format:check** — rode antes de todo commit |
-| `npm run lint` / `lint:fix`       | ESLint                                                          |
-| `npm run typecheck`               | `tsc --noEmit`                                                  |
-| `npm run format` / `format:check` | Prettier                                                        |
-| `npm run db:migrate`              | Cria e aplica migration (dev)                                   |
-| `npm run db:deploy`               | Aplica migrations pendentes (produção)                          |
-| `npm run db:generate`             | Regenera o cliente Prisma                                       |
-| `npm run db:studio`               | Prisma Studio                                                   |
+| Comando                           | O que faz                                                          |
+| --------------------------------- | ------------------------------------------------------------------ |
+| `npm run dev`                     | Servidor de desenvolvimento                                        |
+| `npm run build`                   | Build de produção                                                  |
+| `npm run start`                   | Serve o build                                                      |
+| `npm run check`                   | **lint + typecheck + format + testes** — rode antes de todo commit |
+| `npm test` / `test:watch`         | Testes de integração (banco `caqui_trekking_test`)                 |
+| `npm run db:test:setup`           | Aplica as migrations no banco de teste                             |
+| `npm run lint` / `lint:fix`       | ESLint                                                             |
+| `npm run typecheck`               | `tsc --noEmit`                                                     |
+| `npm run format` / `format:check` | Prettier                                                           |
+| `npm run db:migrate`              | Cria e aplica migration (dev)                                      |
+| `npm run db:deploy`               | Aplica migrations pendentes (produção)                             |
+| `npm run db:generate`             | Regenera o cliente Prisma                                          |
+| `npm run db:studio`               | Prisma Studio                                                      |
 
 ---
 
@@ -122,8 +124,8 @@ nunca para a resposta.
 
 - [x] **00** — Análise do projeto de referência → [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md)
 - [x] **01** — Bootstrap → [`docs/01-estrutura.md`](docs/01-estrutura.md)
-- [ ] **02** — Schema e seed — `Trip` (roteiro reutilizável) ≠ `Departure` (saída com data)
-- [ ] **03** — API do catálogo, incluindo `POST /api/cart/validate`
+- [x] **02** — Schema e seed → [`docs/02-modelagem.md`](docs/02-modelagem.md)
+- [x] **03** — API do catálogo → [`docs/03-api.md`](docs/03-api.md)
 - [ ] **04** — Auth e API do CRM
 - [ ] **05** — Mídia e uploads
 
@@ -162,3 +164,5 @@ está em [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md).
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md) | Análise do projeto de referência: stack, modelagem, carrinho, auth, imagens, SEO, e as decisões arquiteturais que saíram dela |
 | [`docs/01-estrutura.md`](docs/01-estrutura.md)         | Estrutura de pastas e a convenção por trás dela                                                                               |
+| [`docs/02-modelagem.md`](docs/02-modelagem.md)         | Trip vs Departure, disponibilidade manual, MediaAsset, e o bug de fuso que o seed revelou                                     |
+| [`docs/03-api.md`](docs/03-api.md)                     | Os 11 endpoints públicos, códigos de erro e o contrato de `POST /api/cart/validate`                                           |

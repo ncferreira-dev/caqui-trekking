@@ -8,6 +8,7 @@ import { Input, Select } from '@/components/ui/campo'
 import { Modal } from '@/components/ui/dialogo'
 import { useToast } from '@/components/ui/toast'
 import { api, ErroDaApi } from '@/lib/crm/api'
+import { ehLinkCurtoDeMaps, extrairCoordenadas } from '@/lib/maps/coordenadas'
 import { centavosParaDecimal } from '@/lib/money'
 
 /**
@@ -81,11 +82,21 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
   const [preco, setPreco] = useState(saida ? centavosParaReais(saida.precoCentavos) : '')
   const [ponto, setPonto] = useState(saida?.meetingPoint ?? '')
   const [horario, setHorario] = useState(saida?.meetingTimeLocal ?? '')
-  const [lat, setLat] = useState(saida?.meetingLat != null ? String(saida.meetingLat) : '')
-  const [lng, setLng] = useState(saida?.meetingLng != null ? String(saida.meetingLng) : '')
+  // O local vem de um LINK do Google Maps, não de dois números. Ao editar uma
+  // saída que já tem coordenada, remonto um link canônico para o campo mostrar
+  // que há local e para a extração devolver o mesmo par.
+  const [mapsLink, setMapsLink] = useState(
+    saida?.meetingLat != null && saida.meetingLng != null
+      ? `https://www.google.com/maps?q=${saida.meetingLat},${saida.meetingLng}`
+      : '',
+  )
   const [publicar, setPublicar] = useState(saida?.status === 'PUBLISHED')
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+
+  // Derivado do link a cada render — nada de estado espelhando estado. É a
+  // coordenada que o Google Maps embutiu no link colado, ou null.
+  const coord = extrairCoordenadas(mapsLink)
 
   // Ao trocar o roteiro na criação, sugere o preço dele — sem sobrescrever o
   // que a pessoa já digitou, que seria hostil.
@@ -111,17 +122,19 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
       return
     }
 
-    // Coordenada só vai se os DOIS campos vierem: um mapa com metade da
-    // coordenada aponta para o meio do oceano. Vazio nos dois = sem mapa.
-    const temCoord = lat.trim() !== '' && lng.trim() !== ''
-    const latN = temCoord ? Number(lat.replace(',', '.')) : null
-    const lngN = temCoord ? Number(lng.replace(',', '.')) : null
-    if (temCoord && (Number.isNaN(latN) || Number.isNaN(lngN))) {
+    // A coordenada sai do LINK. Link vazio = sem mapa. Link com texto mas sem
+    // coordenada é erro: melhor barrar do que salvar sem local e a pessoa achar
+    // que gravou o ponto.
+    if (mapsLink.trim() !== '' && coord === null) {
       setErro(
-        'Coordenadas inválidas. Cole os dois números do Google Maps, ou deixe ambos em branco.',
+        ehLinkCurtoDeMaps(mapsLink)
+          ? 'Esse é um link curto. Abra ele no navegador e cole o link completo da barra de endereço.'
+          : 'Não achei a localização nesse link. Cole o link do Google Maps do local.',
       )
       return
     }
+    const latN = coord?.lat ?? null
+    const lngN = coord?.lng ?? null
 
     const corpo = {
       startAt: inicio,
@@ -233,30 +246,30 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
           dica="O endereço exato do local de saída."
         />
 
-        <fieldset className="border-caqui-rule flex flex-col gap-3 border-t pt-4">
+        <fieldset className="border-caqui-rule flex flex-col gap-2 border-t pt-4">
           <legend className="text-caqui-ink-700 text-rotulo font-mono uppercase">
-            Coordenadas do mapa
+            Local no mapa
           </legend>
-          <p className="text-caqui-ink-500 text-corpo-sm -mt-1">
-            No Google Maps, clique com o botão direito no local e copie os dois números. É o que faz
-            o botão &ldquo;Como chegar&rdquo; aparecer no site.
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              rotulo="Latitude"
-              inputMode="decimal"
-              placeholder="-23.52145"
-              value={lat}
-              onChange={(e) => setLat(e.target.value)}
-            />
-            <Input
-              rotulo="Longitude"
-              inputMode="decimal"
-              placeholder="-46.18820"
-              value={lng}
-              onChange={(e) => setLng(e.target.value)}
-            />
-          </div>
+          <Input
+            rotulo="Link do Google Maps"
+            type="url"
+            inputMode="url"
+            placeholder="https://maps.google.com/..."
+            value={mapsLink}
+            onChange={(e) => setMapsLink(e.target.value)}
+            dica="Abra o local no Google Maps e cole aqui o link da barra de endereço. É o que faz o botão “Como chegar” aparecer no site."
+          />
+          {coord && (
+            <p className="text-caqui-ink-700 text-corpo-sm">
+              ✓ Local reconhecido — o botão “Como chegar” vai aparecer no site.
+            </p>
+          )}
+          {coord === null && ehLinkCurtoDeMaps(mapsLink) && (
+            <p className="border-caqui-danger text-corpo-sm border-l-4 px-3 py-2">
+              Esse é um link curto (maps.app.goo.gl). Abra ele no navegador e cole o link completo
+              que aparecer na barra de endereço.
+            </p>
+          )}
         </fieldset>
 
         <label className="border-caqui-ink-900 flex cursor-pointer items-start gap-3 border bg-white p-3">

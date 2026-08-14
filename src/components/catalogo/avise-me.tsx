@@ -137,8 +137,8 @@ export function AviseMe({
       ) : (
         <form onSubmit={enviar} className="flex flex-col gap-4">
           <p className="text-caqui-ink-700 text-corpo-sm">
-            {tituloDoRoteiro}, {data}. Esta saída está esgotada. Deixe um contato e a Caqui avisa
-            se abrir vaga.
+            {tituloDoRoteiro}, {data}. Esta saída está esgotada. Deixe um contato e a Caqui avisa se
+            abrir vaga.
           </p>
 
           <Input name="nome" rotulo="Nome" autoComplete="name" />

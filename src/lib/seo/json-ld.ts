@@ -286,9 +286,7 @@ export function eventoDeSaida(
 
 /** Todas as saídas futuras de um roteiro, para a página de detalhe. */
 export function eventosDoRoteiro(base: string, trip: TripDetalheDTO): JsonLd[] {
-  return trip.saidas
-    .filter((s) => !s.encerrada)
-    .map((s) => eventoDeSaida(base, trip, s))
+  return trip.saidas.filter((s) => !s.encerrada).map((s) => eventoDeSaida(base, trip, s))
 }
 
 /**

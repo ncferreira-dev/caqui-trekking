@@ -101,7 +101,9 @@ export function FormularioDeContato({ inicial }: { inicial: CamposDeContato }) {
       mostrar({ tom: 'sucesso', titulo: 'Salvo', descricao: 'O site já mostra os dados novos.' })
       router.refresh()
     } catch (causa) {
-      setErro(causa instanceof ErroDaApi ? causa.message : 'Não foi possível salvar. Tente de novo.')
+      setErro(
+        causa instanceof ErroDaApi ? causa.message : 'Não foi possível salvar. Tente de novo.',
+      )
     } finally {
       setEnviando(false)
     }

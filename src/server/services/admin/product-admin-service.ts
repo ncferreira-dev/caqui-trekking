@@ -89,7 +89,10 @@ export async function criarProduto(
   // constraint. Inclui os arquivados: reaproveitar o slug de uma peça
   // descontinuada roubaria a URL que ela ainda pode ter em links antigos.
   const usados = await prisma.product.findMany({ select: { slug: true } })
-  const slug = slugUnico(campos.name, usados.map((p) => p.slug))
+  const slug = slugUnico(
+    campos.name,
+    usados.map((p) => p.slug),
+  )
 
   return prisma.$transaction(async (tx) => {
     const produto = await tx.product.create({

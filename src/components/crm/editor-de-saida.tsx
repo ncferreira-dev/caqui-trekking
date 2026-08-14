@@ -78,9 +78,7 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
 
   const [tripId, setTripId] = useState(String(saida?.tripId ?? roteiros[0]?.id ?? ''))
   const [inicio, setInicio] = useState(saida?.inicioParede ?? '')
-  const [preco, setPreco] = useState(
-    saida ? centavosParaReais(saida.precoCentavos) : '',
-  )
+  const [preco, setPreco] = useState(saida ? centavosParaReais(saida.precoCentavos) : '')
   const [ponto, setPonto] = useState(saida?.meetingPoint ?? '')
   const [horario, setHorario] = useState(saida?.meetingTimeLocal ?? '')
   const [lat, setLat] = useState(saida?.meetingLat != null ? String(saida.meetingLat) : '')
@@ -119,7 +117,9 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
     const latN = temCoord ? Number(lat.replace(',', '.')) : null
     const lngN = temCoord ? Number(lng.replace(',', '.')) : null
     if (temCoord && (Number.isNaN(latN) || Number.isNaN(lngN))) {
-      setErro('Coordenadas inválidas. Cole os dois números do Google Maps, ou deixe ambos em branco.')
+      setErro(
+        'Coordenadas inválidas. Cole os dois números do Google Maps, ou deixe ambos em branco.',
+      )
       return
     }
 
@@ -150,13 +150,17 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
         mostrar({
           tom: 'sucesso',
           titulo: 'Saída criada',
-          descricao: publicar ? 'Já está na agenda do site.' : 'Em rascunho. Publique quando quiser.',
+          descricao: publicar
+            ? 'Já está na agenda do site.'
+            : 'Em rascunho. Publique quando quiser.',
         })
       }
       router.refresh()
       aoFechar()
     } catch (causa) {
-      setErro(causa instanceof ErroDaApi ? causa.message : 'Não foi possível salvar. Tente de novo.')
+      setErro(
+        causa instanceof ErroDaApi ? causa.message : 'Não foi possível salvar. Tente de novo.',
+      )
     } finally {
       setEnviando(false)
     }

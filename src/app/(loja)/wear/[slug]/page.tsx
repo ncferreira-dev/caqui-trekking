@@ -92,8 +92,8 @@ export default async function PaginaDoProduto({ params }: PageProps<'/wear/[slug
               role="status"
               className="border-caqui-danger text-corpo-sm border-l-4 bg-white px-4 py-3"
             >
-              Todas as combinações desta peça estão esgotadas no momento. Chame no WhatsApp. A
-              Caqui avisa quando repõe.
+              Todas as combinações desta peça estão esgotadas no momento. Chame no WhatsApp. A Caqui
+              avisa quando repõe.
             </p>
           )}
 

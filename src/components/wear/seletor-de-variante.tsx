@@ -194,11 +194,7 @@ export function SeletorDeVariante({ produto }: { produto: ProdutoDetalheDTO }) {
                 >
                   {rotuloDeTamanho(t)}
                   <span className="sr-only">
-                    {!existe
-                      ? `, não feito em ${cor}`
-                      : disponivel
-                        ? ', disponível'
-                        : ', esgotado'}
+                    {!existe ? `, não feito em ${cor}` : disponivel ? ', disponível' : ', esgotado'}
                   </span>
                 </button>
               )

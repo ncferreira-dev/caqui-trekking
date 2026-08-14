@@ -7,13 +7,13 @@
 
 ## O que já está no ar (no código)
 
-| Entrega | Onde |
-| --- | --- |
-| JSON-LD (`LocalBusiness`, `Event`, `Product`, `BreadcrumbList`, `ItemList`) | `src/lib/seo/json-ld.ts` |
-| Sitemap dinâmico | `src/app/sitemap.ts` |
-| robots.txt | `src/app/robots.ts` |
-| Metadata base, Open Graph e canônica por página | `src/app/layout.tsx`, `src/lib/seo/metadata.ts` |
-| Vercel Analytics + eventos de conversão | `src/app/layout.tsx`, `src/lib/analytics.ts` |
+| Entrega                                                                     | Onde                                            |
+| --------------------------------------------------------------------------- | ----------------------------------------------- |
+| JSON-LD (`LocalBusiness`, `Event`, `Product`, `BreadcrumbList`, `ItemList`) | `src/lib/seo/json-ld.ts`                        |
+| Sitemap dinâmico                                                            | `src/app/sitemap.ts`                            |
+| robots.txt                                                                  | `src/app/robots.ts`                             |
+| Metadata base, Open Graph e canônica por página                             | `src/app/layout.tsx`, `src/lib/seo/metadata.ts` |
+| Vercel Analytics + eventos de conversão                                     | `src/app/layout.tsx`, `src/lib/analytics.ts`    |
 
 O **Open Graph com imagem** e o **upload de fotos** ficam de fora até o
 Cloudinary ter credencial — ver a seção "Bloqueios" no fim.
@@ -43,15 +43,15 @@ Com elas, a galeria e o Open Graph com foto destravam.
 Project → Settings → Environment Variables. Todas em **Production** (e
 **Preview**, se quiser testar antes):
 
-| Variável | Valor |
-| --- | --- |
-| `DATABASE_URL` | injetada pelo Neon, ou colada à mão |
-| `NODE_ENV` | `production` |
-| `NEXT_PUBLIC_SITE_URL` | o domínio real, **sem barra final** (ex.: `https://caquitrekking.com.br`) |
-| `AUTH_SECRET` | gere um novo, **diferente do de desenvolvimento**: `openssl rand -base64 48` |
-| `SEED_OWNER_EMAIL` | o e-mail da dona |
-| `SEED_OWNER_PASSWORD` | uma senha forte, só para o primeiro acesso |
-| `CLOUDINARY_CLOUD_NAME` · `_API_KEY` · `_API_SECRET` | do Cloudinary, ou as três em branco |
+| Variável                                             | Valor                                                                        |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `DATABASE_URL`                                       | injetada pelo Neon, ou colada à mão                                          |
+| `NODE_ENV`                                           | `production`                                                                 |
+| `NEXT_PUBLIC_SITE_URL`                               | o domínio real, **sem barra final** (ex.: `https://caquitrekking.com.br`)    |
+| `AUTH_SECRET`                                        | gere um novo, **diferente do de desenvolvimento**: `openssl rand -base64 48` |
+| `SEED_OWNER_EMAIL`                                   | o e-mail da dona                                                             |
+| `SEED_OWNER_PASSWORD`                                | uma senha forte, só para o primeiro acesso                                   |
+| `CLOUDINARY_CLOUD_NAME` · `_API_KEY` · `_API_SECRET` | do Cloudinary, ou as três em branco                                          |
 
 > `NEXT_PUBLIC_SITE_URL` errado é o erro que passa despercebido: o site sobe, mas
 > canônica, sitemap e o preview de link no WhatsApp apontam para `localhost` ou

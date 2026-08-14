@@ -35,7 +35,9 @@ export function BotaoEditarProduto({ produto }: { produto: ProdutoParaEditar }) 
       >
         Editar
       </button>
-      {aberto && <EditorDeProduto aberto={aberto} aoFechar={() => setAberto(false)} produto={produto} />}
+      {aberto && (
+        <EditorDeProduto aberto={aberto} aoFechar={() => setAberto(false)} produto={produto} />
+      )}
     </>
   )
 }

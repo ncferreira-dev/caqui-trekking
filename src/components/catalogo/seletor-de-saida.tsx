@@ -198,8 +198,8 @@ export function SeletorDeSaida({
       ) : (
         <div className="flex flex-col gap-3 px-5 py-5">
           <p className="text-caqui-ink-700 text-corpo-sm">
-            As datas abertas estão esgotadas no momento. Deixe seu contato numa delas. Vaga
-            cancela, e a Caqui avisa antes de anunciar.
+            As datas abertas estão esgotadas no momento. Deixe seu contato numa delas. Vaga cancela,
+            e a Caqui avisa antes de anunciar.
           </p>
         </div>
       )}
@@ -400,8 +400,8 @@ function SemData({
     <div id="seletor-de-saida" className="border-caqui-ink-900 border bg-white p-5">
       <h2 className="text-display-s uppercase">Sem data marcada</h2>
       <p className="text-caqui-ink-700 text-corpo-sm mt-3">
-        Este roteiro não tem saída aberta agora. A Caqui monta saída fechada para grupo, a partir
-        de quatro pessoas, na data que vocês escolherem.
+        Este roteiro não tem saída aberta agora. A Caqui monta saída fechada para grupo, a partir de
+        quatro pessoas, na data que vocês escolherem.
       </p>
 
       <div className="mt-5 flex flex-col gap-3">

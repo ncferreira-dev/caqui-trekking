@@ -263,9 +263,13 @@ export async function atualizarSaida(
   if (atual.status === 'CANCELLED') {
     // Editar uma saída cancelada a ressuscitaria pela porta dos fundos, sem
     // passar pela decisão de republicar. Quem quer a data de volta duplica.
-    throw new AppError(ErrorCode.CONFLICT, 'Saída cancelada não é editável. Duplique para recriar.', {
-      status: 409,
-    })
+    throw new AppError(
+      ErrorCode.CONFLICT,
+      'Saída cancelada não é editável. Duplique para recriar.',
+      {
+        status: 409,
+      },
+    )
   }
 
   // Só checa colisão se a data mudou de fato — reenviar a mesma data no submit

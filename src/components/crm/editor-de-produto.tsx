@@ -148,7 +148,9 @@ export function EditorDeProduto({
       router.refresh()
       aoFechar()
     } catch (causa) {
-      setErro(causa instanceof ErroDaApi ? causa.message : 'Não foi possível salvar. Tente de novo.')
+      setErro(
+        causa instanceof ErroDaApi ? causa.message : 'Não foi possível salvar. Tente de novo.',
+      )
     } finally {
       setEnviando(false)
     }

@@ -113,9 +113,7 @@ export default async function PaginaAgenda({ searchParams }: PageProps<'/agenda'
 
   return (
     <>
-      {naoEncerradas.length > 0 && (
-        <JsonLdScript dados={listaDaAgenda(URL_BASE, naoEncerradas)} />
-      )}
+      {naoEncerradas.length > 0 && <JsonLdScript dados={listaDaAgenda(URL_BASE, naoEncerradas)} />}
 
       <CabecalhoDePagina
         sobretitulo="Próximas saídas"

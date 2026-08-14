@@ -160,7 +160,9 @@ export function EditorDeRoteiro({
       router.refresh()
       aoFechar()
     } catch (causa) {
-      setErro(causa instanceof ErroDaApi ? causa.message : 'Não foi possível salvar. Tente de novo.')
+      setErro(
+        causa instanceof ErroDaApi ? causa.message : 'Não foi possível salvar. Tente de novo.',
+      )
     } finally {
       setEnviando(false)
     }
@@ -186,7 +188,12 @@ export function EditorDeRoteiro({
       <form id={idBase} onSubmit={enviar} noValidate className="flex flex-col gap-6">
         {/* ── Identidade ──────────────────────────────────────────────────── */}
         <div className="flex flex-col gap-4">
-          <Input rotulo="Título" value={titulo} onChange={(e) => setTitulo(e.target.value)} obrigatorio />
+          <Input
+            rotulo="Título"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            obrigatorio
+          />
           <Input
             rotulo="Subtítulo"
             value={subtitulo}
@@ -208,7 +215,12 @@ export function EditorDeRoteiro({
 
         {/* ── Onde e quão difícil ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Input rotulo="Cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} obrigatorio />
+          <Input
+            rotulo="Cidade"
+            value={cidade}
+            onChange={(e) => setCidade(e.target.value)}
+            obrigatorio
+          />
           <Input
             rotulo="UF"
             value={estado}

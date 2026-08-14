@@ -4,7 +4,13 @@ import Link from 'next/link'
 import { ListaDeSaidas, type SaidaDoPainel } from '@/components/crm/lista-de-saidas'
 import { NovaSaida } from '@/components/crm/nova-saida'
 import { CabecalhoDeSecao, Painel, Rotulo } from '@/components/crm/pecas'
-import { chaveMes, inicioDoMes, isoComOffsetLocal, jaEncerrada, mesPorExtenso } from '@/lib/datetime'
+import {
+  chaveMes,
+  inicioDoMes,
+  isoComOffsetLocal,
+  jaEncerrada,
+  mesPorExtenso,
+} from '@/lib/datetime'
 import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/ui/cn'
 import { exigirSessaoDaPagina } from '@/server/crm/sessao-da-pagina'
@@ -98,7 +104,11 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
   // não. Ordenados por título, que é como a Caqui procura na hora de criar.
   const roteiros = await prisma.trip.findMany({
     where: { deletedAt: null, status: { in: ['PUBLISHED', 'DRAFT'] } },
-    select: { id: true, title: true, departures: { select: { priceCents: true }, take: 1, orderBy: { startAt: 'desc' } } },
+    select: {
+      id: true,
+      title: true,
+      departures: { select: { priceCents: true }, take: 1, orderBy: { startAt: 'desc' } },
+    },
     orderBy: { title: 'asc' },
   })
   const roteirosOpcao = roteiros.map((r) => ({

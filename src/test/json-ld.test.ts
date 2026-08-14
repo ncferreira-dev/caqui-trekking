@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  eventoDeSaida,
-  produtoJsonLd,
-  serializarJsonLd,
-  type JsonLd,
-} from '@/lib/seo/json-ld'
+import { eventoDeSaida, produtoJsonLd, serializarJsonLd, type JsonLd } from '@/lib/seo/json-ld'
 import type { ProdutoDetalheDTO, SaidaDTO } from '@/server/dto/public-dto'
 
 /**

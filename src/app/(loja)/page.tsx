@@ -203,8 +203,8 @@ export default async function PaginaInicial() {
               A marca fora da trilha
             </h2>
             <p className="text-caqui-sand-400 text-corpo-lg mt-5 max-w-md">
-              Camiseta e baby look dry fit, caneca e acessório. Feito para quem já subiu e para
-              quem vai subir.
+              Camiseta e baby look dry fit, caneca e acessório. Feito para quem já subiu e para quem
+              vai subir.
             </p>
 
             <div className="mt-8">

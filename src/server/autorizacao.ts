@@ -61,6 +61,9 @@ export const AUTORIZACAO: Record<ChaveDeRota, RegraDeRota> = {
 
   // ── Saídas: a operação diária ─────────────────────────────────────────────
   departures: { GET: TODOS, POST: TODOS },
+  // Editar data, preço e ponto de encontro. Rotina de ADMIN; a disponibilidade
+  // tem rota própria abaixo porque é o toque de todo dia.
+  'departures/[id]': { PATCH: TODOS },
   // O campo mais mexido do sistema. ADMIN precisa, senão o CRM não serve.
   'departures/[id]/availability': { PATCH: TODOS },
   'departures/[id]/duplicate': { POST: TODOS },
@@ -73,7 +76,9 @@ export const AUTORIZACAO: Record<ChaveDeRota, RegraDeRota> = {
   // DELETE aqui é ARQUIVAR (soft delete). Só OWNER: tirar um roteiro do ar
   // apaga a vitrine de um produto inteiro.
   'trips/[id]': { PATCH: TODOS, DELETE: SO_OWNER },
-  products: { GET: TODOS },
+  products: { GET: TODOS, POST: TODOS },
+  // Editar peça e reconciliar variantes. Cadastro de conteúdo é rotina de ADMIN.
+  'products/[id]': { PATCH: TODOS },
   'variants/[id]': { PATCH: TODOS },
   tags: { GET: TODOS, POST: TODOS },
   // DELETE de tag é TODOS, e não SO_OWNER como esta linha chegou a dizer.

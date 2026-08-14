@@ -2,8 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { ListaDeSaidas, type SaidaDoPainel } from '@/components/crm/lista-de-saidas'
+import { NovaSaida } from '@/components/crm/nova-saida'
 import { CabecalhoDeSecao, Painel, Rotulo } from '@/components/crm/pecas'
-import { chaveMes, inicioDoMes, jaEncerrada, mesPorExtenso } from '@/lib/datetime'
+import { chaveMes, inicioDoMes, isoComOffsetLocal, jaEncerrada, mesPorExtenso } from '@/lib/datetime'
 import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/ui/cn'
 import { exigirSessaoDaPagina } from '@/server/crm/sessao-da-pagina'
@@ -62,8 +63,13 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
       id: true,
       startAt: true,
       priceCents: true,
+      compareAtPriceCents: true,
       availability: true,
       status: true,
+      meetingPoint: true,
+      meetingTimeLocal: true,
+      meetingLat: true,
+      meetingLng: true,
       trip: { select: { id: true, slug: true, title: true } },
     },
     orderBy: { startAt: 'asc' },
@@ -73,11 +79,32 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
   const saidas: SaidaDoPainel[] = linhas.map((d) => ({
     id: d.id,
     inicioIso: d.startAt.toISOString(),
+    // Parede local pronta para o `<input type="datetime-local">`: os 16
+    // primeiros caracteres de "2026-08-15T06:00:00-03:00".
+    inicioParede: isoComOffsetLocal(d.startAt).slice(0, 16),
     precoCentavos: d.priceCents,
+    compareAtPriceCents: d.compareAtPriceCents,
     disponibilidade: d.availability,
     status: d.status,
     encerrada: jaEncerrada(d.startAt, agora),
+    meetingPoint: d.meetingPoint,
+    meetingTimeLocal: d.meetingTimeLocal,
+    meetingLat: d.meetingLat ? Number(d.meetingLat) : null,
+    meetingLng: d.meetingLng ? Number(d.meetingLng) : null,
     trip: { id: d.trip.id, slug: d.trip.slug, titulo: d.trip.title },
+  }))
+
+  // Só roteiros publicados ou em rascunho podem receber saída nova — arquivado
+  // não. Ordenados por título, que é como a Caqui procura na hora de criar.
+  const roteiros = await prisma.trip.findMany({
+    where: { deletedAt: null, status: { in: ['PUBLISHED', 'DRAFT'] } },
+    select: { id: true, title: true, departures: { select: { priceCents: true }, take: 1, orderBy: { startAt: 'desc' } } },
+    orderBy: { title: 'asc' },
+  })
+  const roteirosOpcao = roteiros.map((r) => ({
+    id: r.id,
+    titulo: r.title,
+    precoSugeridoCentavos: r.departures[0]?.priceCents ?? 0,
   }))
 
   const meses = agruparPorMes(saidas)
@@ -90,6 +117,10 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
         descricao="Mude a disponibilidade em um toque. Duplique para o mês seguinte em um clique."
         acao={<Rotulo>{futuras} data(s) ativa(s)</Rotulo>}
       />
+
+      <div className="mb-4">
+        <NovaSaida roteiros={roteirosOpcao} />
+      </div>
 
       <div className="flex flex-col gap-4">
         {meses.length === 0 ? (

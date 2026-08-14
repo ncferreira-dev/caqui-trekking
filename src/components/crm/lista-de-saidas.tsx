@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { Confirmar } from '@/components/crm/confirmar'
+import { EditorDeSaida } from '@/components/crm/editor-de-saida'
 import { Rotulo, Vazio } from '@/components/crm/pecas'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
@@ -43,10 +44,17 @@ import { cn } from '@/lib/ui/cn'
 export type SaidaDoPainel = {
   id: number
   inicioIso: string
+  /** Parede local para o `<input type="datetime-local">`: "2026-08-15T06:00". */
+  inicioParede: string
   precoCentavos: number
+  compareAtPriceCents: number | null
   disponibilidade: 'AVAILABLE' | 'LAST_SPOTS' | 'SOLD_OUT'
   status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
   encerrada: boolean
+  meetingPoint: string | null
+  meetingTimeLocal: string | null
+  meetingLat: number | null
+  meetingLng: number | null
   trip: { id: number; slug: string; titulo: string }
 }
 
@@ -65,6 +73,7 @@ export function ListaDeSaidas({ saidas }: { saidas: SaidaDoPainel[] }) {
   const [otimista, setOtimista] = useState<Record<number, SaidaDoPainel['disponibilidade']>>({})
   const [ocupadas, setOcupadas] = useState<Record<number, boolean>>({})
   const [cancelando, setCancelando] = useState<SaidaDoPainel | null>(null)
+  const [editando, setEditando] = useState<SaidaDoPainel | null>(null)
 
   async function mudarDisponibilidade(
     saida: SaidaDoPainel,
@@ -198,6 +207,10 @@ export function ListaDeSaidas({ saidas }: { saidas: SaidaDoPainel[] }) {
                       })}
                     </div>
 
+                    <Button variante="secondary" tamanho="sm" onClick={() => setEditando(saida)}>
+                      Editar
+                    </Button>
+
                     <Button
                       variante="secondary"
                       tamanho="sm"
@@ -243,6 +256,26 @@ export function ListaDeSaidas({ saidas }: { saidas: SaidaDoPainel[] }) {
             await api.post(`/api/admin/departures/${cancelando.id}/cancel`, {})
             mostrar({ tom: 'sucesso', titulo: 'Saída cancelada' })
             router.refresh()
+          }}
+        />
+      )}
+
+      {editando && editando.status !== 'CANCELLED' && (
+        <EditorDeSaida
+          aberto
+          aoFechar={() => setEditando(null)}
+          saida={{
+            id: editando.id,
+            tripId: editando.trip.id,
+            tituloRoteiro: editando.trip.titulo,
+            inicioParede: editando.inicioParede,
+            precoCentavos: editando.precoCentavos,
+            compareAtPriceCents: editando.compareAtPriceCents,
+            meetingPoint: editando.meetingPoint,
+            meetingTimeLocal: editando.meetingTimeLocal,
+            meetingLat: editando.meetingLat,
+            meetingLng: editando.meetingLng,
+            status: editando.status,
           }}
         />
       )}

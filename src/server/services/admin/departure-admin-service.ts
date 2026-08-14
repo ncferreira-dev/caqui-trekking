@@ -221,6 +221,94 @@ export async function alterarDisponibilidade(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// EDITAR — data, hora, preço e ponto de encontro
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Edita uma saída existente.
+ *
+ * A disponibilidade NÃO entra aqui: ela tem endpoint próprio, com histórico, e
+ * misturá-la neste formulário reabriria o caminho lento de "abrir, achar o
+ * campo, salvar" que o toque na lista existe para eliminar. O `status`
+ * (rascunho → publicado) entra, porque publicar é o que tira a saída da gaveta
+ * e a coloca na agenda, e é uma decisão consciente, não um toque de rotina.
+ *
+ * A troca de data revalida o unique (roteiro + instante): mover a saída para
+ * cima de outra do mesmo roteiro é o erro que o banco barraria com uma
+ * constraint crua; aqui vira 409 com frase legível, antes da escrita.
+ */
+export async function atualizarSaida(
+  departureId: number,
+  campos: {
+    startAt?: Date
+    priceCents?: number
+    compareAtPriceCents?: number | null
+    meetingPoint?: string | null
+    meetingTimeLocal?: string | null
+    meetingLat?: number | null
+    meetingLng?: number | null
+    status?: 'DRAFT' | 'PUBLISHED'
+  },
+  ctx: Contexto,
+): Promise<{ id: number }> {
+  const atual = await prisma.departure.findUnique({
+    where: { id: departureId },
+    select: { id: true, tripId: true, startAt: true, priceCents: true, status: true },
+  })
+
+  if (!atual) {
+    throw new AppError(ErrorCode.DEPARTURE_NOT_FOUND, 'Saída não encontrada.', { status: 404 })
+  }
+
+  if (atual.status === 'CANCELLED') {
+    // Editar uma saída cancelada a ressuscitaria pela porta dos fundos, sem
+    // passar pela decisão de republicar. Quem quer a data de volta duplica.
+    throw new AppError(ErrorCode.CONFLICT, 'Saída cancelada não é editável. Duplique para recriar.', {
+      status: 409,
+    })
+  }
+
+  // Só checa colisão se a data mudou de fato — reenviar a mesma data no submit
+  // é o caso comum, e ele não pode falir contra a própria saída.
+  if (campos.startAt && campos.startAt.getTime() !== atual.startAt.getTime()) {
+    const colisao = await prisma.departure.findUnique({
+      where: { tripId_startAt: { tripId: atual.tripId, startAt: campos.startAt } },
+      select: { id: true },
+    })
+    if (colisao && colisao.id !== departureId) {
+      throw new AppError(
+        ErrorCode.CONFLICT,
+        'Já existe uma saída deste roteiro nesta data e hora.',
+        { status: 409 },
+      )
+    }
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const depois = await tx.departure.update({
+      where: { id: departureId },
+      data: campos,
+      select: { id: true, startAt: true, priceCents: true, status: true },
+    })
+
+    await registrarAuditoria(
+      {
+        userId: ctx.userId,
+        action: 'departure.update',
+        entityType: 'Departure',
+        entityId: departureId,
+        before: { startAt: atual.startAt, priceCents: atual.priceCents, status: atual.status },
+        after: { startAt: depois.startAt, priceCents: depois.priceCents, status: depois.status },
+        ip: ctx.ip,
+      },
+      tx,
+    )
+
+    return { id: depois.id }
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function cancelarSaida(
   departureId: number,
@@ -266,8 +354,11 @@ export async function criarSaida(
     tripId: number
     startAt: Date
     priceCents: number
+    compareAtPriceCents?: number | null
     meetingPoint?: string | undefined
     meetingTimeLocal?: string | undefined
+    meetingLat?: number | null
+    meetingLng?: number | null
     internalNotes?: string | undefined
   },
   ctx: Contexto,
@@ -298,8 +389,11 @@ export async function criarSaida(
         tripId: dados.tripId,
         startAt: dados.startAt,
         priceCents: dados.priceCents,
+        compareAtPriceCents: dados.compareAtPriceCents ?? null,
         meetingPoint: dados.meetingPoint ?? null,
         meetingTimeLocal: dados.meetingTimeLocal ?? null,
+        meetingLat: dados.meetingLat ?? null,
+        meetingLng: dados.meetingLng ?? null,
         internalNotes: dados.internalNotes ?? null,
         availability: 'AVAILABLE',
         status: 'DRAFT',

@@ -2,9 +2,12 @@ import type { NextRequest } from 'next/server'
 
 import { ok } from '@/lib/api/respond'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
+import { criarProdutoSchema } from '@/lib/api/schema-produto'
 import { paginacaoSchema, queryParaObjeto } from '@/lib/api/schemas'
 import { exigirPapel } from '@/lib/auth/guard'
 import { prisma } from '@/lib/prisma'
+import { criarProduto } from '@/server/services/admin/product-admin-service'
+import { ipDaRequest } from '@/server/services/audit-service'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,4 +92,25 @@ export const GET = rota(async (request: NextRequest) => {
   }))
 
   return ok(dados, { meta: { total, limit, offset, hasMore: offset + dados.length < total } })
+})
+
+/**
+ * POST /api/admin/products — cadastrar uma peça com suas variantes.
+ *
+ * Nasce como DRAFT por padrão: publicar é uma decisão à parte, e uma peça recém
+ * cadastrada quase sempre ainda vai receber foto e revisão antes de ir para a
+ * loja. O slug é gerado do nome no serviço; o cliente não o envia.
+ */
+export const POST = rota(async (request: NextRequest) => {
+  const usuario = await exigirPapel(request, ['OWNER', 'ADMIN'])
+
+  const corpo: unknown = await request.json().catch(() => null)
+  const dados = validarOuFalhar(criarProdutoSchema.safeParse(corpo))
+
+  const resultado = await criarProduto(dados, {
+    userId: usuario.userId,
+    ip: ipDaRequest(request),
+  })
+
+  return ok(resultado)
 })

@@ -19,6 +19,15 @@ const atualizarSchema = z.object({
   state: z.string().trim().length(2).optional(),
   region: z.string().trim().max(120).nullable().optional(),
   difficulty: z.enum(['FACIL', 'MODERADO', 'DIFICIL', 'EXTREMO']).optional(),
+  // Decimal com vírgula ou ponto vira string "8.50" — é o formato que o Prisma
+  // aceita para a coluna Decimal sem passar por ponto flutuante. O regex barra
+  // texto livre; o serviço grava como está.
+  distanceKm: z
+    .string()
+    .regex(/^\d{1,3}([.,]\d{1,2})?$/, 'Distância em km, ex.: 8.5')
+    .transform((s) => s.replace(',', '.'))
+    .nullable()
+    .optional(),
   elevationGainM: z.number().int().min(0).nullable().optional(),
   maxAltitudeM: z.number().int().min(0).nullable().optional(),
   durationMinutes: z.number().int().min(0).nullable().optional(),

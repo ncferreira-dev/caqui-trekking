@@ -67,7 +67,7 @@ export function ListaDaMochila({
     <div className="flex flex-col gap-8">
       {experiencias.length > 0 && (
         <Grupo
-          titulo="Suas experiências"
+          titulo="Trilhas"
           subtitulo={compacta ? undefined : 'Vagas em saídas com data marcada.'}
           itens={experiencias}
         />

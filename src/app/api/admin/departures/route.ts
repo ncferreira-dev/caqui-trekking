@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
 
+import { instanteLocal } from '@/lib/datetime'
 import { ok } from '@/lib/api/respond'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
 import { idSchema, paginacaoSchema, queryParaObjeto } from '@/lib/api/schemas'
@@ -11,15 +12,24 @@ import { ipDaRequest } from '@/server/services/audit-service'
 
 export const dynamic = 'force-dynamic'
 
+// `startAt` chega como parede local ("2026-08-15T06:00"), o que o
+// `<input type="datetime-local">` produz e o que a Caqui pensa. A conversão
+// para o instante UTC certo é feita por `instanteLocal`, respeitando o horário
+// de verão da DATA escolhida — não o de hoje.
+const PAREDE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
+
 const criarSchema = z.object({
   tripId: idSchema,
-  startAt: z.coerce.date(),
-  priceCents: z.number().int().min(0),
+  startAt: z.string().regex(PAREDE, 'Data e hora em formato inválido.'),
+  priceCents: z.number().int().min(0).max(100_000_00),
+  compareAtPriceCents: z.number().int().min(0).max(100_000_00).nullable().optional(),
   meetingPoint: z.string().trim().max(300).optional(),
   meetingTimeLocal: z
     .string()
     .regex(/^\d{2}:\d{2}$/, 'Use o formato HH:MM.')
     .optional(),
+  meetingLat: z.number().min(-90).max(90).nullable().optional(),
+  meetingLng: z.number().min(-180).max(180).nullable().optional(),
   internalNotes: z.string().trim().max(2000).optional(),
 })
 
@@ -61,9 +71,12 @@ export const POST = rota(async (request: NextRequest) => {
   const usuario = await exigirPapel(request, ['OWNER', 'ADMIN'])
 
   const corpo: unknown = await request.json().catch(() => null)
-  const dados = validarOuFalhar(criarSchema.safeParse(corpo))
+  const { startAt, ...dados } = validarOuFalhar(criarSchema.safeParse(corpo))
 
-  const nova = await criarSaida(dados, { userId: usuario.userId, ip: ipDaRequest(request) })
+  const nova = await criarSaida(
+    { ...dados, startAt: instanteLocal(startAt) },
+    { userId: usuario.userId, ip: ipDaRequest(request) },
+  )
 
   return ok(nova)
 })

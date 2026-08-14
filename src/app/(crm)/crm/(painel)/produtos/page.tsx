@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { BotaoCadastrarProduto, BotaoEditarProduto } from '@/components/crm/acoes-de-produto'
 import { CabecalhoDeSecao, Painel, Rotulo, Vazio } from '@/components/crm/pecas'
 import { TabelaDeVariantes, type VarianteDoPainel } from '@/components/crm/tabela-de-variantes'
 import { formatarBRL } from '@/lib/money'
@@ -38,6 +39,7 @@ export default async function PaginaProdutos() {
       id: true,
       slug: true,
       name: true,
+      description: true,
       category: true,
       priceCents: true,
       status: true,
@@ -72,6 +74,10 @@ export default async function PaginaProdutos() {
         }
       />
 
+      <div className="mb-4">
+        <BotaoCadastrarProduto />
+      </div>
+
       {produtos.length === 0 ? (
         <Painel>
           <Vazio titulo="Nenhum produto cadastrado">
@@ -104,6 +110,22 @@ export default async function PaginaProdutos() {
                         Rascunho
                       </span>
                     )}
+                    <BotaoEditarProduto
+                      produto={{
+                        id: p.id,
+                        name: p.name,
+                        description: p.description,
+                        category: p.category,
+                        priceCentavos: p.priceCents,
+                        status: p.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT',
+                        variantes: p.variants.map((v) => ({
+                          size: v.size,
+                          colorName: v.colorName,
+                          colorHex: v.colorHex ?? '#000000',
+                          available: v.available,
+                        })),
+                      }}
+                    />
                     <Link
                       href={`/wear/${p.slug}`}
                       target="_blank"

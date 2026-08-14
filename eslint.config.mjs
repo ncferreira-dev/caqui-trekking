@@ -74,7 +74,15 @@ const eslintConfig = defineConfig([
     // qualquer outro arquivo continua sendo erro. Quem quiser renderizar
     // imagem passa pelos componentes que sabem montar `srcset`, `sizes` e o
     // borrão — que é justamente o que a regra existe para garantir.
-    files: ['src/components/midia/imagem.tsx', 'src/components/catalogo/galeria.tsx'],
+    // `zona-de-upload.tsx` entra porque exibe prévia de arquivo LOCAL: um
+    // `object URL` que só existe no navegador, sem passar por Cloudinary nem por
+    // otimizador. `next/image` não sabe servir um `blob:` e reclamaria da falta
+    // de `width`/`height` de uma imagem que ainda nem foi enviada.
+    files: [
+      'src/components/midia/imagem.tsx',
+      'src/components/catalogo/galeria.tsx',
+      'src/components/crm/zona-de-upload.tsx',
+    ],
     rules: {
       '@next/next/no-img-element': 'off',
     },

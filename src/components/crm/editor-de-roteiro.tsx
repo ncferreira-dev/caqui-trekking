@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 
+import { ZonaDeUpload } from '@/components/crm/zona-de-upload'
 import { Button } from '@/components/ui/button'
 import { Input, Select, Textarea } from '@/components/ui/campo'
 import { Modal } from '@/components/ui/dialogo'
@@ -202,14 +203,8 @@ export function EditorDeRoteiro({
           />
         </div>
 
-        {/* ── Foto ────────────────────────────────────────────────────────── */}
-        <div className="border-caqui-rule bg-caqui-sand-100 flex items-center gap-3 border border-dashed px-4 py-3">
-          <span className="text-caqui-ink-500 text-corpo-sm">
-            <strong className="text-caqui-ink-900">Fotos entram depois.</strong> A galeria (várias
-            fotos por roteiro) liga junto com a configuração do Cloudinary. Até lá, a página usa o
-            grafismo da serra no lugar da foto.
-          </span>
-        </div>
+        {/* ── Fotos: a zona de upload com moldura de enquadramento ─────────── */}
+        <ZonaDeUpload max={8} />
 
         {/* ── Onde e quão difícil ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

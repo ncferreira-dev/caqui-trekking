@@ -5,6 +5,7 @@ import { useId, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input, Select, Textarea } from '@/components/ui/campo'
+import { ZonaDeUpload } from '@/components/crm/zona-de-upload'
 import { Modal } from '@/components/ui/dialogo'
 import { useToast } from '@/components/ui/toast'
 import { api, ErroDaApi } from '@/lib/crm/api'
@@ -206,14 +207,8 @@ export function EditorDeProduto({
           rows={3}
         />
 
-        {/* ── Foto: o espaço reservado, honesto ────────────────────────────── */}
-        <div className="border-caqui-rule bg-caqui-sand-100 flex items-center gap-3 border border-dashed px-4 py-3">
-          <span className="text-caqui-ink-500 text-corpo-sm">
-            <strong className="text-caqui-ink-900">Fotos entram depois.</strong> O envio de imagem
-            liga junto com a configuração do Cloudinary. Até lá, a peça aparece na loja com o
-            placeholder da marca.
-          </span>
-        </div>
+        {/* ── Fotos: a zona de upload com moldura de enquadramento ─────────── */}
+        <ZonaDeUpload max={6} />
 
         {/* ── Variantes ────────────────────────────────────────────────────── */}
         <fieldset className="flex flex-col gap-3">

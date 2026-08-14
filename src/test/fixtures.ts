@@ -23,6 +23,7 @@ export async function limparBanco(): Promise<void> {
       "contact_messages",
       "leads",
       "audit_logs",
+      "rate_limit_buckets",
       "users",
       "site_settings"
     RESTART IDENTITY CASCADE

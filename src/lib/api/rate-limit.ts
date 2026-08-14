@@ -1,4 +1,5 @@
 import { AppError, ErrorCode } from '@/lib/api/errors'
+import { prisma } from '@/lib/prisma'
 
 /**
  * Rate limit por IP, em memória, com janela deslizante.
@@ -65,6 +66,69 @@ export function consumirRateLimit(request: Request, opcoes: OpcoesRateLimit): vo
       `Muitas requisições. Tente novamente em ${segundos}s.`,
       { status: 429 },
     )
+  }
+}
+
+/**
+ * Rate limit PERSISTENTE, para as rotas públicas de ESCRITA (contato, leads).
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * POR QUE ESTE EXISTE, SE JÁ HÁ O DE MEMÓRIA ACIMA
+ * ────────────────────────────────────────────────────────────────────────────
+ * O de memória reseta a cada cold start e é por instância: na Vercel, o limite
+ * efetivo virava `limite × nº de instâncias`, e um loop de curl atravessava. As
+ * duas rotas que ESCREVEM sem autenticação (contato e leads) precisam de um
+ * teto que sobreviva a restart e seja compartilhado. O login não usa este — ele
+ * já tem o bloqueio por conta no banco (auth-service); e o cart-validate não
+ * usa porque só LÊ, e é chamado a cada toque de quantidade: uma escrita por
+ * toque seria o abuso que estamos evitando.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * JANELA FIXA COM INCREMENTO ATÔMICO
+ * ────────────────────────────────────────────────────────────────────────────
+ * Uma linha por (chave, janelaInicio). O `increment` do Prisma compila para
+ * `SET contagem = contagem + 1`, atômico sob o lock de linha do Postgres —
+ * então dois pedidos concorrentes NÃO escapam pela brecha clássica do
+ * "conta, depois insere". E um IP já bloqueado só incrementa o mesmo contador:
+ * nem sob flood a tabela ganha linha nova, que é justamente a inflação que a
+ * rota precisa impedir.
+ *
+ * A janela é FIXA, não deslizante: um atacante pode mandar `limite` no fim de
+ * uma janela e `limite` no início da seguinte. Para um teto anti-abuso de
+ * formulário isso é aceitável, e custa uma linha — não uma máquina de Redis.
+ * O dia em que a força bruta virar o risco (não é o caso de um formulário de
+ * contato), a troca é por um contador deslizante em Redis, sem mexer nas rotas.
+ */
+export async function consumirRateLimitPersistente(
+  request: Request,
+  opcoes: OpcoesRateLimit,
+): Promise<void> {
+  const agora = Date.now()
+  const janelaInicio = BigInt(agora - (agora % opcoes.janelaMs))
+  const chave = `${opcoes.balde}:${extrairIp(request)}`
+
+  const { contagem } = await prisma.rateLimitBucket.upsert({
+    where: { chave_janelaInicio: { chave, janelaInicio } },
+    create: { chave, janelaInicio, contagem: 1 },
+    update: { contagem: { increment: 1 } },
+    select: { contagem: true },
+  })
+
+  if (contagem > opcoes.limite) {
+    const segundos = Math.ceil((Number(janelaInicio) + opcoes.janelaMs - agora) / 1000)
+    throw new AppError(
+      ErrorCode.RATE_LIMITED,
+      `Muitas requisições. Tente novamente em ${segundos}s.`,
+      { status: 429 },
+    )
+  }
+
+  // Poda oportunista: sem cron, a limpeza pega carona em ~2% dos pedidos e
+  // apaga baldes de janelas já encerradas (todas as chaves que usam este
+  // caminho compartilham o tamanho de janela, então `< janelaInicio` só
+  // alcança janela passada). O índice em `janelaInicio` cobre o DELETE.
+  if (Math.random() < 0.02) {
+    await prisma.rateLimitBucket.deleteMany({ where: { janelaInicio: { lt: janelaInicio } } })
   }
 }
 

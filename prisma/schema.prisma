@@ -585,3 +585,25 @@ model ContactMessage {
   @@index([tripId])
   @@map("contact_messages")
 }
+
+/// Backstop de rate-limit PERSISTENTE das rotas públicas de escrita (contato,
+/// leads). O contador em memória de `src/lib/api/rate-limit.ts` reseta a cada
+/// cold start serverless, então em produção o limite efetivo virava
+/// `limite × nº de instâncias`; este vive no Postgres e sobrevive a isso.
+///
+/// Janela FIXA: uma linha por (chave, janelaInicio). Nem um flood infla a
+/// tabela — o pedido de um IP já bloqueado só incrementa o mesmo contador, sem
+/// criar linha nova. Ver a explicação completa em `rate-limit.ts`.
+model RateLimitBucket {
+  /// `balde:ip` — ex.: "contact:203.0.113.7".
+  chave String @db.VarChar(160)
+
+  /// Início do balde, em epoch-ms truncado ao tamanho da janela.
+  janelaInicio BigInt
+
+  contagem Int @default(0)
+
+  @@id([chave, janelaInicio])
+  @@index([janelaInicio])
+  @@map("rate_limit_buckets")
+}

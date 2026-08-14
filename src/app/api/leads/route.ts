@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
-import { consumirRateLimit } from '@/lib/api/rate-limit'
+import { consumirRateLimitPersistente } from '@/lib/api/rate-limit'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
 import { leadSchema } from '@/lib/api/schemas'
 import { criarLead } from '@/server/services/captura-service'
@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic'
  * Uso principal: o "Avise-me" da saída esgotada.
  */
 export const POST = rota(async (request: NextRequest) => {
-  consumirRateLimit(request, { balde: 'leads', limite: 10, janelaMs: 10 * 60_000 })
+  await consumirRateLimitPersistente(request, { balde: 'leads', limite: 10, janelaMs: 10 * 60_000 })
 
   const corpo: unknown = await request.json().catch(() => null)
   const dados = validarOuFalhar(leadSchema.safeParse(corpo))

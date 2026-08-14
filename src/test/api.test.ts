@@ -538,6 +538,38 @@ describe('Rotas institucionais e de captura', () => {
     expect(corpo.error.code).toBe('RATE_LIMITED')
   })
 
+  it('o rate limit do contato é PERSISTENTE: sobrevive ao restart da instância', async () => {
+    // Nasce como prova do backstop de 14/08/2026. Antes dele o contador vivia só
+    // na memória do processo e, na Vercel, resetava a cada cold start — o limite
+    // efetivo virava `limite × instâncias`. Aqui a memória é ZERADA de propósito
+    // no meio (simulando a outra instância / o restart) e o bloqueio precisa
+    // continuar de pé, porque quem o segura agora é o Postgres. No código antigo
+    // o 6º pedido, depois do reset, voltaria 201.
+    const enviar = (): Promise<Response> =>
+      criarContatoRota(
+        post(
+          '/api/contact',
+          { nome: 'Fulano', mensagem: 'Mensagem de teste com tamanho suficiente.' },
+          { 'x-forwarded-for': '203.0.113.11' },
+        ) as never,
+      )
+
+    for (let i = 0; i < 5; i++) expect((await enviar()).status).toBe(201)
+
+    // A instância "reinicia": a memória some, o banco permanece.
+    _resetRateLimit()
+
+    expect((await enviar()).status).toBe(429)
+
+    // E é o Postgres que segura: UMA linha para o IP (nem sob flood vira várias),
+    // com a contagem acima do teto.
+    const baldes = await prisma.rateLimitBucket.findMany({
+      where: { chave: { startsWith: 'contact:' } },
+    })
+    expect(baldes).toHaveLength(1)
+    expect(baldes[0]!.contagem).toBeGreaterThan(5)
+  })
+
   it('POST /api/leads exige consentimento explícito', async () => {
     const semConsentimento = await criarLeadRota(
       post('/api/leads', {

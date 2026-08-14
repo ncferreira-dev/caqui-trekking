@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import { Archivo_Black, DM_Mono, DM_Sans } from 'next/font/google'
 
@@ -67,7 +68,16 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       lang="pt-BR"
       className={`${display.variable} ${corpo.variable} ${dados.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-white">{children}</body>
+      <body className="flex min-h-full flex-col bg-white">
+        {children}
+        {/* Vercel Analytics: SEM cookie, sem banner de consentimento — foi por
+            isso que ele foi escolhido em vez do GA4. Ele cobre sozinho o evento
+            "ver roteiro" do briefing, que é uma visita de página; os eventos de
+            conversão (adicionar à mochila, finalizar) são disparados à mão com
+            `track`, nos componentes onde acontecem. Fora da Vercel ele é inerte,
+            então não faz nada em `localhost`. */}
+        <Analytics />
+      </body>
     </html>
   )
 }

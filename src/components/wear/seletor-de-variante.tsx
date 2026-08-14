@@ -7,6 +7,7 @@ import { useMochila } from '@/components/carrinho/contexto'
 import { TabelaDeMedidas } from '@/components/wear/tabela-de-medidas'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { eventoAdicionarAMochila } from '@/lib/analytics'
 import { lineIdDeVariante, useCarrinho } from '@/lib/carrinho/store'
 import { ordenarTamanhos, rotuloDeTamanho } from '@/lib/formato'
 import { formatarBRL } from '@/lib/money'
@@ -84,6 +85,11 @@ export function SeletorDeVariante({ produto }: { produto: ProdutoDetalheDTO }) {
       tipo: 'WEAR',
       variantId: selecionada.id,
       quantidade,
+    })
+
+    eventoAdicionarAMochila({
+      tipo: 'WEAR',
+      item: `${produto.nome}: ${rotuloDeTamanho(selecionada.tamanho)} · ${selecionada.cor}`,
     })
 
     setAdicionada(true)

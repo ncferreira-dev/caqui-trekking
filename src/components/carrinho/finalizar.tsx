@@ -1,7 +1,8 @@
 'use client'
 
 import { classesDeBotao } from '@/components/ui/button'
-import { montarMensagem } from '@/lib/carrinho/mensagem'
+import { eventoFinalizarNoWhatsApp } from '@/lib/analytics'
+import { itensQueVaoNaMensagem, montarMensagem } from '@/lib/carrinho/mensagem'
 import { linkWhatsApp } from '@/lib/formato'
 import type { ResultadoValidacao } from '@/server/services/cart-service'
 
@@ -81,12 +82,20 @@ export function Finalizar({
     )
   }
 
+  const itens = itensQueVaoNaMensagem(resultado)
+  const totalCentavos = itens.reduce((soma, i) => soma + i.subtotalCentavos, 0)
+
   return (
     <div className="flex flex-col gap-3">
       <a
         href={linkWhatsApp(whatsapp, montarMensagem(template ?? '', resultado))}
         target="_blank"
         rel="noopener noreferrer"
+        // O clique é o último passo do funil que o site consegue medir: o que
+        // acontece depois é a conversa no WhatsApp, fora do alcance. `onClick`
+        // dispara antes da navegação, então o evento sai mesmo com o link
+        // levando a aba embora.
+        onClick={() => eventoFinalizarNoWhatsApp({ itens: itens.length, totalCentavos })}
         className={classesDeBotao({ tamanho: 'lg', bloco: true })}
       >
         <span>Finalizar no WhatsApp</span>

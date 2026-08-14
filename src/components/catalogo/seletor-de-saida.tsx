@@ -7,6 +7,7 @@ import { AviseMe } from '@/components/catalogo/avise-me'
 import { BadgeDisponibilidade } from '@/components/ui/badge'
 import { Button, classesDeBotao } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { eventoAdicionarAMochila } from '@/lib/analytics'
 import { lineIdDeSaida, useCarrinho } from '@/lib/carrinho/store'
 import { diaEMes } from '@/lib/datetime'
 import { linkWhatsApp } from '@/lib/formato'
@@ -99,6 +100,11 @@ export function SeletorDeSaida({
       tipo: 'DEPARTURE',
       departureId: selecionada.id,
       quantidade,
+    })
+
+    eventoAdicionarAMochila({
+      tipo: 'DEPARTURE',
+      item: `${tituloDoRoteiro} · ${diaEMes(new Date(selecionada.inicioUtc))}`,
     })
 
     setAdicionada(true)

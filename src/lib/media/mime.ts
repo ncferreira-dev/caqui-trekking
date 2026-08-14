@@ -86,9 +86,3 @@ export function detectarFormato(bytes: Uint8Array): FormatoAceito | null {
 
   return null
 }
-
-/** `image/jpeg` etc. — `null` quando o formato não é aceito. */
-export function detectarMime(bytes: Uint8Array): string | null {
-  const formato = detectarFormato(bytes)
-  return formato ? MIME_POR_FORMATO[formato] : null
-}

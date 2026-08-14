@@ -104,8 +104,3 @@ export const AUTORIZACAO: Record<ChaveDeRota, RegraDeRota> = {
   // Criar usuário é criar acesso. Só OWNER, sem exceção.
   users: { GET: SO_OWNER, POST: SO_OWNER },
 }
-
-/** Os papéis que podem chamar `metodo` em `chave`. `null` = fora da tabela. */
-export function papeisPermitidos(chave: ChaveDeRota, metodo: Metodo): readonly Papel[] | null {
-  return AUTORIZACAO[chave]?.[metodo] ?? null
-}

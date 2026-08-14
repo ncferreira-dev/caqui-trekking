@@ -136,7 +136,3 @@ function statusPadrao(code: ErrorCode): number {
       return 500
   }
 }
-
-export function naoEncontrado(code: ErrorCode, mensagem: string): AppError {
-  return new AppError(code, mensagem, { status: 404 })
-}

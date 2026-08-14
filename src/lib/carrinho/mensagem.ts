@@ -27,9 +27,6 @@ import type { ItemValidado, ResultadoValidacao } from '@/server/services/cart-se
  * O que ele conhece são os dois marcadores: `{{itens}}` e `{{total}}`.
  */
 
-/** Os marcadores que o template pode usar. Qualquer outro passa intacto. */
-export const MARCADORES = ['{{itens}}', '{{total}}'] as const
-
 /**
  * Fallback usado quando o template do banco não tem `{{itens}}`.
  *

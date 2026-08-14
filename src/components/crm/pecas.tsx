@@ -104,28 +104,6 @@ export function Aviso({
   )
 }
 
-/**
- * Tabela que vira lista no celular.
- *
- * Tabela de verdade em 375px ou estoura a largura ou fica com 9px de fonte.
- * Aqui a marcação continua sendo `<table>` — semântica preservada para leitor
- * de tela e para o teclado — e o CSS a reorganiza: em `lg` é grade; abaixo,
- * cada linha vira um bloco empilhado.
- *
- * Rolagem horizontal foi descartada: rolar a tabela para o lado com o polegar
- * enquanto a página rola para baixo é o gesto mais frustrante que existe em
- * painel de celular.
- */
-export function ListaResponsiva({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string
-}) {
-  return <div className={cn('divide-caqui-rule divide-y', className)}>{children}</div>
-}
-
 export function Vazio({
   titulo,
   children,

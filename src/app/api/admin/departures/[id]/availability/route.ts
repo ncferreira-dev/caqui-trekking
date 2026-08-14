@@ -11,10 +11,12 @@ export const dynamic = 'force-dynamic'
 
 type Contexto = { params: Promise<{ id: string }> }
 
-const corpoSchema = z.object({
-  disponibilidade: z.enum(['AVAILABLE', 'LAST_SPOTS', 'SOLD_OUT']),
-  motivo: z.string().trim().max(300).optional(),
-})
+const corpoSchema = z
+  .object({
+    disponibilidade: z.enum(['AVAILABLE', 'LAST_SPOTS', 'SOLD_OUT']),
+    motivo: z.string().trim().max(300).optional(),
+  })
+  .strict()
 
 /**
  * PATCH /api/admin/departures/:id/availability

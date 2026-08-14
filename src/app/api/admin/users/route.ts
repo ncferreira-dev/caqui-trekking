@@ -19,12 +19,14 @@ export const dynamic = 'force-dynamic'
  * se tornar irremovível — por isso a porta é mais estreita.
  */
 
-const criarSchema = z.object({
-  nome: z.string().trim().min(2).max(150),
-  email: z.string().trim().toLowerCase().email().max(255),
-  senha: z.string().min(12, 'A senha precisa ter pelo menos 12 caracteres.').max(200),
-  role: z.enum(['OWNER', 'ADMIN']).default('ADMIN'),
-})
+const criarSchema = z
+  .object({
+    nome: z.string().trim().min(2).max(150),
+    email: z.string().trim().toLowerCase().email().max(255),
+    senha: z.string().min(12, 'A senha precisa ter pelo menos 12 caracteres.').max(200),
+    role: z.enum(['OWNER', 'ADMIN']).default('ADMIN'),
+  })
+  .strict()
 
 /** GET /api/admin/users — nunca devolve `passwordHash`. */
 export const GET = rota(async (request: Request) => {

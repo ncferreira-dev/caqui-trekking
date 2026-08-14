@@ -11,37 +11,39 @@ export const dynamic = 'force-dynamic'
 
 type Contexto = { params: Promise<{ id: string }> }
 
-const atualizarSchema = z.object({
-  title: z.string().trim().min(3).max(200).optional(),
-  subtitle: z.string().trim().max(300).nullable().optional(),
-  description: z.string().trim().min(10).optional(),
-  city: z.string().trim().min(2).max(120).optional(),
-  state: z.string().trim().length(2).optional(),
-  region: z.string().trim().max(120).nullable().optional(),
-  difficulty: z.enum(['FACIL', 'MODERADO', 'DIFICIL', 'EXTREMO']).optional(),
-  // Decimal com vírgula ou ponto vira string "8.50" — é o formato que o Prisma
-  // aceita para a coluna Decimal sem passar por ponto flutuante. O regex barra
-  // texto livre; o serviço grava como está.
-  distanceKm: z
-    .string()
-    .regex(/^\d{1,3}([.,]\d{1,2})?$/, 'Distância em km, ex.: 8.5')
-    .transform((s) => s.replace(',', '.'))
-    .nullable()
-    .optional(),
-  elevationGainM: z.number().int().min(0).nullable().optional(),
-  maxAltitudeM: z.number().int().min(0).nullable().optional(),
-  durationMinutes: z.number().int().min(0).nullable().optional(),
-  minAge: z.number().int().min(0).max(120).nullable().optional(),
-  requiresExperience: z.boolean().optional(),
-  highlights: z.array(z.string().trim().max(200)).max(20).optional(),
-  included: z.array(z.string().trim().max(200)).max(30).optional(),
-  notIncluded: z.array(z.string().trim().max(200)).max(30).optional(),
-  whatToBring: z.array(z.string().trim().max(200)).max(30).optional(),
-  cancellationPolicy: z.string().trim().max(5000).nullable().optional(),
-  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
-  featured: z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
-})
+const atualizarSchema = z
+  .object({
+    title: z.string().trim().min(3).max(200).optional(),
+    subtitle: z.string().trim().max(300).nullable().optional(),
+    description: z.string().trim().min(10).optional(),
+    city: z.string().trim().min(2).max(120).optional(),
+    state: z.string().trim().length(2).optional(),
+    region: z.string().trim().max(120).nullable().optional(),
+    difficulty: z.enum(['FACIL', 'MODERADO', 'DIFICIL', 'EXTREMO']).optional(),
+    // Decimal com vírgula ou ponto vira string "8.50" — é o formato que o Prisma
+    // aceita para a coluna Decimal sem passar por ponto flutuante. O regex barra
+    // texto livre; o serviço grava como está.
+    distanceKm: z
+      .string()
+      .regex(/^\d{1,3}([.,]\d{1,2})?$/, 'Distância em km, ex.: 8.5')
+      .transform((s) => s.replace(',', '.'))
+      .nullable()
+      .optional(),
+    elevationGainM: z.number().int().min(0).nullable().optional(),
+    maxAltitudeM: z.number().int().min(0).nullable().optional(),
+    durationMinutes: z.number().int().min(0).nullable().optional(),
+    minAge: z.number().int().min(0).max(120).nullable().optional(),
+    requiresExperience: z.boolean().optional(),
+    highlights: z.array(z.string().trim().max(200)).max(20).optional(),
+    included: z.array(z.string().trim().max(200)).max(30).optional(),
+    notIncluded: z.array(z.string().trim().max(200)).max(30).optional(),
+    whatToBring: z.array(z.string().trim().max(200)).max(30).optional(),
+    cancellationPolicy: z.string().trim().max(5000).nullable().optional(),
+    status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
+    featured: z.boolean().optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .strict()
 
 /**
  * PATCH /api/admin/trips/:id — editar, publicar, arquivar, destacar, reordenar.

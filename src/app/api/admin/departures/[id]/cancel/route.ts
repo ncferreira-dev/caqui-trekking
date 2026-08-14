@@ -11,10 +11,12 @@ export const dynamic = 'force-dynamic'
 
 type Contexto = { params: Promise<{ id: string }> }
 
-const corpoSchema = z.object({
-  /** Vai para a auditoria, não para o cliente. Ninguém cancela "por nada". */
-  motivo: z.string().trim().max(300).optional(),
-})
+const corpoSchema = z
+  .object({
+    /** Vai para a auditoria, não para o cliente. Ninguém cancela "por nada". */
+    motivo: z.string().trim().max(300).optional(),
+  })
+  .strict()
 
 /**
  * POST /api/admin/departures/:id/cancel

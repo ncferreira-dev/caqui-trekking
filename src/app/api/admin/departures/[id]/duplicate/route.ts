@@ -11,10 +11,12 @@ export const dynamic = 'force-dynamic'
 
 type Contexto = { params: Promise<{ id: string }> }
 
-const corpoSchema = z.object({
-  /** Omitido = usa a data equivalente sugerida no mês seguinte. */
-  novaData: z.coerce.date().optional(),
-})
+const corpoSchema = z
+  .object({
+    /** Omitido = usa a data equivalente sugerida no mês seguinte. */
+    novaData: z.coerce.date().optional(),
+  })
+  .strict()
 
 /**
  * POST /api/admin/departures/:id/duplicate

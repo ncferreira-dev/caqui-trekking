@@ -9,10 +9,12 @@ import { autenticar } from '@/server/services/auth-service'
 
 export const dynamic = 'force-dynamic'
 
-const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email().max(255),
-  senha: z.string().min(1).max(200),
-})
+const loginSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email().max(255),
+    senha: z.string().min(1).max(200),
+  })
+  .strict()
 
 /**
  * POST /api/auth/login

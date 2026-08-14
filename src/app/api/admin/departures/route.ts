@@ -18,20 +18,22 @@ export const dynamic = 'force-dynamic'
 // de verão da DATA escolhida — não o de hoje.
 const PAREDE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
 
-const criarSchema = z.object({
-  tripId: idSchema,
-  startAt: z.string().regex(PAREDE, 'Data e hora em formato inválido.'),
-  priceCents: z.number().int().min(0).max(100_000_00),
-  compareAtPriceCents: z.number().int().min(0).max(100_000_00).nullable().optional(),
-  meetingPoint: z.string().trim().max(300).optional(),
-  meetingTimeLocal: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, 'Use o formato HH:MM.')
-    .optional(),
-  meetingLat: z.number().min(-90).max(90).nullable().optional(),
-  meetingLng: z.number().min(-180).max(180).nullable().optional(),
-  internalNotes: z.string().trim().max(2000).optional(),
-})
+const criarSchema = z
+  .object({
+    tripId: idSchema,
+    startAt: z.string().regex(PAREDE, 'Data e hora em formato inválido.'),
+    priceCents: z.number().int().min(0).max(100_000_00),
+    compareAtPriceCents: z.number().int().min(0).max(100_000_00).nullable().optional(),
+    meetingPoint: z.string().trim().max(300).optional(),
+    meetingTimeLocal: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, 'Use o formato HH:MM.')
+      .optional(),
+    meetingLat: z.number().min(-90).max(90).nullable().optional(),
+    meetingLng: z.number().min(-180).max(180).nullable().optional(),
+    internalNotes: z.string().trim().max(2000).optional(),
+  })
+  .strict()
 
 /**
  * GET /api/admin/departures

@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 
 type Contexto = { params: Promise<{ id: string }> }
 
-const corpoSchema = z.object({ disponivel: z.boolean() })
+const corpoSchema = z.object({ disponivel: z.boolean() }).strict()
 
 /**
  * PATCH /api/admin/variants/:id

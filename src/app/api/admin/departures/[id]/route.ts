@@ -23,20 +23,22 @@ type Contexto = { params: Promise<{ id: string }> }
  */
 const PAREDE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
 
-const atualizarSchema = z.object({
-  startAt: z.string().regex(PAREDE, 'Data e hora em formato inválido.').optional(),
-  priceCents: z.number().int().min(0).max(100_000_00).optional(),
-  compareAtPriceCents: z.number().int().min(0).max(100_000_00).nullable().optional(),
-  meetingPoint: z.string().trim().max(300).nullable().optional(),
-  meetingTimeLocal: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, 'Horário em formato HH:MM.')
-    .nullable()
-    .optional(),
-  meetingLat: z.number().min(-90).max(90).nullable().optional(),
-  meetingLng: z.number().min(-180).max(180).nullable().optional(),
-  status: z.enum(['DRAFT', 'PUBLISHED']).optional(),
-})
+const atualizarSchema = z
+  .object({
+    startAt: z.string().regex(PAREDE, 'Data e hora em formato inválido.').optional(),
+    priceCents: z.number().int().min(0).max(100_000_00).optional(),
+    compareAtPriceCents: z.number().int().min(0).max(100_000_00).nullable().optional(),
+    meetingPoint: z.string().trim().max(300).nullable().optional(),
+    meetingTimeLocal: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, 'Horário em formato HH:MM.')
+      .nullable()
+      .optional(),
+    meetingLat: z.number().min(-90).max(90).nullable().optional(),
+    meetingLng: z.number().min(-180).max(180).nullable().optional(),
+    status: z.enum(['DRAFT', 'PUBLISHED']).optional(),
+  })
+  .strict()
 
 /**
  * PATCH /api/admin/departures/:id — editar data, preço, ponto e status.

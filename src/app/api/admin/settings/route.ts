@@ -12,28 +12,53 @@ import { ipDaRequest } from '@/server/services/audit-service'
 
 export const dynamic = 'force-dynamic'
 
-const settingsSchema = z.object({
-  whatsappNumber: z
-    .string()
-    .regex(/^\d{12,13}$/, 'Só dígitos, com DDI e DDD. Ex.: 5511943017232')
-    .optional(),
-  whatsappMessageTemplate: z.string().min(10).max(2000).optional(),
-  instagramTrekking: z.string().max(100).nullable().optional(),
-  instagramWear: z.string().max(100).nullable().optional(),
-  linktree: z.string().max(255).nullable().optional(),
-  email: z.string().email().max(255).nullable().optional(),
-  cadasturNumber: z.string().max(50).nullable().optional(),
-  pesmCredentials: z.string().max(255).nullable().optional(),
-  heroTitle: z.string().max(200).nullable().optional(),
-  heroSubtitle: z.string().max(300).nullable().optional(),
-  aboutText: z.string().max(5000).nullable().optional(),
-})
+const settingsSchema = z
+  .object({
+    whatsappNumber: z
+      .string()
+      .regex(/^\d{12,13}$/, 'Só dígitos, com DDI e DDD. Ex.: 5511943017232')
+      .optional(),
+    whatsappMessageTemplate: z.string().min(10).max(2000).optional(),
+    instagramTrekking: z.string().max(100).nullable().optional(),
+    instagramWear: z.string().max(100).nullable().optional(),
+    linktree: z.string().max(255).nullable().optional(),
+    email: z.string().email().max(255).nullable().optional(),
+    cadasturNumber: z.string().max(50).nullable().optional(),
+    pesmCredentials: z.string().max(255).nullable().optional(),
+    heroTitle: z.string().max(200).nullable().optional(),
+    heroSubtitle: z.string().max(300).nullable().optional(),
+    aboutText: z.string().max(5000).nullable().optional(),
+  })
+  .strict()
 
 /** GET /api/admin/settings — inclui a lista de placeholders válidos. */
 export const GET = rota(async (request: Request) => {
   await exigirPapel(request, ['OWNER', 'ADMIN'])
 
-  const settings = await prisma.siteSetting.findUnique({ where: { id: 1 } })
+  // Select explícito, espelhando as colunas atuais de SiteSetting. É idêntico
+  // ao findUnique sem projeção HOJE; a diferença aparece amanhã: uma coluna
+  // interna nova não vaza sozinha para o cliente do CRM — quem quiser expô-la
+  // decide aqui, por escrito. Mesmo invariante da rota pública (public-dto.ts:
+  // "res.json(registroDoBanco) é PROIBIDO").
+  const settings = await prisma.siteSetting.findUnique({
+    where: { id: 1 },
+    select: {
+      id: true,
+      whatsappNumber: true,
+      whatsappMessageTemplate: true,
+      instagramTrekking: true,
+      instagramWear: true,
+      linktree: true,
+      email: true,
+      cadasturNumber: true,
+      pesmCredentials: true,
+      heroTitle: true,
+      heroSubtitle: true,
+      aboutText: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  })
 
   return ok({ settings, placeholdersValidos: PLACEHOLDERS_VALIDOS })
 })

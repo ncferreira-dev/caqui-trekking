@@ -40,7 +40,7 @@ export const GET = rota(async (request: NextRequest) => {
   })
 })
 
-const marcarSchema = z.object({ id: idSchema, lida: z.boolean() })
+const marcarSchema = z.object({ id: idSchema, lida: z.boolean() }).strict()
 
 /** PATCH /api/admin/messages — marca como lida. */
 export const PATCH = rota(async (request: NextRequest) => {

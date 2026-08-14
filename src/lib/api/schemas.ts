@@ -119,13 +119,15 @@ export const validarCarrinhoSchema = z.object({
 })
 
 /** Corpo de `POST /api/contact`. */
-export const contatoSchema = z.object({
-  nome: z.string().trim().min(2).max(150),
-  email: z.string().trim().email().max(255).optional(),
-  telefone: z.string().trim().min(8).max(20).optional(),
-  mensagem: z.string().trim().min(10).max(2000),
-  tripSlug: slugSchema.optional(),
-})
+export const contatoSchema = z
+  .object({
+    nome: z.string().trim().min(2).max(150),
+    email: z.string().trim().email().max(255).optional(),
+    telefone: z.string().trim().min(8).max(20).optional(),
+    mensagem: z.string().trim().min(10).max(2000),
+    tripSlug: slugSchema.optional(),
+  })
+  .strict()
 
 /**
  * Corpo de `POST /api/leads`.
@@ -144,6 +146,7 @@ export const leadSchema = z
       message: 'É necessário consentir com o uso dos dados.',
     }),
   })
+  .strict()
   .refine((d) => Boolean(d.email ?? d.telefone), {
     message: 'Informe ao menos um e-mail ou telefone.',
     path: ['email'],
@@ -164,6 +167,7 @@ export const donoDeMidiaSchema = z
     productId: idSchema.optional(),
     guideId: idSchema.optional(),
   })
+  .strict()
   .refine(
     (d) => [d.tripId, d.productId, d.guideId].filter((v) => v !== undefined).length === 1,
     'Informe exatamente um dono: tripId, productId ou guideId.',
@@ -183,24 +187,35 @@ export const donoDeMidiaSchema = z
  */
 export const altSchema = z.string().max(300, 'O texto alternativo tem no máximo 300 caracteres.')
 
-export const reordenarMidiaSchema = z.object({
-  tripId: idSchema.optional(),
-  productId: idSchema.optional(),
-  guideId: idSchema.optional(),
-  /** Manifesto COMPLETO da galeria. O primeiro id é a imagem principal. */
-  ids: z.array(idSchema).min(1).max(100),
-})
+export const reordenarMidiaSchema = z
+  .object({
+    tripId: idSchema.optional(),
+    productId: idSchema.optional(),
+    guideId: idSchema.optional(),
+    /** Manifesto COMPLETO da galeria. O primeiro id é a imagem principal. */
+    ids: z.array(idSchema).min(1).max(100),
+  })
+  .strict()
 
-export const atualizarAltSchema = z.object({ alt: altSchema })
+export const atualizarAltSchema = z.object({ alt: altSchema }).strict()
 
 // ─── Tags ────────────────────────────────────────────────────────────────────
 
-export const criarTagSchema = z.object({
-  slug: slugSchema,
-  label: z.string().trim().min(2).max(80),
-  icone: z.string().trim().max(60).nullable().optional(),
-})
+export const criarTagSchema = z
+  .object({
+    slug: slugSchema,
+    label: z.string().trim().min(2).max(80),
+    icone: z.string().trim().max(60).nullable().optional(),
+  })
+  .strict()
 
+// Sem `.strict()`, de propósito — e é o único schema de corpo assim. O `slug`
+// é campo CONHECIDO e IMUTÁVEL: o editor de tag pode mandá-lo junto, e a regra
+// é tolerar e ignorar, não recusar. Mudar o slug em silêncio quebraria o que
+// já está indexado (`/expedicoes?tag=rapel`) e os filtros salvos — então ele
+// simplesmente não entra na atualização. O teste "edita label sem deixar mexer
+// no slug" (media.test.ts) trava esse comportamento; strict o transformaria em
+// 400 e contrariaria a decisão.
 export const atualizarTagSchema = z.object({
   label: z.string().trim().min(2).max(80).optional(),
   icone: z.string().trim().max(60).nullable().optional(),

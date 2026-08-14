@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 
 import { EditorDeTemplate } from '@/components/crm/editor-de-template'
+import { FormularioDeContato } from '@/components/crm/formulario-de-contato'
 import { Aviso, CabecalhoDeSecao, Painel, Rotulo } from '@/components/crm/pecas'
 import { dataCurta } from '@/lib/datetime'
-import { telefoneBR } from '@/lib/formato'
 import { prisma } from '@/lib/prisma'
 import { PLACEHOLDERS_VALIDOS } from '@/server/services/admin/content-admin-service'
 import { exigirSessaoDaPagina } from '@/server/crm/sessao-da-pagina'
@@ -74,24 +74,20 @@ export default async function PaginaConfig() {
       <CabecalhoDeSecao titulo="Configurações" descricao="O que o site mostra em nome da Caqui." />
 
       <div className="flex flex-col gap-4">
-        <Painel titulo="Contato">
-          <dl className="divide-caqui-rule divide-y">
-            <Linha rotulo="WhatsApp" valor={telefoneBR(settings.whatsappNumber)} />
-            <Linha rotulo="E-mail" valor={settings.email} />
-            <Linha rotulo="Instagram Trekking" valor={settings.instagramTrekking} />
-            <Linha rotulo="Instagram Wear" valor={settings.instagramWear} />
-            <Linha rotulo="Cadastur" valor={settings.cadasturNumber} />
-            <Linha rotulo="PESM" valor={settings.pesmCredentials} />
-          </dl>
-        </Painel>
-
-        <Painel titulo="Textos do site">
-          <dl className="divide-caqui-rule divide-y">
-            <Linha rotulo="Título do herói" valor={settings.heroTitle} />
-            <Linha rotulo="Subtítulo" valor={settings.heroSubtitle} />
-            <Linha rotulo="Sobre" valor={settings.aboutText} />
-          </dl>
-        </Painel>
+        <FormularioDeContato
+          inicial={{
+            whatsappNumber: settings.whatsappNumber,
+            email: settings.email,
+            instagramTrekking: settings.instagramTrekking,
+            instagramWear: settings.instagramWear,
+            linktree: settings.linktree,
+            cadasturNumber: settings.cadasturNumber,
+            pesmCredentials: settings.pesmCredentials,
+            heroTitle: settings.heroTitle,
+            heroSubtitle: settings.heroSubtitle,
+            aboutText: settings.aboutText,
+          }}
+        />
 
         {/* ── O template, com prévia ao vivo ─────────────────────────────── */}
         <Painel
@@ -131,26 +127,7 @@ export default async function PaginaConfig() {
             </ul>
           </Painel>
         )}
-
-        <Aviso tom="neutro" titulo="Edição de contato e textos ainda é pelo banco">
-          <p>
-            O formulário destes campos entra junto com o upload de imagem, no PROMPT 11: os dois
-            dependem da mesma coisa: o Cloudinary configurado. O template acima já salva porque não
-            depende de storage. Ver docs/10-crm.md.
-          </p>
-        </Aviso>
       </div>
     </>
-  )
-}
-
-function Linha({ rotulo, valor }: { rotulo: string; valor: string | null }) {
-  return (
-    <div className="flex flex-wrap items-baseline gap-x-3 px-4 py-2.5">
-      <dt className="text-caqui-ink-500 text-micro w-40 shrink-0 font-mono uppercase">{rotulo}</dt>
-      <dd className={valor ? 'text-corpo-sm' : 'text-caqui-danger text-micro font-mono uppercase'}>
-        {valor ?? 'a preencher'}
-      </dd>
-    </div>
   )
 }

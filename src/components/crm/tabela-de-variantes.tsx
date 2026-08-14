@@ -143,7 +143,7 @@ export function TabelaDeVariantes({
               {disponivel ? 'Marcar esgotada' : 'Voltar a vender'}
               <span className="sr-only">
                 {' '}
-                — {v.tamanho === 'UNICO' ? 'tamanho único' : v.tamanho}, {v.cor}
+                · {v.tamanho === 'UNICO' ? 'tamanho único' : v.tamanho}, {v.cor}
               </span>
             </button>
           </li>

@@ -10,6 +10,7 @@ import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { Acordeao, AcordeaoItem } from '@/components/ui/acordeao'
 import { BadgeDificuldade, Etiqueta } from '@/components/ui/badge'
 import { Ficha } from '@/components/ui/card'
+import { Compartilhar } from '@/components/ui/compartilhar'
 import { AppError } from '@/lib/api/errors'
 import { formatarDuracao, rotuloDificuldade } from '@/lib/formato'
 import { buscarSettings } from '@/server/services/institucional-service'
@@ -100,12 +101,22 @@ export default async function PaginaDoRoteiro({ params }: PageProps<'/trekking/[
       <div className="mx-auto w-full max-w-7xl px-5 pt-14 pb-16 sm:px-8">
         <Galeria imagens={trip.imagens} titulo={trip.titulo} />
 
-        <div className="mt-8 flex flex-wrap gap-2">
+        <div className="mt-8 flex flex-wrap items-center gap-2">
           <BadgeDificuldade nivel={trip.dificuldade as Dificuldade} />
           {trip.tags.map((tag) => (
             <Etiqueta key={tag.slug}>{tag.label}</Etiqueta>
           ))}
           {trip.exigeExperiencia && <Etiqueta tom="mata">Exige experiência prévia</Etiqueta>}
+
+          {/* Fica junto das etiquetas, e não no rodapé da página: quem decide
+              chamar o grupo decide no começo, olhando a dificuldade e a data.
+              Botão de compartilhar no fim só é encontrado por quem já leu tudo,
+              que é justamente quem já decidiu sozinho. */}
+          <Compartilhar
+            className="ml-auto"
+            titulo={trip.titulo}
+            texto={`${trip.titulo}, com a Caqui Trekking em ${trip.cidade}/${trip.estado}.`}
+          />
         </div>
 
         <Ficha
@@ -170,7 +181,7 @@ export default async function PaginaDoRoteiro({ params }: PageProps<'/trekking/[
                 <AcordeaoItem grupo="preparo" titulo="O que está incluso" abertoPorPadrao>
                   <ListaSimples
                     itens={trip.incluso}
-                    vazio="A combinar na conversa — chame no WhatsApp."
+                    vazio="A combinar na conversa. Chame no WhatsApp."
                   />
                 </AcordeaoItem>
                 <AcordeaoItem grupo="preparo" titulo="Não está incluso">
@@ -269,7 +280,7 @@ function perguntas(trip: TripDetalheDTO): { pergunta: string; resposta: string }
     {
       pergunta: 'Como reservo a vaga?',
       resposta:
-        'Escolha a data e a quantidade de vagas, adicione à mochila e finalize pelo WhatsApp. A conversa é onde a Caqui confirma a vaga e combina o pagamento — o site não cobra nada.',
+        'Escolha a data e a quantidade de vagas, adicione à mochila e finalize pelo WhatsApp. A conversa é onde a Caqui confirma a vaga e combina o pagamento. O site não cobra nada.',
     },
   ]
 
@@ -284,19 +295,19 @@ function perguntas(trip: TripDetalheDTO): { pergunta: string; resposta: string }
     lista.push({
       pergunta: 'Preciso ter experiência?',
       resposta:
-        'Sim. Esta expedição exige experiência prévia em trilha — não é a primeira para quem está começando. Se estiver em dúvida sobre o seu preparo, conte no WhatsApp o que você já fez e a Caqui indica o roteiro certo.',
+        'Sim. Esta expedição exige experiência prévia em trilha. Não é a primeira para quem está começando. Se estiver em dúvida sobre o seu preparo, conte no WhatsApp o que você já fez e a Caqui indica o roteiro certo.',
     })
   } else {
     lista.push({
       pergunta: 'Preciso ter experiência?',
-      resposta: `Não. O nível é ${rotuloDificuldade(trip.dificuldade).toLowerCase()} e o grupo anda no ritmo do mais lento — é assim que se chega inteiro. Se for a sua primeira trilha, avise: o guia fica de olho.`,
+      resposta: `Não. O nível é ${rotuloDificuldade(trip.dificuldade).toLowerCase()} e o grupo anda no ritmo do mais lento, que é assim que se chega inteiro. Se for a sua primeira trilha, avise: o guia fica de olho.`,
     })
   }
 
   lista.push({
     pergunta: 'E se chover?',
     resposta:
-      'Chuva leve não cancela — trilha na Serra do Mar tem chuva. O que cancela é condição de risco: tempestade, raio, rio cheio para travessia. Nesse caso a Caqui avisa antes da saída e remarca ou devolve o valor.',
+      'Chuva leve não cancela: trilha na Serra do Mar tem chuva. O que cancela é condição de risco: tempestade, raio, rio cheio para travessia. Nesse caso a Caqui avisa antes da saída e remarca ou devolve o valor.',
   })
 
   if (trip.politicaCancelamento) {

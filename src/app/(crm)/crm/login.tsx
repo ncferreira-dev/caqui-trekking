@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/campo'
+import { Input, InputSenha } from '@/components/ui/campo'
 
 /**
  * Login.
@@ -87,13 +87,7 @@ export function FormularioDeLogin() {
         autoComplete="username"
         obrigatorio
       />
-      <Input
-        rotulo="Senha"
-        name="senha"
-        type="password"
-        autoComplete="current-password"
-        obrigatorio
-      />
+      <InputSenha rotulo="Senha" name="senha" autoComplete="current-password" obrigatorio />
 
       {erro && (
         <p role="alert" className="text-caqui-danger text-corpo-sm">

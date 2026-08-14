@@ -227,11 +227,11 @@ export function ListaDeSaidas({ saidas }: { saidas: SaidaDoPainel[] }) {
           consequencia={
             <>
               <strong>
-                {cancelando.trip.titulo} — {diaEMes(new Date(cancelando.inicioIso))}
+                {cancelando.trip.titulo} · {diaEMes(new Date(cancelando.inicioIso))}
               </strong>
               <p className="mt-1">
                 Ela some da agenda do site na hora, e ninguém mais consegue reservar. Quem já tem a
-                vaga na mochila recebe um aviso de indisponível ao tentar finalizar — mas{' '}
+                vaga na mochila recebe um aviso de indisponível ao tentar finalizar, mas{' '}
                 <strong>quem já fechou pelo WhatsApp precisa ser avisado por você.</strong>
               </p>
               <p className="mt-1">

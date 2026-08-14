@@ -39,7 +39,7 @@ export default async function PaginaSobre() {
       <CabecalhoDePagina
         sobretitulo="Quem leva você"
         titulo="Sobre a Caqui"
-        descricao="Segurança e qualidade em 1º lugar — e isso é credencial, não slogan."
+        descricao="Segurança e qualidade em 1º lugar. Isso é credencial, não slogan."
       />
 
       <div className="mx-auto w-full max-w-3xl px-5 py-16 sm:px-8">

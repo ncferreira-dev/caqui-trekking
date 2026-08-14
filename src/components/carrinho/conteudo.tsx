@@ -40,7 +40,7 @@ export function ConteudoDaMochila({ compacta = false }: { compacta?: boolean }) 
     return (
       <div className="flex flex-col items-start gap-4">
         <p role="alert" className="border-caqui-danger text-corpo border-l-4 px-4 py-3">
-          {erro} Seus itens continuam guardados — é só a conferência de preço e disponibilidade que
+          {erro} Seus itens continuam guardados. É só a conferência de preço e disponibilidade que
           não respondeu.
         </p>
         <Button onClick={revalidar}>Tentar de novo</Button>

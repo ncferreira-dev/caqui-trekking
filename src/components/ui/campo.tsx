@@ -1,6 +1,12 @@
 'use client'
 
-import { type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useId } from 'react'
+import {
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  useId,
+  useState,
+} from 'react'
 
 import { CLASSES_COM_ERRO, CLASSES_CONTROLE } from '@/components/ui/estilos-de-campo'
 import { cn } from '@/lib/ui/cn'
@@ -128,6 +134,106 @@ export function Input({ rotulo, dica, erro, obrigatorio, className, ...props }: 
         className={cn(CONTROLE, erro && COM_ERRO)}
       />
     </Envelope>
+  )
+}
+
+/**
+ * Campo de senha com olho.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * MOSTRAR A SENHA É MEDIDA DE SEGURANÇA, NÃO O CONTRÁRIO
+ * ────────────────────────────────────────────────────────────────────────────
+ * O reflexo é achar que esconder sempre é mais seguro. Na prática, quem digita
+ * às cegas erra, erra de novo, e a saída é escolher uma senha curta e fácil, ou
+ * deixar colada num papel. Pior: aqui a Caqui entra pelo CELULAR, teclado de
+ * vidro, muitas vezes em pé no meio da rua, e três erros seguidos disparam o
+ * bloqueio de conta que o `auth-service` aplica de propósito.
+ *
+ * O risco real de alguém lendo por cima do ombro é escolha de quem está lá, e
+ * por isso o padrão continua sendo oculto: o olho é opt-in, um toque, e volta a
+ * esconder no toque seguinte.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * O QUE FAZ ISTO SER ACESSÍVEL, E NÃO SÓ UM ÍCONE BONITO
+ * ────────────────────────────────────────────────────────────────────────────
+ *  - É `<button type="button">`. Sem o `type`, dentro de um `<form>` ele vira
+ *    submit e o clique no olho tentaria fazer login.
+ *  - `aria-pressed` informa o estado a quem usa leitor de tela; o nome do botão
+ *    diz a AÇÃO ("Mostrar senha"), não o estado, que é o que o `aria-pressed`
+ *    já carrega.
+ *  - O alvo tem 44px, como todo alvo do projeto.
+ *  - O ícone é `aria-hidden`: quem lê a tela ouve o nome do botão, e ouvir
+ *    "olho" no meio não ajuda ninguém.
+ *  - O campo mantém `autocomplete`, então o gerenciador de senhas continua
+ *    preenchendo normalmente nos dois estados.
+ */
+export function InputSenha({
+  rotulo,
+  dica,
+  erro,
+  obrigatorio,
+  className,
+  ...props
+}: Omit<InputProps, 'type'>) {
+  const gerado = useId()
+  const id = props.id ?? gerado
+  const [visivel, setVisivel] = useState(false)
+
+  return (
+    <Envelope
+      id={id}
+      rotulo={rotulo}
+      dica={dica}
+      erro={erro}
+      obrigatorio={obrigatorio}
+      className={className}
+    >
+      <div className="relative">
+        <input
+          {...props}
+          id={id}
+          type={visivel ? 'text' : 'password'}
+          aria-invalid={erro ? true : undefined}
+          aria-describedby={erro ? `${id}-erro` : dica ? `${id}-dica` : undefined}
+          required={obrigatorio}
+          className={cn(CONTROLE, 'pr-12', erro && COM_ERRO)}
+        />
+
+        <button
+          type="button"
+          onClick={() => setVisivel((v) => !v)}
+          aria-pressed={visivel}
+          aria-controls={id}
+          className={cn(
+            'absolute top-1/2 right-0 inline-flex size-11 -translate-y-1/2',
+            'text-caqui-ink-700 hover:text-caqui-ink-900 items-center justify-center',
+            'rounded-xs transition-colors',
+          )}
+        >
+          <OlhoIcone aberto={visivel} />
+          <span className="sr-only">{visivel ? 'Ocultar senha' : 'Mostrar senha'}</span>
+        </button>
+      </div>
+    </Envelope>
+  )
+}
+
+/**
+ * O olho.
+ *
+ * Fechado, ele ganha uma BARRA cruzando, e não só uma pálpebra abaixada: a
+ * barra é o sinal universal de "desligado" e sobrevive a 16px, que é o tamanho
+ * em que a diferença entre uma pálpebra e um olho aberto desaparece.
+ */
+function OlhoIcone({ aberto }: { aberto: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="size-5">
+      <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+        <path d="M1.5 10S4.9 4.5 10 4.5 18.5 10 18.5 10 15.1 15.5 10 15.5 1.5 10 1.5 10Z" />
+        <circle cx="10" cy="10" r="2.6" />
+        {!aberto && <path d="M3.5 16.5 16.5 3.5" strokeWidth="1.8" />}
+      </g>
+    </svg>
   )
 }
 

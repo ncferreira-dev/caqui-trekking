@@ -84,7 +84,7 @@ export default async function PaginaMensagens() {
           <CaixaDeMensagens mensagens={dados} />
         </Painel>
 
-        <Painel titulo="Leads — Avise-me e newsletter" acao={<Rotulo>{leads.length}</Rotulo>}>
+        <Painel titulo="Leads: avise-me e newsletter" acao={<Rotulo>{leads.length}</Rotulo>}>
           {leads.length === 0 ? (
             <Vazio titulo="Nenhum lead ainda">
               <p>
@@ -123,7 +123,7 @@ export default async function PaginaMensagens() {
         </Painel>
 
         <p className="text-caqui-ink-500 text-micro font-mono uppercase">
-          Lead sem consentimento não pode entrar em disparo — LGPD.
+          Lead sem consentimento não pode entrar em disparo. É a LGPD.
         </p>
       </div>
     </>

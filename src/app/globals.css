@@ -513,3 +513,79 @@
     will-change: auto;
   }
 }
+
+/* ==========================================================================
+   O CÉU
+   ==========================================================================
+   Duas coisas se movem sozinhas no herói: as nuvens atravessam, e a serra
+   respira. Nenhuma das duas responde a input — são pano de fundo, e a régua é
+   a mesma do parallax: só `transform`, nunca `left`/`top`/`background-position`,
+   que forçariam layout ou paint a cada quadro.
+
+   O percurso é medido em `vw` e não em `%`, porque `%` no `translateX` é
+   relativo à LARGURA DO PRÓPRIO ELEMENTO: uma nuvem de 160px andaria 190px e
+   voltaria, o que na tela lê como tremor, não como travessia.
+   ========================================================================== */
+
+@keyframes caqui-nuvem {
+  from {
+    transform: translate3d(-45vw, 0, 0);
+  }
+  to {
+    transform: translate3d(130vw, 0, 0);
+  }
+}
+
+.nuvem-derivando {
+  position: absolute;
+  left: 0;
+  animation: caqui-nuvem var(--duracao, 120s) linear infinite;
+  animation-delay: var(--atraso, 0s);
+  will-change: transform;
+}
+
+/* A serra respira: 1% de deslocamento horizontal em 40s.
+
+   O `scale(1.04)` não é enfeite e não pode sair. `Montanhas` usa
+   `preserveAspectRatio="slice"`, então em tela larga o desenho preenche a
+   largura EXATA do contêiner. Deslocar 1% sem sobra descobriria uma faixa vazia
+   na borda a cada meio ciclo. Os 4% de escala dão 2% de material sobrando de
+   cada lado — o dobro do que o movimento consome.
+
+   `transform-origin: bottom` mantém a base da serra colada no rodapé do herói
+   enquanto ela cresce; com origem no centro, a linha d'água subiria. */
+@keyframes caqui-respiro-serra {
+  0%,
+  100% {
+    transform: translate3d(-1%, 0, 0) scale(1.04);
+  }
+  50% {
+    transform: translate3d(1%, 0, 0) scale(1.04);
+  }
+}
+
+.serra-respirando {
+  transform-origin: bottom center;
+  animation: caqui-respiro-serra var(--duracao, 44s) ease-in-out infinite;
+  animation-delay: var(--atraso, 0s);
+  will-change: transform;
+}
+
+/* Sob redução de movimento nada disso roda. As nuvens continuam no céu, paradas
+   na posição em que o atraso negativo as colocaria — elas existem para dar
+   escala à serra, e isso funciona sem elas andarem. A regra global do topo já
+   zera a duração; aqui o `transform` é fixado no estado de repouso para as
+   camadas não pararem num meio-quadro qualquer. */
+@media (prefers-reduced-motion: reduce) {
+  .nuvem-derivando {
+    animation: none;
+    transform: translate3d(var(--parada, 30vw), 0, 0);
+    will-change: auto;
+  }
+
+  .serra-respirando {
+    animation: none;
+    transform: none;
+    will-change: auto;
+  }
+}

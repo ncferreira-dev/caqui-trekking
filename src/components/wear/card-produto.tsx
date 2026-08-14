@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { Capa, Imagem } from '@/components/midia/imagem'
 import { Card, CardCorpo, CardMidia, CardRodape } from '@/components/ui/card'
+import { rotuloDeTamanho } from '@/lib/formato'
 import { formatarBRL } from '@/lib/money'
 import { cn } from '@/lib/ui/cn'
 import type { ProdutoResumoDTO } from '@/server/dto/public-dto'
@@ -72,20 +73,41 @@ export function CardProduto({
           </Link>
         </h2>
 
-        {produto.cores.length > 0 && (
-          <ul className="mt-auto flex flex-wrap items-center gap-1.5 pt-2">
-            {produto.cores.map((cor) => (
-              <li key={cor.nome}>
-                <span
-                  title={cor.nome}
-                  className="border-caqui-ink-900 block size-4 rounded-xs border"
-                  style={cor.hex ? { backgroundColor: cor.hex } : undefined}
-                />
-                <span className="sr-only">{cor.nome}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="mt-auto flex flex-col gap-2 pt-2">
+          {produto.cores.length > 0 && (
+            <ul className="flex flex-wrap items-center gap-1.5">
+              {produto.cores.map((cor) => (
+                <li key={cor.nome}>
+                  <span
+                    title={cor.nome}
+                    className="border-caqui-ink-900 block size-4 rounded-xs border"
+                    style={cor.hex ? { backgroundColor: cor.hex } : undefined}
+                  />
+                  <span className="sr-only">{cor.nome}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* A grade de tamanhos, se a peça tiver.
+              Aqui NÃO se marca o que está esgotado. O card mostra o que a peça
+              é; o que está disponível hoje depende da cor escolhida, e essa
+              conta só fecha na página do produto. Riscar o G no card, quando
+              ele existe em azul e acabou só no cinza, seria mentira. */}
+          {produto.tamanhos.length > 0 && (
+            <ul className="flex flex-wrap items-center gap-1">
+              <li className="sr-only">Tamanhos:</li>
+              {produto.tamanhos.map((t) => (
+                <li
+                  key={t}
+                  className="border-caqui-rule-wear text-caqui-ink-700 text-micro min-w-6 rounded-xs border px-1 py-0.5 text-center font-mono uppercase"
+                >
+                  {rotuloDeTamanho(t)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </CardCorpo>
 
       <CardRodape className="border-caqui-rule-wear">

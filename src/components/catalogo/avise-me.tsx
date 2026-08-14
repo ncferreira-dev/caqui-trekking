@@ -74,7 +74,7 @@ export function AviseMe({
     // registrar agora" — a pessoa não descobre o que arrumar, fecha o modal, e
     // o lead do momento de maior intenção da página se perde.
     if (nome && nome.length < 2) {
-      setErro('O nome precisa ter ao menos 2 letras — ou deixe em branco.')
+      setErro('O nome precisa ter ao menos 2 letras, ou deixe em branco.')
       return
     }
     if (telefone && telefone.length < 8) {
@@ -137,7 +137,7 @@ export function AviseMe({
       ) : (
         <form onSubmit={enviar} className="flex flex-col gap-4">
           <p className="text-caqui-ink-700 text-corpo-sm">
-            {tituloDoRoteiro} — {data}. Esta saída está esgotada. Deixe um contato e a Caqui avisa
+            {tituloDoRoteiro}, {data}. Esta saída está esgotada. Deixe um contato e a Caqui avisa
             se abrir vaga.
           </p>
 

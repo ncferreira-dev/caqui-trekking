@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { CardSaida } from '@/components/catalogo/card-saida'
 import { Carrossel, ItemDoCarrossel } from '@/components/catalogo/carrossel'
 import { FaixaDeCredibilidade } from '@/components/catalogo/faixa-credibilidade'
-import { Montanhas } from '@/components/marca/grafismos'
+import { Montanhas, Nuvens } from '@/components/marca/grafismos'
 import { Capa } from '@/components/midia/imagem'
 import { CamadaHero, Hero } from '@/components/movimento/hero'
 import { Revelar } from '@/components/movimento/revelar'
@@ -77,14 +77,26 @@ export default async function PaginaInicial() {
               <div className="from-caqui-orange-400 to-caqui-orange-600 size-56 rounded-full bg-gradient-to-b opacity-90 sm:size-72" />
             </CamadaHero>
 
-            {/* Serra distante. */}
+            {/* O céu. Fica ENTRE o sol e a serra: nuvem passando na frente da
+                montanha é o que a coloca no espaço certo, e nuvem por cima do
+                sol tira dele o papel de ponto mais distante da cena. */}
+            <Nuvens />
+
+            {/* Serra distante. Respira mais devagar e desloca menos: o que está
+                longe se move menos, a mesma regra que governa o parallax. */}
             <CamadaHero profundidade={0.12} className="bottom-0 opacity-45">
-              <Montanhas className="h-56 sm:h-72" />
+              <div className="serra-respirando [--duracao:64s]">
+                <Montanhas className="h-56 sm:h-72" />
+              </div>
             </CamadaHero>
 
-            {/* Serra próxima: o teto de 0,18 do projeto. */}
+            {/* Serra próxima: o teto de 0,18 do projeto. O atraso desencontra as
+                duas cristas — em fase elas andariam como um bloco só, que é
+                exatamente o que mata a sensação de profundidade. */}
             <CamadaHero profundidade={0.18} className="-bottom-6">
-              <Montanhas className="h-64 sm:h-80" />
+              <div className="serra-respirando [--atraso:-11s] [--duracao:44s]">
+                <Montanhas className="h-64 sm:h-80" />
+              </div>
             </CamadaHero>
           </>
         }
@@ -131,7 +143,7 @@ export default async function PaginaInicial() {
         {agenda.saidas.length === 0 ? (
           <p className="text-caqui-ink-700 text-corpo-lg mx-auto w-full max-w-7xl px-5 sm:px-8">
             A agenda do próximo mês ainda está sendo montada. Dá para pedir uma saída fechada para o
-            seu grupo —{' '}
+            seu grupo:{' '}
             <Link href="/contato" className="rounded-xs underline underline-offset-4">
               fale com a Caqui
             </Link>
@@ -168,7 +180,7 @@ export default async function PaginaInicial() {
               A marca fora da trilha
             </h2>
             <p className="text-caqui-sand-400 text-corpo-lg mt-5 max-w-md">
-              Camiseta e baby look dry fit, caneca e acessório. Feito para quem já subiu — e para
+              Camiseta e baby look dry fit, caneca e acessório. Feito para quem já subiu e para
               quem vai subir.
             </p>
 

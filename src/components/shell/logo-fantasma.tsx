@@ -1,26 +1,44 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Brasao } from '@/components/marca/grafismos'
 import { cn } from '@/lib/ui/cn'
 
 /**
- * A logo, e o gesto que revela o CRM.
+ * A logo, e o gesto que leva ao CRM.
  *
  * ════════════════════════════════════════════════════════════════════════════
  * ISTO NÃO É AUTENTICAÇÃO. NÃO CHEGA PERTO.
  * ════════════════════════════════════════════════════════════════════════════
- * O gesto apenas REVELA um link. Digitar `/crm` na barra de endereço leva ao
- * mesmo lugar, e é assim que tem que ser: a barreira real é o middleware do
- * backend, aplicado rota a rota, com um teste que percorre o diretório e falha
- * se alguma rota administrativa nascer sem guard (ver docs/04-permissoes.md).
+ * O gesto é um ATALHO. Digitar `/crm` na barra de endereço leva ao mesmo lugar,
+ * e é assim que tem que ser: a barreira real é o guard do backend, aplicado
+ * rota a rota, com um teste que percorre o diretório e falha se alguma rota
+ * administrativa nascer sem ele (ver `docs/04-permissoes.md` e
+ * `src/test/autorizacao.test.ts`).
  *
  * O projeto de referência ilustra o oposto melhor do que qualquer argumento:
  * escondia o botão do painel atrás de 5 cliques no copyright e, ao mesmo
  * tempo, listava `/login`, `/dashboard`, `/clients` e `/admin/` no
  * `robots.txt` — público, para qualquer um ler.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * O 5º TOQUE NAVEGA. NÃO EXISTE BOTÃO "CRM" NO SITE.
+ * ════════════════════════════════════════════════════════════════════════════
+ * A primeira versão revelava um link "CRM" ao lado da logo e o mantinha pela
+ * sessão inteira. Dois problemas, e o segundo é o grave:
+ *
+ *  1. Um botão de painel administrativo no cabeçalho de uma loja é ruído para
+ *     quem está comprando, e some do lugar dependendo de quem abriu.
+ *  2. Ele ficava **fixo**. Bastava um toque acidental repetido — coisa que
+ *     acontece com logo no topo do celular — para a marca virar um botão de
+ *     administração pelo resto da visita, inclusive com o cliente olhando.
+ *
+ * Agora o 5º toque leva direto ao `/crm`, que já é a tela de login. O atalho
+ * some no instante em que cumpre a função, e a loja nunca mostra que existe um
+ * painel. Nada é persistido: a contagem morre em 3 segundos parada.
  *
  * ════════════════════════════════════════════════════════════════════════════
  * A ARMADILHA: A LOGO É UM LINK
@@ -46,7 +64,6 @@ import { cn } from '@/lib/ui/cn'
  */
 
 const CHAVE_CONTAGEM = 'caqui:toques'
-const CHAVE_REVELADO = 'caqui:crm-revelado'
 
 const TOQUES_NECESSARIOS = 5
 /** A partir daqui a logo dá sinal de vida. Antes disso, nada acontece. */
@@ -78,40 +95,9 @@ function gravarContagem(contagem: Contagem): void {
   }
 }
 
-/**
- * O "revelado" também é estado EXTERNO — mora no `sessionStorage`, sobrevive à
- * navegação e pode ser ligado por outra instância deste componente. Ler isso
- * num `useEffect` com `setState` seria render em cascata; `useSyncExternalStore`
- * é o mecanismo que o React oferece exatamente para o caso. Mesma decisão do
- * carrinho — ver `lib/carrinho/store.ts`.
- */
-const EVENTO_REVELADO = 'caqui:crm-revelado'
-
-function assinarRevelado(aoMudar: () => void): () => void {
-  window.addEventListener(EVENTO_REVELADO, aoMudar)
-  return () => window.removeEventListener(EVENTO_REVELADO, aoMudar)
-}
-
-function lerRevelado(): boolean {
-  try {
-    return sessionStorage.getItem(CHAVE_REVELADO) === '1'
-  } catch {
-    return false
-  }
-}
-
-const NUNCA_REVELADO = () => false
-
-export function LogoFantasma({
-  className,
-  aoRevelar,
-}: {
-  className?: string
-  /** Chamado uma vez, quando o gesto completa. */
-  aoRevelar?: () => void
-}) {
+export function LogoFantasma({ className }: { className?: string }) {
+  const router = useRouter()
   const [toques, setToques] = useState(0)
-  const revelado = useSyncExternalStore(assinarRevelado, lerRevelado, NUNCA_REVELADO)
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // A contagem NÃO é restaurada na montagem, de propósito: ela já vive no
@@ -140,18 +126,14 @@ export function LogoFantasma({
     }, JANELA_MS)
 
     if (total >= TOQUES_NECESSARIOS) {
-      try {
-        sessionStorage.setItem(CHAVE_REVELADO, '1')
-      } catch {
-        // Sem persistência: o gesto não sobrevive à navegação, mas o link
-        // aparece nesta tela porque o evento abaixo é disparado do mesmo jeito.
-      }
-      window.dispatchEvent(new CustomEvent(EVENTO_REVELADO))
+      // Zera ANTES de navegar: sem isto, voltar para o site e tocar uma vez na
+      // logo dispararia o 6º toque da mesma sequência e jogaria a pessoa no
+      // painel de novo, sem ela ter pedido nada.
       gravarContagem({ total: 0, ultimoToque: 0 })
       setToques(0)
-      aoRevelar?.()
+      router.push('/crm')
     }
-  }, [aoRevelar])
+  }, [router])
 
   /**
    * `onPointerDown` e não `onClick`: dispara antes da navegação, então o toque
@@ -173,7 +155,7 @@ export function LogoFantasma({
         href="/"
         onPointerDown={aoApontar}
         onClick={aoClicar}
-        aria-label="Caqui Trekking — ir para a página inicial"
+        aria-label="Caqui Trekking, ir para a página inicial"
         className={cn(
           'relative block shrink-0 rounded-xs',
           'transition-transform duration-150',
@@ -195,20 +177,6 @@ export function LogoFantasma({
           />
         )}
       </Link>
-
-      {revelado && (
-        <Link
-          href="/crm"
-          className={cn(
-            'border-caqui-ink-900 text-caqui-ink-900 border px-2 py-1',
-            'text-micro font-mono uppercase',
-            'hover:bg-caqui-sand-100 transition-colors',
-            'motion-safe:animate-[caqui-entrada_200ms_var(--ease-saida)]',
-          )}
-        >
-          CRM
-        </Link>
-      )}
     </div>
   )
 }

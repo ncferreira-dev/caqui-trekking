@@ -94,7 +94,7 @@ export function GaleriaDoProduto({ imagens, nome }: { imagens: MediaDTO[]; nome:
                 type="button"
                 onClick={() => setAtiva(indice)}
                 aria-pressed={indice === ativa}
-                aria-label={`Ver foto ${indice + 1} de ${imagens.length} — ${nome}`}
+                aria-label={`Ver foto ${indice + 1} de ${imagens.length}: ${nome}`}
                 className={cn(
                   'block aspect-square w-full overflow-hidden rounded-xs border transition-colors',
                   indice === ativa

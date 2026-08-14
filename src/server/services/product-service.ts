@@ -1,4 +1,5 @@
 import { AppError, ErrorCode } from '@/lib/api/errors'
+import { ordenarTamanhos } from '@/lib/formato'
 import { centavosParaDecimal, precoEfetivo } from '@/lib/money'
 import { prisma } from '@/lib/prisma'
 import {
@@ -35,7 +36,7 @@ export async function listarProdutos(
         // `take: 2`: a segunda é a que aparece no hover do card.
         images: { select: SELECT_MEDIA, orderBy: { sortOrder: 'asc' }, take: 2 },
         variants: {
-          select: { colorName: true, colorHex: true },
+          select: { colorName: true, colorHex: true, size: true, available: true },
           orderBy: { sortOrder: 'asc' },
         },
       },
@@ -56,6 +57,13 @@ export async function listarProdutos(
       cores.push({ nome: v.colorName, hex: v.colorHex })
     }
 
+    // `UNICO` fica de fora: no card ele viraria uma etiqueta dizendo que não há
+    // escolha de tamanho. A ordem é a da grade, não a do banco — variante nova
+    // cadastrada por último não pode empurrar o GG para antes do M.
+    const tamanhos = ordenarTamanhos([
+      ...new Set(p.variants.map((v) => v.size).filter((t) => t !== 'UNICO')),
+    ])
+
     return {
       slug: p.slug,
       nome: p.name,
@@ -65,6 +73,7 @@ export async function listarProdutos(
       capa: p.images[0] ? paraMediaDTO(p.images[0]) : null,
       capaAlternativa: p.images[1] ? paraMediaDTO(p.images[1]) : null,
       cores,
+      tamanhos,
     }
   })
 
@@ -166,6 +175,9 @@ export async function buscarProdutoPorSlug(slug: string): Promise<ProdutoDetalhe
     capaAlternativa: p.images[1] ? paraMediaDTO(p.images[1]) : null,
     imagens: p.images.map(paraMediaDTO),
     cores,
+    tamanhos: ordenarTamanhos([...new Set(variantes.map((v) => v.tamanho))]).filter(
+      (t) => t !== 'UNICO',
+    ),
     variantes,
   }
 }

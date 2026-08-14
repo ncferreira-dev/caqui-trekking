@@ -101,13 +101,13 @@ export function TabelaDeMedidas({
           <p className="border-caqui-orange-500 text-corpo-sm bg-caqui-sand-100 border-l-4 px-3 py-2">
             <strong className="font-display text-corpo-sm uppercase">Aproximado.</strong> Variação
             de até 2 cm é normal em malha. Na dúvida entre dois tamanhos, chame no WhatsApp antes de
-            fechar — é mais rápido que trocar depois.
+            fechar. É mais rápido que trocar depois.
           </p>
         </div>
       ) : (
         <p className="text-corpo">
           Esta peça é de tamanho único. Se tiver dúvida sobre dimensões ou capacidade, chame no
-          WhatsApp — a Caqui mede e responde.
+          WhatsApp. A Caqui mede e responde.
         </p>
       )}
     </Modal>

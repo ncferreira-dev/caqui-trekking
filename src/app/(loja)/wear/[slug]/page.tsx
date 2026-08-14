@@ -7,6 +7,7 @@ import { SeletorDeVariante } from '@/components/wear/seletor-de-variante'
 import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { Acordeao, AcordeaoItem } from '@/components/ui/acordeao'
 import { Etiqueta } from '@/components/ui/badge'
+import { Compartilhar } from '@/components/ui/compartilhar'
 import { AppError } from '@/lib/api/errors'
 import { buscarProdutoPorSlug, ROTULO_CATEGORIA } from '@/server/services/product-service'
 import type { ProdutoDetalheDTO } from '@/server/dto/public-dto'
@@ -70,12 +71,20 @@ export default async function PaginaDoProduto({ params }: PageProps<'/wear/[slug
               role="status"
               className="border-caqui-danger text-corpo-sm border-l-4 bg-white px-4 py-3"
             >
-              Todas as combinações desta peça estão esgotadas no momento. Chame no WhatsApp — a
+              Todas as combinações desta peça estão esgotadas no momento. Chame no WhatsApp. A
               Caqui avisa quando repõe.
             </p>
           )}
 
           <SeletorDeVariante produto={produto} />
+
+          {/* Logo abaixo do botão de comprar: é ali que a pessoa para quando
+              gosta da peça mas quer perguntar o tamanho para alguém antes. */}
+          <Compartilhar
+            titulo={produto.nome}
+            texto={`${produto.nome}, da Caqui Wear.`}
+            className="self-start"
+          />
 
           {produto.descricao && (
             <p className="text-corpo whitespace-pre-line">{produto.descricao}</p>
@@ -88,14 +97,14 @@ export default async function PaginaDoProduto({ params }: PageProps<'/wear/[slug
             <AcordeaoItem grupo="peca" titulo="Como recebo">
               <p>
                 Nada é cobrado no site. Você monta o pedido na mochila e finaliza pelo WhatsApp; a
-                entrega é combinada ali — retirada em Mogi das Cruzes, entrega numa saída da agenda,
+                entrega é combinada ali: retirada em Mogi das Cruzes, entrega numa saída da agenda,
                 ou envio, conforme o caso.
               </p>
             </AcordeaoItem>
             <AcordeaoItem grupo="peca" titulo="Troca">
               <p>
                 Deu errado no tamanho? Fale com a Caqui pelo mesmo WhatsApp do pedido. Peça sem uso
-                e com etiqueta é trocada sem discussão — por isso a tabela de medidas existe, para a
+                e com etiqueta é trocada sem discussão. Por isso a tabela de medidas existe, para a
                 troca ser rara.
               </p>
             </AcordeaoItem>
@@ -135,7 +144,7 @@ function Cuidados({ categoria }: { categoria: string }) {
   if (categoria === 'CAMISETA' || categoria === 'REGATA') {
     return (
       <ul className="list-inside list-disc space-y-1">
-        <li>Malha dry fit ou poliamida, conforme a peça — confira na descrição acima.</li>
+        <li>Malha dry fit ou poliamida, conforme a peça. Confira na descrição acima.</li>
         <li>Lave à mão ou em máquina no ciclo delicado, com água fria.</li>
         <li>Não use alvejante e não passe sobre a estampa.</li>
         <li>Seque à sombra: sol direto desbota a serigrafia.</li>
@@ -148,7 +157,7 @@ function Cuidados({ categoria }: { categoria: string }) {
       <ul className="list-inside list-disc space-y-1">
         <li>Limpe com a flanela que acompanha o produto, quando houver.</li>
         <li>Evite deixar no painel do carro: calor deforma armação e cola.</li>
-        <li>Guarde no estojo — é o que preserva a lente.</li>
+        <li>Guarde no estojo, que é o que preserva a lente.</li>
       </ul>
     )
   }

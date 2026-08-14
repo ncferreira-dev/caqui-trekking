@@ -38,7 +38,7 @@ const dados = DM_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Caqui Trekking — Ecoturismo e aventura em Mogi das Cruzes',
+    default: 'Caqui Trekking · Ecoturismo e aventura em Mogi das Cruzes',
     template: '%s · Caqui Trekking',
   },
   description:

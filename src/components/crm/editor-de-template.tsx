@@ -51,7 +51,7 @@ function pedidoDeExemplo(): ResultadoValidacao {
       precoAnteriorCentavos: null,
       quantidade: 2,
       subtotalCentavos: 85_000,
-      descricao: 'Escalavrado — Teresópolis',
+      descricao: 'Escalavrado · Teresópolis',
       detalhe: 'sábado, 29 de agosto, 05:00',
     },
     {

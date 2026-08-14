@@ -198,7 +198,7 @@ function AgendaVazia({ comFiltro }: { comFiltro: boolean }) {
       <p className="text-caqui-ink-700 text-corpo mt-4">
         {comFiltro
           ? 'Tente um mês diferente, ou tire a dificuldade e a atividade para ver a agenda inteira. As datas costumam sair na virada do mês.'
-          : 'A agenda do mês costuma sair na virada. Enquanto isso, dá para montar saída fechada para o seu grupo — é só chamar.'}
+          : 'A agenda do mês costuma sair na virada. Enquanto isso, dá para montar saída fechada para o seu grupo. É só chamar.'}
       </p>
 
       <div className="mt-7 flex flex-wrap justify-center gap-3">

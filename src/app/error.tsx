@@ -43,7 +43,7 @@ export default function Erro({
       <h1 className="text-display-l mt-3 uppercase">Não foi possível carregar</h1>
 
       <p className="text-caqui-ink-700 text-corpo-lg mt-5 max-w-md">
-        O erro foi registrado do nosso lado. Tente de novo — se persistir, chame no WhatsApp e
+        O erro foi registrado do nosso lado. Tente de novo. Se persistir, chame no WhatsApp e
         informe o código abaixo.
       </p>
 

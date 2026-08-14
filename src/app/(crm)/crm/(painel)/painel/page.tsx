@@ -120,7 +120,7 @@ export default async function PaginaPainel() {
                 titulo={`${aindaAbertas.length} saída(s) em menos de 7 dias, ainda com vagas abertas`}
               >
                 <p>
-                  Pode ser verdade — ou pode ter esgotado sem alguém marcar. Vale conferir antes de
+                  Pode ser verdade, ou pode ter esgotado sem alguém marcar. Vale conferir antes de
                   alguém reservar uma vaga que não existe.
                 </p>
                 <ul className="mt-2 flex flex-col gap-1">

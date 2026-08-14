@@ -102,7 +102,7 @@ export async function processarImagem(
     throw new AppError(
       ErrorCode.MEDIA_INVALID_FILE,
       `"${referencia}" não é uma imagem em formato aceito (JPEG, PNG, WebP, AVIF ou HEIC). ` +
-        `A extensão do arquivo não conta — o conteúdo é que foi verificado.`,
+        `A extensão do arquivo não conta. O conteúdo é que foi verificado.`,
     )
   }
 

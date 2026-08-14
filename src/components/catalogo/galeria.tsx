@@ -137,7 +137,7 @@ function BotaoDeFoto({
       // O rótulo diz o que o clique FAZ e onde a pessoa está. "Foto 3 de 12" é
       // o mínimo para quem navega por lista de botões saber que a galeria não
       // acabou.
-      aria-label={`Ampliar foto ${indice + 1} de ${total} — ${titulo}`}
+      aria-label={`Ampliar foto ${indice + 1} de ${total}: ${titulo}`}
       className={cn(
         'group border-caqui-ink-900 relative block w-full overflow-hidden border',
         'bg-caqui-sand-100 cursor-zoom-in',

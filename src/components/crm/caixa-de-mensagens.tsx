@@ -124,7 +124,7 @@ export function CaixaDeMensagens({ mensagens }: { mensagens: MensagemDoPainel[] 
                   rel="noopener noreferrer"
                   className="text-caqui-forest-800 text-micro rounded-xs font-mono uppercase underline underline-offset-4"
                 >
-                  Responder — {telefoneBR(m.telefone)}
+                  Responder · {telefoneBR(m.telefone)}
                 </a>
               )}
 

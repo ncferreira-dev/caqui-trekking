@@ -61,7 +61,7 @@ export default async function PaginaConfig() {
         <Aviso tom="erro" titulo="Configurações não encontradas">
           <p>
             A linha de configuração do site não existe no banco. Rode{' '}
-            <code>npx prisma db seed</code> para criá-la — sem ela o rodapé some e o botão de
+            <code>npx prisma db seed</code> para criá-la. Sem ela o rodapé some e o botão de
             WhatsApp não aparece no site.
           </p>
         </Aviso>
@@ -134,7 +134,7 @@ export default async function PaginaConfig() {
 
         <Aviso tom="neutro" titulo="Edição de contato e textos ainda é pelo banco">
           <p>
-            O formulário destes campos entra junto com o upload de imagem, no PROMPT 11 — os dois
+            O formulário destes campos entra junto com o upload de imagem, no PROMPT 11: os dois
             dependem da mesma coisa: o Cloudinary configurado. O template acima já salva porque não
             depende de storage. Ver docs/10-crm.md.
           </p>

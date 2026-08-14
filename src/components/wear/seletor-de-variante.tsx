@@ -8,6 +8,7 @@ import { TabelaDeMedidas } from '@/components/wear/tabela-de-medidas'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { lineIdDeVariante, useCarrinho } from '@/lib/carrinho/store'
+import { ordenarTamanhos, rotuloDeTamanho } from '@/lib/formato'
 import { formatarBRL } from '@/lib/money'
 import { cn } from '@/lib/ui/cn'
 import type { ProdutoDetalheDTO } from '@/server/dto/public-dto'
@@ -40,7 +41,7 @@ import type { ProdutoDetalheDTO } from '@/server/dto/public-dto'
  */
 export function SeletorDeVariante({ produto }: { produto: ProdutoDetalheDTO }) {
   const cores = produto.cores
-  const tamanhos = [...new Set(produto.variantes.map((v) => v.tamanho))]
+  const tamanhos = ordenarTamanhos([...new Set(produto.variantes.map((v) => v.tamanho))])
   const soUmTamanho = tamanhos.length === 1 && tamanhos[0] === 'UNICO'
 
   const primeiraDisponivel = produto.variantes.find((v) => v.disponivel)
@@ -89,7 +90,7 @@ export function SeletorDeVariante({ produto }: { produto: ProdutoDetalheDTO }) {
     mostrar({
       tom: 'sucesso',
       titulo: 'Na mochila',
-      descricao: `${produto.nome} — ${rotuloDoTamanho(selecionada.tamanho)} · ${selecionada.cor}, ${quantidade} un.`,
+      descricao: `${produto.nome}: ${rotuloDeTamanho(selecionada.tamanho)} · ${selecionada.cor}, ${quantidade} un.`,
     })
   }
 
@@ -185,13 +186,13 @@ export function SeletorDeVariante({ produto }: { produto: ProdutoDetalheDTO }) {
                       : 'trama-indisponivel text-caqui-ink-500 cursor-not-allowed',
                   )}
                 >
-                  {rotuloDoTamanho(t)}
+                  {rotuloDeTamanho(t)}
                   <span className="sr-only">
                     {!existe
-                      ? ` — não feito em ${cor}`
+                      ? `, não feito em ${cor}`
                       : disponivel
-                        ? ' — disponível'
-                        : ' — esgotado'}
+                        ? ', disponível'
+                        : ', esgotado'}
                   </span>
                 </button>
               )
@@ -242,11 +243,6 @@ export function SeletorDeVariante({ produto }: { produto: ProdutoDetalheDTO }) {
       />
     </div>
   )
-}
-
-/** `UNICO` é o valor do enum; "Único" é o que a pessoa lê. */
-function rotuloDoTamanho(tamanho: string): string {
-  return tamanho === 'UNICO' ? 'Único' : tamanho
 }
 
 function Quantidade({ valor, aoMudar }: { valor: number; aoMudar: (n: number) => void }) {

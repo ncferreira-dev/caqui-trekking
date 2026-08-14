@@ -82,7 +82,7 @@ export default async function PaginaWear({ searchParams }: PageProps<'/wear'>) {
 
         <p className="border-caqui-rule-wear text-caqui-ink-700 text-corpo-sm mt-14 border-t pt-6">
           O site não processa pagamento. Você monta o pedido na mochila e fecha na conversa do
-          WhatsApp, com um guia — mesmo fluxo das expedições.
+          WhatsApp, com um guia, no mesmo fluxo das expedições.
         </p>
       </section>
     </div>

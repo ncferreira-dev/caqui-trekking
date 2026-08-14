@@ -131,6 +131,18 @@ export type ProdutoResumoDTO = {
    */
   capaAlternativa: MediaDTO | null
   cores: { nome: string; hex: string | null }[]
+  /**
+   * Os tamanhos que a peça tem, na ordem da grade (P, M, G, GG).
+   *
+   * Vem na LISTAGEM, e não só no detalhe, porque "serve em mim?" é a pergunta
+   * que decide o clique. Sem isso a pessoa abre quatro peças para descobrir
+   * que só uma vai até o GG.
+   *
+   * Peça de tamanho único sai como lista VAZIA, e não como `['UNICO']`: o card
+   * não deve escrever "Tamanho: Único", que ocupa espaço para dizer que não há
+   * escolha a fazer.
+   */
+  tamanhos: string[]
 }
 
 export type ProdutoDetalheDTO = ProdutoResumoDTO & {

@@ -138,10 +138,10 @@ export async function validarCarrinho(
         return itemInvalido(item, 'DEPARTURE_NOT_FOUND', 'Esta saída não está mais disponível.')
       }
       if (jaEncerrada(s.startAt, agora)) {
-        return itemInvalido(item, 'DEPARTURE_PAST', `${s.trip.title} — esta data já passou.`)
+        return itemInvalido(item, 'DEPARTURE_PAST', `${s.trip.title}: esta data já passou.`)
       }
       if (s.availability === 'SOLD_OUT') {
-        return itemInvalido(item, 'DEPARTURE_NOT_AVAILABLE', `${s.trip.title} — esgotado.`)
+        return itemInvalido(item, 'DEPARTURE_NOT_AVAILABLE', `${s.trip.title}: esgotado.`)
       }
 
       const preco = s.priceCents
@@ -173,7 +173,7 @@ export async function validarCarrinho(
       return itemInvalido(
         item,
         'VARIANT_UNAVAILABLE',
-        `${v.product.name} — ${descreverVariante(v.size, v.colorName)} indisponível.`,
+        `${v.product.name}, ${descreverVariante(v.size, v.colorName)}: indisponível.`,
       )
     }
 

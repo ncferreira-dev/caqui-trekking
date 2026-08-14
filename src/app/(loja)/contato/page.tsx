@@ -20,7 +20,7 @@ export default async function PaginaContato() {
       <CabecalhoDePagina
         sobretitulo="Fale com a gente"
         titulo="Contato"
-        descricao="A resposta mais rápida é pelo WhatsApp — é lá que a Caqui confirma vaga, tira dúvida de trilha e fecha grupo fechado."
+        descricao="A resposta mais rápida é pelo WhatsApp. É lá que a Caqui confirma vaga, tira dúvida de trilha e fecha grupo fechado."
         acao={
           settings?.whatsappNumber ? (
             <LinkBotao

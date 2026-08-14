@@ -22,7 +22,7 @@ import {
 
 const connectionString = process.env['DATABASE_URL']
 if (!connectionString) {
-  throw new Error('DATABASE_URL não definida — copie o .env.example para .env')
+  throw new Error('DATABASE_URL não definida. Copie o .env.example para .env')
 }
 
 const prisma = new PrismaClient({ adapter: createPgAdapter(connectionString) })
@@ -59,7 +59,7 @@ const TAGS = [
 const EXPEDICOES = [
   {
     slug: 'fazenda-santa-rita-cachoeira-do-paredao',
-    title: 'Fazenda Santa Rita — Cachoeira do Paredão',
+    title: 'Fazenda Santa Rita · Cachoeira do Paredão',
     subtitle: 'Rapel na cachoeira, café da manhã e feijoada',
     description:
       'Dia completo na Fazenda Santa Rita: trilha até a Cachoeira do Paredão, rapel na parede da queda e ' +
@@ -90,7 +90,7 @@ const EXPEDICOES = [
     ],
     departure: {
       startAtLocal: '2026-08-08T07:00:00',
-      meetingPoint: 'Portaria da Fazenda Santa Rita — Mogi das Cruzes/SP',
+      meetingPoint: 'Portaria da Fazenda Santa Rita, Mogi das Cruzes/SP',
       meetingTimeLocal: '07:00',
       priceCents: 19_990,
       availability: Availability.AVAILABLE,
@@ -120,7 +120,7 @@ const EXPEDICOES = [
     whatToBring: ['Tênis fechado', 'Água (2 L)', 'Lanche', 'Protetor solar', 'Boné'],
     departure: {
       startAtLocal: '2026-08-15T06:00:00',
-      meetingPoint: 'Praça de Quatinga — Mogi das Cruzes/SP',
+      meetingPoint: 'Praça de Quatinga, Mogi das Cruzes/SP',
       meetingTimeLocal: '06:00',
       priceCents: 9_000,
       availability: Availability.AVAILABLE,
@@ -148,7 +148,7 @@ const EXPEDICOES = [
     whatToBring: ['Tênis fechado', 'Água', 'Protetor solar'],
     departure: {
       startAtLocal: '2026-08-16T08:00:00',
-      meetingPoint: 'Base da tirolesa — estrada de Taiaçupeba, Mogi das Cruzes/SP',
+      meetingPoint: 'Base da tirolesa, estrada de Taiaçupeba, Mogi das Cruzes/SP',
       meetingTimeLocal: '08:00',
       priceCents: 29_900,
       availability: Availability.SOLD_OUT,
@@ -193,7 +193,7 @@ const EXPEDICOES = [
   },
   {
     slug: 'escalavrado-teresopolis',
-    title: 'Escalavrado — Teresópolis',
+    title: 'Escalavrado · Teresópolis',
     subtitle: '1.420 m no Parque Nacional da Serra dos Órgãos',
     description:
       'O Escalavrado é uma das silhuetas mais reconhecíveis da Serra dos Órgãos e faz parte do perfil do ' +
@@ -222,7 +222,7 @@ const EXPEDICOES = [
     ],
     departure: {
       startAtLocal: '2026-08-29T05:00:00',
-      meetingPoint: 'Sede Teresópolis do PARNASO — Teresópolis/RJ',
+      meetingPoint: 'Sede Teresópolis do PARNASO, Teresópolis/RJ',
       meetingTimeLocal: '05:00',
       priceCents: 42_500,
       availability: Availability.LAST_SPOTS,
@@ -322,7 +322,7 @@ const PRODUTOS = [
     slug: 'oculos-aviador-redondo-caqui',
     name: 'Óculos Aviador Redondo Caqui',
     description:
-      'Lentes redondas com ponte dupla — a barra reta ligando os aros, do aviador clássico. Lente cinza escura.',
+      'Lentes redondas com ponte dupla, a barra reta ligando os aros, do aviador clássico. Lente cinza escura.',
     category: 'ACESSORIO',
     priceCents: 5_990,
     sortOrder: 13,
@@ -392,7 +392,7 @@ const PRODUTOS = [
     slug: 'oculos-espelhado-laranja-caqui',
     name: 'Óculos Espelhado Laranja Caqui',
     description:
-      'Wayfarer laranja fosco com lente espelhada laranja — a cor da marca inteira, do aro à lente.',
+      'Wayfarer laranja fosco com lente espelhada laranja, a cor da marca inteira, do aro à lente.',
     category: 'ACESSORIO',
     priceCents: 8_990,
     sortOrder: 19,
@@ -447,7 +447,7 @@ async function main() {
       whatsappMessageTemplate: template,
       instagramTrekking: '@caquitrekking',
       instagramWear: '@caqui.wear',
-      cadasturNumber: 'Cadastur — a preencher',
+      cadasturNumber: 'Cadastur a preencher',
       pesmCredentials: 'Monitores credenciados PESM',
       heroTitle: 'Venha viver novas experiências',
       heroSubtitle: 'Ecoturismo e aventura em Mogi das Cruzes e região',

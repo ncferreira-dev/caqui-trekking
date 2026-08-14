@@ -107,23 +107,52 @@ export function MapaEncontro({
           </div>
         )}
 
-        <div className="border-caqui-rule flex flex-wrap gap-4 border-t px-5 py-3">
+        {/* ── Como chegar ─────────────────────────────────────────────────
+            Era um par de links sublinhados, do tamanho de uma legenda. Virou
+            botão porque esta é a ação mais executada da página DEPOIS da
+            compra: quem já tem a vaga volta aqui na véspera, e às vezes na
+            estrada, com uma mão no volante, para traçar a rota.
+
+            O Google Maps é o primário e ocupa a linha inteira no celular. O
+            Waze fica ao lado, secundário, e só aparece com coordenada: sem
+            `ll` ele abriria o app na posição atual da pessoa, que é pior que
+            não oferecer.
+
+            `noopener noreferrer` continua valendo, e `target="_blank"` é o
+            certo aqui: quem está lendo o roteiro não quer perder a página
+            para o app de mapas. */}
+        <div className="border-caqui-rule flex flex-col gap-2 border-t px-5 py-4 sm:flex-row">
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(consulta)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-caqui-ink-700 text-rotulo hover:text-caqui-ink-900 rounded-xs font-mono uppercase underline underline-offset-4"
+            className={[
+              'inline-flex min-h-11 flex-1 items-center justify-center gap-2 px-4',
+              'border-caqui-ink-900 bg-caqui-orange-500 text-caqui-ink-900 border',
+              'text-rotulo font-mono uppercase',
+              'shadow-[var(--shadow-corte-1)] transition-transform',
+              'hover:translate-x-px hover:translate-y-px hover:shadow-none',
+            ].join(' ')}
           >
-            Abrir no Google Maps
+            <Alfinete pequeno />
+            Como chegar
+            <span className="sr-only">, abre o Google Maps em outra aba</span>
           </a>
+
           {coordenadas && (
             <a
               href={`https://waze.com/ul?ll=${coordenadas.lat},${coordenadas.lng}&navigate=yes`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-caqui-ink-700 text-rotulo hover:text-caqui-ink-900 rounded-xs font-mono uppercase underline underline-offset-4"
+              className={[
+                'inline-flex min-h-11 items-center justify-center gap-2 px-4',
+                'border-caqui-ink-900 border bg-white',
+                'text-rotulo font-mono uppercase',
+                'hover:bg-caqui-sand-100 transition-colors',
+              ].join(' ')}
             >
-              Abrir no Waze
+              Waze
+              <span className="sr-only">, abre o Waze em outra aba</span>
             </a>
           )}
         </div>
@@ -164,9 +193,14 @@ function urlDoEmbed({ lat, lng }: { lat: number; lng: number }): string {
   return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`
 }
 
-function Alfinete() {
+function Alfinete({ pequeno = false }: { pequeno?: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className="text-caqui-ink-900 size-8" aria-hidden="true" fill="none">
+    <svg
+      viewBox="0 0 24 24"
+      className={pequeno ? 'size-4' : 'text-caqui-ink-900 size-8'}
+      aria-hidden="true"
+      fill="none"
+    >
       <path
         d="M12 2c-3.9 0-7 3.1-7 7 0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7Z"
         stroke="currentColor"

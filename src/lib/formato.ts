@@ -62,3 +62,39 @@ const DIFICULDADES: Record<string, string> = {
 export function rotuloDificuldade(nivel: string): string {
   return DIFICULDADES[nivel] ?? nivel
 }
+
+/**
+ * A ordem das grades de tamanho.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ORDEM ALFABÉTICA AQUI É UM DEFEITO, NÃO UMA SIMPLIFICAÇÃO
+ * ────────────────────────────────────────────────────────────────────────────
+ * `['P','M','G','GG'].sort()` devolve `G, GG, M, P`. Fica plausível o bastante
+ * para passar despercebido numa revisão e absurdo o bastante para quem está
+ * comprando: ninguém procura o próprio tamanho numa régua fora de ordem.
+ *
+ * Por isso a ordem é declarada, e o desconhecido vai para o fim em vez de
+ * sumir — se a Caqui cadastrar "XGG" amanhã, ele aparece no fim da fila e
+ * ninguém precisa mexer aqui para a peça não quebrar.
+ */
+const ORDEM_TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG', 'UNICO']
+
+export function ordenarTamanhos(tamanhos: readonly string[]): string[] {
+  const posicao = (t: string) => {
+    const i = ORDEM_TAMANHOS.indexOf(t)
+    return i === -1 ? ORDEM_TAMANHOS.length : i
+  }
+  return [...tamanhos].sort((a, b) => posicao(a) - posicao(b) || a.localeCompare(b, 'pt-BR'))
+}
+
+/**
+ * `UNICO` é o valor do enum; "Único" é o que a pessoa lê.
+ *
+ * Mora aqui, e não dentro do seletor de variante, porque a mesma tradução é
+ * precisa no card, na mochila e na mensagem do WhatsApp. Enquanto ela existia
+ * só no seletor, o carrinho vazou `Tam UNICO · Preto` para dentro da conversa
+ * com o cliente — ver `docs/09-wear-carrinho.md`.
+ */
+export function rotuloDeTamanho(tamanho: string): string {
+  return tamanho === 'UNICO' ? 'Único' : tamanho
+}

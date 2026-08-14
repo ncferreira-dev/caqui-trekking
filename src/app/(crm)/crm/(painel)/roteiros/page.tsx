@@ -78,7 +78,7 @@ export default async function PaginaRoteiros() {
       <Painel>
         {roteiros.length === 0 ? (
           <Vazio titulo="Nenhum roteiro cadastrado">
-            <p>Sem roteiro não há o que agendar — a agenda do site fica vazia.</p>
+            <p>Sem roteiro não há o que agendar, e a agenda do site fica vazia.</p>
           </Vazio>
         ) : (
           <ul className="divide-caqui-rule divide-y">
@@ -136,7 +136,7 @@ export default async function PaginaRoteiros() {
 
                   {semAgenda && (
                     <p className="text-caqui-ink-700 text-micro mt-2 font-mono uppercase">
-                      Está no ar e ninguém consegue comprar —{' '}
+                      Está no ar e ninguém consegue comprar:{' '}
                       <Link href="/crm/saidas" className="rounded-xs underline underline-offset-4">
                         publicar uma data
                       </Link>

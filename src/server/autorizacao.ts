@@ -63,7 +63,9 @@ export const AUTORIZACAO: Record<ChaveDeRota, RegraDeRota> = {
   departures: { GET: TODOS, POST: TODOS },
   // Editar data, preço e ponto de encontro. Rotina de ADMIN; a disponibilidade
   // tem rota própria abaixo porque é o toque de todo dia.
-  'departures/[id]': { PATCH: TODOS },
+  // DELETE aqui é EXCLUIR de vez (hard delete), e só de saída passada ou
+  // cancelada — a regra fica no serviço. Destrutivo, então SO_OWNER.
+  'departures/[id]': { PATCH: TODOS, DELETE: SO_OWNER },
   // O campo mais mexido do sistema. ADMIN precisa, senão o CRM não serve.
   'departures/[id]/availability': { PATCH: TODOS },
   'departures/[id]/duplicate': { POST: TODOS },

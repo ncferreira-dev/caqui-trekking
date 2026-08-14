@@ -4,8 +4,8 @@ import { instanteLocal } from '@/lib/datetime'
 import { ok } from '@/lib/api/respond'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
 import { idSchema } from '@/lib/api/schemas'
-import { exigirPapel } from '@/lib/auth/guard'
-import { atualizarSaida } from '@/server/services/admin/departure-admin-service'
+import { exigirOwner, exigirPapel } from '@/lib/auth/guard'
+import { atualizarSaida, excluirSaida } from '@/server/services/admin/departure-admin-service'
 import { ipDaRequest } from '@/server/services/audit-service'
 
 export const dynamic = 'force-dynamic'
@@ -61,6 +61,29 @@ export const PATCH = rota(async (request: Request, contexto: Contexto) => {
     { ...resto, ...(startAt ? { startAt: instanteLocal(startAt) } : {}) },
     { userId: usuario.userId, ip: ipDaRequest(request) },
   )
+
+  return ok(resultado)
+})
+
+/**
+ * DELETE /api/admin/departures/:id — exclui de vez uma saída já encerrada ou
+ * cancelada.
+ *
+ * Só OWNER: é destrutivo (a tabela de autorização registra `DELETE: SO_OWNER`).
+ * A regra de "só passada ou cancelada" mora no serviço, não aqui, para valer
+ * mesmo que a UI mude — a UI só oferece a lixeira nessas saídas, mas quem
+ * decide é o servidor.
+ */
+export const DELETE = rota(async (request: Request, contexto: Contexto) => {
+  const usuario = await exigirOwner(request)
+
+  const { id } = await contexto.params
+  const departureId = validarOuFalhar(idSchema.safeParse(id))
+
+  const resultado = await excluirSaida(departureId, {
+    userId: usuario.userId,
+    ip: ipDaRequest(request),
+  })
 
   return ok(resultado)
 })

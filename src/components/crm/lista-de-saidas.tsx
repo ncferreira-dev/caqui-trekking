@@ -64,7 +64,14 @@ const ESTADOS = [
   { valor: 'SOLD_OUT', curto: 'Esgotado', classe: 'bg-caqui-danger text-white' },
 ] as const
 
-export function ListaDeSaidas({ saidas }: { saidas: SaidaDoPainel[] }) {
+export function ListaDeSaidas({
+  saidas,
+  podeExcluir = false,
+}: {
+  saidas: SaidaDoPainel[]
+  /** OWNER pode excluir saída passada/cancelada. A rota é a barreira real. */
+  podeExcluir?: boolean
+}) {
   const router = useRouter()
   const { mostrar } = useToast()
 
@@ -74,6 +81,7 @@ export function ListaDeSaidas({ saidas }: { saidas: SaidaDoPainel[] }) {
   const [ocupadas, setOcupadas] = useState<Record<number, boolean>>({})
   const [cancelando, setCancelando] = useState<SaidaDoPainel | null>(null)
   const [editando, setEditando] = useState<SaidaDoPainel | null>(null)
+  const [excluindo, setExcluindo] = useState<SaidaDoPainel | null>(null)
 
   async function mudarDisponibilidade(
     saida: SaidaDoPainel,
@@ -225,6 +233,23 @@ export function ListaDeSaidas({ saidas }: { saidas: SaidaDoPainel[] }) {
                     </Button>
                   </div>
                 )}
+
+                {/* Saída inativa (já foi ou cancelada) não tem ação de rotina,
+                    mas o dono pode LIMPAR a lista. A lixeira só aparece para o
+                    OWNER; o servidor recusa o resto. */}
+                {inativa && podeExcluir && (
+                  <div className="flex items-center lg:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setExcluindo(saida)}
+                      aria-label={`Excluir ${saida.trip.titulo} de ${diaEMes(inicio)} do histórico`}
+                      className="text-caqui-ink-500 hover:text-caqui-danger text-micro inline-flex min-h-11 items-center gap-1.5 rounded-xs px-2 font-mono uppercase transition-colors"
+                    >
+                      <IconeLixeira />
+                      Excluir
+                    </button>
+                  </div>
+                )}
               </div>
             </li>
           )
@@ -260,6 +285,32 @@ export function ListaDeSaidas({ saidas }: { saidas: SaidaDoPainel[] }) {
         />
       )}
 
+      {excluindo && (
+        <Confirmar
+          aberto
+          aoFechar={() => setExcluindo(null)}
+          titulo="Excluir esta saída?"
+          rotuloConfirmar="Excluir de vez"
+          consequencia={
+            <>
+              <strong>
+                {excluindo.trip.titulo} · {diaEMes(new Date(excluindo.inicioIso))}
+              </strong>
+              <p className="mt-1">
+                Ela é apagada de vez e some da lista. Não muda nada no site — uma saída que já foi
+                ou foi cancelada não aparece lá. Fica só um registro na auditoria de que você
+                excluiu, com a data.
+              </p>
+            </>
+          }
+          aoConfirmar={async () => {
+            await api.delete(`/api/admin/departures/${excluindo.id}`)
+            mostrar({ tom: 'sucesso', titulo: 'Saída excluída' })
+            router.refresh()
+          }}
+        />
+      )}
+
       {editando && editando.status !== 'CANCELLED' && (
         <EditorDeSaida
           aberto
@@ -280,5 +331,22 @@ export function ListaDeSaidas({ saidas }: { saidas: SaidaDoPainel[] }) {
         />
       )}
     </>
+  )
+}
+
+function IconeLixeira() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className="size-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.6 9a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9L12 4M6.5 7v4M9.5 7v4" />
+    </svg>
   )
 }

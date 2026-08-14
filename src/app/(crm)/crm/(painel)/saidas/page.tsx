@@ -48,7 +48,11 @@ export const dynamic = 'force-dynamic'
  * completo fica atrás de `?tudo=1`.
  */
 export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/saidas'>) {
-  await exigirSessaoDaPagina()
+  const sessao = await exigirSessaoDaPagina()
+  // Excluir saída é destrutivo e só do OWNER. A barreira real é o backend
+  // (a rota é SO_OWNER); aqui só escondemos a lixeira de quem não pode, por
+  // cortesia — mostrar um botão que sempre dá 403 seria hostil.
+  const ehOwner = sessao.role === 'OWNER'
 
   const params = await searchParams
   const tudo = (Array.isArray(params['tudo']) ? params['tudo'][0] : params['tudo']) === '1'
@@ -135,7 +139,7 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
       <div className="flex flex-col gap-4">
         {meses.length === 0 ? (
           <Painel>
-            <ListaDeSaidas saidas={[]} />
+            <ListaDeSaidas saidas={[]} podeExcluir={ehOwner} />
           </Painel>
         ) : (
           meses.map((mes) => (
@@ -144,7 +148,7 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
               titulo={mesPorExtenso(mes.chave)}
               acao={<Rotulo>{mes.saidas.length} saída(s)</Rotulo>}
             >
-              <ListaDeSaidas saidas={mes.saidas} />
+              <ListaDeSaidas saidas={mes.saidas} podeExcluir={ehOwner} />
             </Painel>
           ))
         )}

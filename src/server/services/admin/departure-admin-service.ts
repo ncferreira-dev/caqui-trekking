@@ -352,6 +352,80 @@ export async function cancelarSaida(
   })
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// EXCLUIR — apagar de vez uma saída já encerrada ou cancelada
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Exclui uma saída do banco, de verdade.
+ *
+ * A regra do projeto é soft delete — nada some — e ela vale para Trip, Product
+ * e Guide, que têm vitrine e histórico vivo. A saída é o caso diferente: depois
+ * que passou, é uma linha de calendário que já cumpriu o papel, e o dono quer
+ * poder limpar a lista. Então o excluir existe, mas CERCADO em três pontos:
+ *
+ *  1. Só o OWNER (a rota aplica): destruir é decisão de dono, não de rotina.
+ *  2. Só saída JÁ ENCERRADA (passou) ou CANCELADA — validado aqui, no servidor,
+ *     não só na UI. Saída futura no ar NÃO se apaga: cancela primeiro. Isso
+ *     fecha o acidente de tirar do site uma data que alguém ainda ia reservar.
+ *  3. A auditoria grava o retrato ANTES de apagar, na mesma transação — então
+ *     "quem apagou o quê, e quando" sobrevive à exclusão. O que o CASCADE leva
+ *     junto (o histórico de disponibilidade daquela saída) é registro de uma
+ *     data que deixou de existir.
+ */
+export async function excluirSaida(departureId: number, ctx: Contexto): Promise<{ id: number }> {
+  const atual = await prisma.departure.findUnique({
+    where: { id: departureId },
+    select: {
+      id: true,
+      tripId: true,
+      startAt: true,
+      status: true,
+      priceCents: true,
+      availability: true,
+      meetingPoint: true,
+    },
+  })
+
+  if (!atual) {
+    throw new AppError(ErrorCode.DEPARTURE_NOT_FOUND, 'Saída não encontrada.', { status: 404 })
+  }
+
+  const jaPassou = atual.startAt.getTime() < Date.now()
+  if (!jaPassou && atual.status !== 'CANCELLED') {
+    throw new AppError(
+      ErrorCode.CONFLICT,
+      'Só dá para excluir saída que já aconteceu ou foi cancelada. Cancele a saída antes.',
+      { status: 409 },
+    )
+  }
+
+  return prisma.$transaction(async (tx) => {
+    await registrarAuditoria(
+      {
+        userId: ctx.userId,
+        action: 'departure.delete',
+        entityType: 'Departure',
+        entityId: departureId,
+        before: {
+          tripId: atual.tripId,
+          startAt: atual.startAt,
+          status: atual.status,
+          priceCents: atual.priceCents,
+          availability: atual.availability,
+          meetingPoint: atual.meetingPoint,
+        },
+        ip: ctx.ip,
+      },
+      tx,
+    )
+
+    await tx.departure.delete({ where: { id: departureId } })
+
+    return { id: departureId }
+  })
+}
+
 /** Cria uma saída a partir de um roteiro, herdando o preço como sugestão. */
 export async function criarSaida(
   dados: {

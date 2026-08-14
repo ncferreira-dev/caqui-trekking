@@ -45,10 +45,30 @@ export const filtrosTripSchema = paginacaoSchema.extend({
   precoMax: z.coerce.number().int().min(0).optional(),
 })
 
+/**
+ * Chave de mês da agenda: "2026-08".
+ *
+ * O regex trava o formato, e o `refine` trava o INTERVALO — sem ele,
+ * `?mes=2026-99` passaria pela forma e viraria um `Date` inválido lá dentro,
+ * produzindo uma consulta com `NaN` e um 500 no lugar de um 400.
+ */
+export const chaveMesSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}$/, 'Mês inválido.')
+  .refine((v) => {
+    const mes = Number(v.slice(5, 7))
+    return mes >= 1 && mes <= 12
+  }, 'Mês inválido.')
+
 /** Filtros de `GET /api/departures`. */
 export const filtrosDepartureSchema = paginacaoSchema.extend({
   de: z.coerce.date().optional(),
   ate: z.coerce.date().optional(),
+  mes: chaveMesSchema.optional(),
+  dificuldade: dificuldadeSchema.optional(),
+  tag: slugSchema.optional(),
+  precoMin: z.coerce.number().int().min(0).optional(),
+  precoMax: z.coerce.number().int().min(0).optional(),
   incluirEncerradas: z
     .union([z.literal('true'), z.literal('false')])
     .transform((v) => v === 'true')

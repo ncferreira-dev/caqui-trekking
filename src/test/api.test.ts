@@ -12,7 +12,9 @@ import { GET as listarTripsRota } from '@/app/api/trips/route'
 import { POST as validarCarrinhoRota } from '@/app/api/cart/validate/route'
 import { POST as criarContatoRota } from '@/app/api/contact/route'
 import { _resetRateLimit } from '@/lib/api/rate-limit'
+import { chaveMes } from '@/lib/datetime'
 import { prisma } from '@/lib/prisma'
+import { opcoesDeAgenda } from '@/server/services/departure-service'
 import { criarFixtures, get, limparBanco, post, type Fixtures } from '@/test/fixtures'
 
 let f: Fixtures
@@ -138,6 +140,102 @@ describe('GET /api/departures — a agenda', () => {
 
     expect(res.status).toBe(400)
     expect(corpo.error.code).toBe('VALIDATION_FAILED')
+  })
+})
+
+// =============================================================================
+describe('GET /api/departures — filtros da agenda', () => {
+  it('a faixa de preço filtra a SAÍDA, não o roteiro', async () => {
+    // As duas saídas futuras são do MESMO roteiro, a R$ 90 e a R$ 120. Um
+    // filtro que operasse sobre a Trip devolveria as duas (ou nenhuma), porque
+    // Trip não tem preço. Este teste falha se alguém mover o filtro para lá.
+    const res = await listarDeparturesRota(get('/api/departures?precoMin=10000') as never)
+    const corpo = (await res.json()) as { data: { id: number; precoCentavos: number }[] }
+
+    expect(corpo.data).toHaveLength(1)
+    expect(corpo.data[0]?.id).toBe(f.saidaEsgotada.id)
+  })
+
+  it('precoMax exclui a saída acima do teto', async () => {
+    const res = await listarDeparturesRota(get('/api/departures?precoMax=10000') as never)
+    const corpo = (await res.json()) as { data: { id: number }[] }
+
+    expect(corpo.data.map((s) => s.id)).toEqual([f.saidaDisponivel.id])
+  })
+
+  it('filtra por dificuldade do roteiro', async () => {
+    const semNada = await listarDeparturesRota(get('/api/departures?dificuldade=EXTREMO') as never)
+    expect(((await semNada.json()) as { data: unknown[] }).data).toHaveLength(0)
+
+    const comTudo = await listarDeparturesRota(get('/api/departures?dificuldade=MODERADO') as never)
+    expect(((await comTudo.json()) as { data: unknown[] }).data).toHaveLength(2)
+  })
+
+  it('filtra por tag de atividade', async () => {
+    const res = await listarDeparturesRota(get('/api/departures?tag=rapel') as never)
+    expect(((await res.json()) as { data: unknown[] }).data).toHaveLength(2)
+
+    const vazio = await listarDeparturesRota(get('/api/departures?tag=camping') as never)
+    expect(((await vazio.json()) as { data: unknown[] }).data).toHaveLength(0)
+  })
+
+  it('o filtro de mês recorta pela chave de São Paulo', async () => {
+    const chave = chaveMes(f.saidaDisponivel.startAt)
+    const res = await listarDeparturesRota(
+      get(`/api/departures?incluirEncerradas=true&mes=${chave}`) as never,
+    )
+    const corpo = (await res.json()) as { data: { id: number; mes: string }[] }
+
+    expect(corpo.data.length).toBeGreaterThan(0)
+    // Toda saída devolvida pertence ao mês pedido — inclusive as encerradas,
+    // que só somem por causa da janela, nunca por causa do recorte.
+    expect(corpo.data.every((s) => s.mes === chave)).toBe(true)
+    expect(corpo.data.map((s) => s.id)).toContain(f.saidaDisponivel.id)
+  })
+
+  it('mês malformado devolve 400, não 500', async () => {
+    // Sem o `refine` do schema, `2026-99` viraria uma data inválida lá dentro
+    // e a consulta explodiria com `NaN` — 500 no lugar de 400.
+    for (const valor of ['2026-99', 'agosto', '2026-8']) {
+      const res = await listarDeparturesRota(get(`/api/departures?mes=${valor}`) as never)
+      expect(res.status, valor).toBe(400)
+    }
+  })
+
+  it('filtros se combinam sem se anular', async () => {
+    const res = await listarDeparturesRota(
+      get('/api/departures?dificuldade=MODERADO&tag=rapel&precoMax=10000') as never,
+    )
+    const corpo = (await res.json()) as { data: { id: number }[] }
+
+    expect(corpo.data.map((s) => s.id)).toEqual([f.saidaDisponivel.id])
+  })
+})
+
+// =============================================================================
+describe('opcoesDeAgenda — os filtros só oferecem o que existe', () => {
+  it('não oferece dificuldade sem saída', async () => {
+    const opcoes = await opcoesDeAgenda(new Date(0))
+
+    // O roteiro FÁCIL do fixture está em RASCUNHO. Oferecer "Fácil" no filtro
+    // levaria a pessoa a um resultado vazio — que ela leria como site
+    // quebrado, não como "não tem data marcada".
+    expect(opcoes.dificuldades).toEqual(['MODERADO'])
+  })
+
+  it('não oferece tag sem saída publicada', async () => {
+    const opcoes = await opcoesDeAgenda(new Date(0))
+    expect(opcoes.tags.map((t) => t.slug)).toEqual(['rapel'])
+  })
+
+  it('conta as saídas de cada mês', async () => {
+    const opcoes = await opcoesDeAgenda(new Date(0))
+    const soma = opcoes.meses.reduce((total, m) => total + m.total, 0)
+
+    // 3 publicadas do roteiro publicado: a disponível, a esgotada e a passada.
+    // A saída do roteiro em rascunho não entra.
+    expect(soma).toBe(3)
+    expect(opcoes.meses.every((m) => /^\d{4}-\d{2}$/.test(m.chave))).toBe(true)
   })
 })
 

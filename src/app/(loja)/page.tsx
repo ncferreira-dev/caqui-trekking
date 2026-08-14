@@ -1,41 +1,38 @@
 import Link from 'next/link'
 
+import { CardSaida } from '@/components/catalogo/card-saida'
+import { Carrossel, ItemDoCarrossel } from '@/components/catalogo/carrossel'
+import { FaixaDeCredibilidade } from '@/components/catalogo/faixa-credibilidade'
 import { Montanhas } from '@/components/marca/grafismos'
+import { Capa } from '@/components/midia/imagem'
 import { CamadaHero, Hero } from '@/components/movimento/hero'
 import { Revelar } from '@/components/movimento/revelar'
 import { LinkBotao } from '@/components/ui/button'
-import { Card, CardCorpo } from '@/components/ui/card'
+import { listarDepartures } from '@/server/services/departure-service'
 import { buscarSettings } from '@/server/services/institucional-service'
+import { listarProdutos } from '@/server/services/product-service'
 
 /**
  * Home.
  *
- * O que existe aqui é a CASCA: herói com parallax, e os três caminhos do site.
- * A faixa de credibilidade, o carrossel de próximas saídas e a chamada da
- * Caqui Wear são o PROMPT 08 — a parte que vende. O herói construído aqui é o
- * mesmo que o 08 recebe pronto.
+ * ────────────────────────────────────────────────────────────────────────────
+ * A HOME LEVA PARA A AGENDA. NÃO É UMA VITRINE DE ROTEIROS.
+ * ────────────────────────────────────────────────────────────────────────────
+ * A pergunta que fecha venda em operação de trilha guiada é "quando é a
+ * próxima?". Um grid de roteiros bonitos responde "para onde dá para ir", que
+ * é a segunda pergunta — e leva a uma página que ainda vai ter que perguntar a
+ * data de novo.
+ *
+ * Por isso o carrossel logo abaixo do herói é de SAÍDAS com data, não de
+ * roteiros: o primeiro elemento clicável depois do herói já mostra um dia, um
+ * preço e uma vaga.
  */
-
-const CAMINHOS = [
-  {
-    href: '/agenda',
-    titulo: 'Agenda',
-    texto: 'Todas as saídas com data marcada, mês a mês. É por aqui que se reserva vaga.',
-  },
-  {
-    href: '/trekking',
-    titulo: 'Expedições',
-    texto: 'Os roteiros: distância, altimetria, dificuldade e o que esperar de cada um.',
-  },
-  {
-    href: '/wear',
-    titulo: 'Caqui Wear',
-    texto: 'Camiseta, baby look, caneca e acessório. A marca fora da trilha.',
-  },
-] as const
-
 export default async function PaginaInicial() {
-  const settings = await buscarSettings()
+  const [settings, agenda, wear] = await Promise.all([
+    buscarSettings(),
+    listarDepartures({ incluirEncerradas: false, limit: 8, offset: 0 }),
+    listarProdutos({ limit: 3, offset: 0 }),
+  ])
 
   const titulo = settings?.heroTitulo ?? 'Venha viver novas experiências'
   const subtitulo =
@@ -92,17 +89,114 @@ export default async function PaginaInicial() {
         </div>
       </Hero>
 
-      <section className="mx-auto w-full max-w-7xl px-5 py-16 sm:px-8 sm:py-24">
-        <div className="grid gap-8 md:grid-cols-3">
+      <FaixaDeCredibilidade settings={settings} />
+
+      {/* ── Próximas saídas ─────────────────────────────────────────────────
+          O carrossel sangra até a borda da tela de propósito: um card cortado
+          na direita é o que avisa que a lista continua, sem precisar de
+          bolinha de paginação nem de seta piscando no celular. */}
+      <section aria-labelledby="proximas" className="py-16 sm:py-20">
+        <div className="mx-auto mb-8 flex w-full max-w-7xl flex-wrap items-end justify-between gap-4 px-5 sm:px-8">
+          <div>
+            <p className="text-caqui-ink-700 text-rotulo font-mono uppercase">Com data marcada</p>
+            <h2 id="proximas" className="text-display-l mt-2 uppercase">
+              Próximas saídas
+            </h2>
+          </div>
+          <LinkBotao href="/agenda" variante="secondary">
+            Ver a agenda inteira
+          </LinkBotao>
+        </div>
+
+        {agenda.saidas.length === 0 ? (
+          <p className="text-caqui-ink-700 text-corpo-lg mx-auto w-full max-w-7xl px-5 sm:px-8">
+            A agenda do próximo mês ainda está sendo montada. Dá para pedir uma saída fechada para o
+            seu grupo —{' '}
+            <Link href="/contato" className="rounded-xs underline underline-offset-4">
+              fale com a Caqui
+            </Link>
+            .
+          </p>
+        ) : (
+          <Carrossel rotulo="Próximas saídas com data marcada">
+            {agenda.saidas.map((saida, indice) => (
+              <ItemDoCarrossel key={saida.id}>
+                <CardSaida saida={saida} prioridade={indice === 0} />
+              </ItemDoCarrossel>
+            ))}
+          </Carrossel>
+        )}
+      </section>
+
+      {/* ── Caqui Wear ──────────────────────────────────────────────────────
+          Fundo escuro: é a única seção da home que muda de superfície, e a
+          troca é o que separa "a operação" de "a marca". Aqui o laranja pode
+          ser texto — sobre `ink-900` ele dá 8,31:1 — e por isso existe o token
+          `realce-escuro`, com outro nome porque tem outra regra de uso. */}
+      <section
+        aria-labelledby="wear"
+        className="bg-caqui-ink-900 relative overflow-hidden py-16 text-white sm:py-20"
+      >
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 opacity-15" aria-hidden>
+          <Montanhas className="h-40 w-full" />
+        </div>
+
+        <div className="relative mx-auto grid w-full max-w-7xl items-center gap-10 px-5 sm:px-8 lg:grid-cols-2">
+          <div>
+            <p className="text-caqui-realce-escuro text-rotulo font-mono uppercase">Caqui Wear</p>
+            <h2 id="wear" className="text-display-l mt-2 text-white uppercase">
+              A marca fora da trilha
+            </h2>
+            <p className="text-caqui-sand-400 text-corpo-lg mt-5 max-w-md">
+              Camiseta e baby look dry fit, caneca e acessório. Feito para quem já subiu — e para
+              quem vai subir.
+            </p>
+
+            <div className="mt-8">
+              <LinkBotao href="/wear" tamanho="lg">
+                Ver a Caqui Wear
+              </LinkBotao>
+            </div>
+          </div>
+
+          {wear.produtos.length > 0 && (
+            <ul className="grid grid-cols-3 gap-3">
+              {wear.produtos.map((produto) => (
+                <li key={produto.slug}>
+                  <Link
+                    href={`/wear/${produto.slug}`}
+                    className="border-caqui-rule-invertido block aspect-square overflow-hidden rounded-xs border"
+                  >
+                    <Capa midia={produto.capa} sizes="(min-width: 64rem) 12rem, 30vw" />
+                    <span className="sr-only">{produto.nome}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {/* ── Os três caminhos ────────────────────────────────────────────────
+          Fica no FIM, e não no topo: quem chegou até aqui sem clicar em data
+          nenhuma está explorando, e aí a navegação por tema ajuda. Colocada
+          antes do carrossel, ela competiria com a única coisa que a home
+          precisa entregar — uma data. */}
+      <section className="mx-auto w-full max-w-7xl px-5 pb-20 sm:px-8">
+        <div className="border-caqui-rule grid gap-8 border-t pt-12 md:grid-cols-3">
           {CAMINHOS.map((caminho, indice) => (
             <Revelar key={caminho.href} atraso={indice * 70}>
-              <Link href={caminho.href} className="block h-full rounded-xs">
-                <Card interativo className="h-full">
-                  <CardCorpo>
-                    <h2 className="text-display-m uppercase">{caminho.titulo}</h2>
-                    <p className="text-caqui-ink-700 text-corpo">{caminho.texto}</p>
-                  </CardCorpo>
-                </Card>
+              <Link
+                href={caminho.href}
+                className="group block rounded-xs focus-visible:ring-2 focus-visible:ring-white"
+              >
+                <h3 className="text-display-m group-hover:text-caqui-ink-700 uppercase transition-colors">
+                  {caminho.titulo}
+                </h3>
+                <p className="text-caqui-ink-700 text-corpo mt-2">{caminho.texto}</p>
+                <span className="text-caqui-ink-900 text-rotulo mt-3 inline-block font-mono uppercase underline underline-offset-4">
+                  {caminho.acao}
+                </span>
               </Link>
             </Revelar>
           ))}
@@ -111,3 +205,24 @@ export default async function PaginaInicial() {
     </>
   )
 }
+
+const CAMINHOS = [
+  {
+    href: '/agenda',
+    titulo: 'Agenda',
+    texto: 'Todas as saídas com data marcada, mês a mês. É por aqui que se reserva vaga.',
+    acao: 'Ver as datas',
+  },
+  {
+    href: '/trekking',
+    titulo: 'Expedições',
+    texto: 'Os roteiros: distância, altimetria, dificuldade e o que esperar de cada um.',
+    acao: 'Ver os roteiros',
+  },
+  {
+    href: '/sobre',
+    titulo: 'A Caqui',
+    texto: 'Quem guia, com quais credenciais, e como a operação funciona na prática.',
+    acao: 'Conhecer a equipe',
+  },
+] as const

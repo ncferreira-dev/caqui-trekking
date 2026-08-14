@@ -14,6 +14,16 @@ import { cn } from '@/lib/ui/cn'
  * `aria-label` explícito porque o conteúdo visível é um ícone. E `rel` com
  * `noopener` — `target="_blank"` sem ele dá à aba de destino acesso a
  * `window.opener`.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * A CLASSE `whatsapp-flutuante` NÃO É PARA ESTILO — É UM PONTO DE ANCORAGEM
+ * ────────────────────────────────────────────────────────────────────────────
+ * Ela existe para a barra fixa de compra do mobile poder empurrar este botão
+ * para cima quando entra em cena. Medido no navegador: os dois são `fixed`
+ * no canto inferior, os dois em `z-40`, e o círculo do WhatsApp cobria
+ * exatamente o CTA "Escolher data" — o botão mais importante da página de
+ * roteiro no celular. Ver a regra em globals.css e o efeito em
+ * `components/catalogo/barra-de-compra.tsx`.
  */
 export function WhatsAppFlutuante({ numero }: { numero: string }) {
   return (
@@ -23,6 +33,7 @@ export function WhatsAppFlutuante({ numero }: { numero: string }) {
       rel="noopener noreferrer"
       aria-label="Falar com a Caqui Trekking no WhatsApp"
       className={cn(
+        'whatsapp-flutuante',
         'fixed right-4 bottom-4 z-40 sm:right-6 sm:bottom-6',
         'inline-flex size-14 items-center justify-center',
         'bg-caqui-forest-600 border-caqui-ink-900 rounded-full border text-white',

@@ -2,6 +2,7 @@
 
 import { type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useId } from 'react'
 
+import { CLASSES_COM_ERRO, CLASSES_CONTROLE } from '@/components/ui/estilos-de-campo'
 import { cn } from '@/lib/ui/cn'
 
 /**
@@ -33,17 +34,11 @@ import { cn } from '@/lib/ui/cn'
  * para quem tem daltonismo nem para quem usa leitor de tela.
  */
 
-const CONTROLE = [
-  'w-full min-h-11 px-3 py-2',
-  'bg-white text-caqui-ink-900 font-sans text-corpo',
-  'border border-caqui-ink-900 rounded-xs',
-  'placeholder:text-caqui-ink-500',
-  'transition-[border-color,box-shadow] duration-150',
-  'disabled:bg-caqui-sand-100 disabled:text-caqui-ink-500 disabled:cursor-not-allowed',
-  'disabled:border-caqui-rule',
-].join(' ')
-
-const COM_ERRO = 'border-caqui-danger border-2'
+// As classes moram em `estilos-de-campo.ts`, um módulo sem `'use client'`.
+// Ver o comentário de lá: os filtros da agenda precisam delas SEM arrastar
+// este arquivo — e este arquivo é de cliente por causa do `useId`.
+const CONTROLE = CLASSES_CONTROLE
+const COM_ERRO = CLASSES_COM_ERRO
 
 type CampoBaseProps = {
   rotulo: string

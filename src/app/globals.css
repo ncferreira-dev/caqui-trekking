@@ -342,6 +342,33 @@
 }
 
 /* ==========================================================================
+   O BOTÃO DO WHATSAPP CEDE LUGAR À BARRA DE COMPRA
+   ==========================================================================
+   Achado medindo, não lendo: no celular, a barra fixa de compra (`fixed
+   inset-x-0 bottom-0`, z-40) e o botão flutuante do WhatsApp (`fixed right-4
+   bottom-4`, z-40) ocupam o mesmo canto. Com o mesmo `z-index`, quem vence é
+   quem vem depois no DOM — o círculo verde — e ele cobria exatamente o CTA
+   "Escolher data", o botão mais importante da página de roteiro.
+
+   A barra marca o `<html>` enquanto está em cena; o botão sobe a própria
+   altura dela mais um respiro. Fica no CSS porque o botão é um componente de
+   SERVIDOR, sem estado — e não vale torná-lo cliente para ele saber de algo
+   que só o CSS precisa saber.
+
+   `transform` e não `bottom`: composição pura, e o elemento já tem transição
+   de `transform` declarada para o hover.
+
+   A media query repete o corte `lg` da barra: acima de 64rem ela é
+   `lg:hidden`, mas o atributo continua no `<html>` — o observer não sabe de
+   CSS. Sem este escopo, o botão do WhatsApp subiria no desktop para desviar
+   de uma barra que não está lá. */
+@media (width < 64rem) {
+  :root[data-barra-de-compra='visivel'] .whatsapp-flutuante {
+    transform: translateY(-4.5rem);
+  }
+}
+
+/* ==========================================================================
    MOVIMENTO
    ==========================================================================
    O bloco nuclear `*{transition-duration:0.01ms!important}` é tentador e está

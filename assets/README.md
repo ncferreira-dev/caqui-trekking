@@ -9,8 +9,49 @@ assets/
 ├── wear/       → produtos da Caqui Wear   (--destino=produto, o padrão)
 ├── roteiros/   → galeria das expedições   (--destino=roteiro)
 ├── guias/      → fotos dos guias          (--destino=guia)
-└── _originais/ → material cru, antes de renomear
+├── _originais/ → material cru, antes de renomear
+└── _oculos/    → óculos da marca, aguardando cadastro (ver abaixo)
 ```
+
+Pasta com `_` na frente **não é destino de importação**. O script lê um
+diretório só, sem recursão, escolhido pelo `--destino` — então `_originais` e
+`_oculos` nunca são varridos por acidente.
+
+---
+
+## Estado do material entregue (14/08/2026)
+
+O cliente entregou **41 fotos, todas de produto da Caqui Wear**. Não há
+nenhuma foto de expedição.
+
+| Pasta         | Qtd | O que é                                                                                         |
+| ------------- | --: | ----------------------------------------------------------------------------------------------- |
+| `wear/`       |  15 | Camiseta, baby look, regata e caneca. **Já renomeadas** pela convenção — prontas para importar. |
+| `_oculos/`    |  26 | Óculos de sol da marca. Aguardando cadastro como produto (PROMPT 09).                           |
+| `roteiros/`   |   0 | **Vazia.** Nenhuma foto de trilha foi entregue.                                                 |
+| `_originais/` |  41 | O material cru, intacto. É a fonte da verdade se algo for classificado errado.                  |
+
+### Os 26 óculos estavam na pasta errada
+
+Foram classificados em `roteiros/` no PROMPT 05 olhando só o nome do arquivo
+(`IMG-2024…-WA….jpg`, o padrão do WhatsApp). Abrindo as imagens, são óculos de
+sol — produto, não expedição. Movidos para `_oculos/` em 14/08/2026.
+
+Duas coisas precisam acontecer antes de eles virarem importáveis:
+
+1. **Não existe produto de óculos cadastrado.** A convenção de nome exige o
+   slug de um produto que já esteja no banco. Cadastro é PROMPT 09.
+2. **O preço está queimado na imagem** (R$ 59,90 / R$ 71,90 / R$ 89,90). Isso
+   briga com a arquitetura do projeto: preço vive no banco e é editável no CRM.
+   Foto com preço impresso envelhece e só muda com novo upload. Ou o cliente
+   manda a foto sem a etiqueta, ou o número da etiqueta vira a fonte da verdade
+   — e aí o CRM passa a mentir.
+
+### Sem foto de expedição, o catálogo não quebra
+
+`components/midia/imagem.tsx` tem o `MidiaVazia`: o grafismo de montanhas sobre
+areia. Roteiro sem foto renderiza isso, não um ícone de imagem quebrada. Ver
+docs/08-catalogo.md.
 
 ---
 

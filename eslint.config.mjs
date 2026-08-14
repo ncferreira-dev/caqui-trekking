@@ -59,6 +59,27 @@ const eslintConfig = defineConfig([
     },
   },
 
+  {
+    // ────────────────────────────────────────────────────────────────────────
+    // `<img>` É PERMITIDO EM EXATAMENTE DOIS ARQUIVOS
+    // ────────────────────────────────────────────────────────────────────────
+    // A regra `@next/next/no-img-element` pressupõe que o otimizador do Next é
+    // quem serve as imagens. Neste projeto não é: o Cloudinary já entrega
+    // `f_auto,q_auto,c_limit` na borda, negociando AVIF/WebP pelo `Accept`.
+    // Passar por `/_next/image` em cima disso custaria uma invocação de função
+    // por imagem e por largura, re-encodaria um arquivo já otimizado e mataria
+    // o `f_auto`. A justificativa completa está no cabeçalho de imagem.tsx.
+    //
+    // A exceção é NOMINAL, e não global, de propósito: um `<img>` solto em
+    // qualquer outro arquivo continua sendo erro. Quem quiser renderizar
+    // imagem passa pelos componentes que sabem montar `srcset`, `sizes` e o
+    // borrão — que é justamente o que a regra existe para garantir.
+    files: ['src/components/midia/imagem.tsx', 'src/components/catalogo/galeria.tsx'],
+    rules: {
+      '@next/next/no-img-element': 'off',
+    },
+  },
+
   globalIgnores([
     '.next/**',
     'out/**',

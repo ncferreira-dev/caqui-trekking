@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 
 import { ok } from '@/lib/api/respond'
+import { intervaloDoMes } from '@/lib/datetime'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
 import { filtrosDepartureSchema, queryParaObjeto } from '@/lib/api/schemas'
 import { listarDepartures } from '@/server/services/departure-service'
@@ -20,9 +21,18 @@ export const GET = rota(async (request: NextRequest) => {
   const url = new URL(request.url)
   const filtros = validarOuFalhar(filtrosDepartureSchema.safeParse(queryParaObjeto(url)))
 
+  // `mes` é açúcar para o par `de`/`ate`, resolvido no fuso de São Paulo. Quem
+  // manda os dois vence com o par explícito — o parâmetro mais específico não
+  // deve ser sobrescrito pelo atalho.
+  const janela = filtros.mes ? intervaloDoMes(filtros.mes) : null
+
   const { saidas, total } = await listarDepartures({
-    de: filtros.de,
-    ate: filtros.ate,
+    de: filtros.de ?? janela?.de,
+    ate: filtros.ate ?? janela?.ate,
+    dificuldade: filtros.dificuldade,
+    tag: filtros.tag,
+    precoMinCentavos: filtros.precoMin,
+    precoMaxCentavos: filtros.precoMax,
     incluirEncerradas: filtros.incluirEncerradas,
     limit: filtros.limit,
     offset: filtros.offset,

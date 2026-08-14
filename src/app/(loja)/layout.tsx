@@ -1,6 +1,7 @@
 import { Footer } from '@/components/shell/footer'
 import { Header } from '@/components/shell/header'
 import { WhatsAppFlutuante } from '@/components/shell/whatsapp-flutuante'
+import { ProvedorDeToast } from '@/components/ui/toast'
 import { buscarSettings } from '@/server/services/institucional-service'
 
 /**
@@ -34,7 +35,13 @@ export default async function LayoutLoja({ children }: LayoutProps<'/'>) {
   const settings = await buscarSettings()
 
   return (
-    <>
+    // O provedor de avisos envolve a loja inteira, e não cada página que
+    // precisa dele: "adicionado à mochila" é disparado do detalhe do roteiro e
+    // do catálogo da Wear, e a região viva precisa existir no DOM ANTES da
+    // primeira mensagem — um live region criado junto com o texto costuma não
+    // ser anunciado, porque o leitor de tela precisa já estar observando o nó.
+    // Ver o comentário de `components/ui/toast.tsx`.
+    <ProvedorDeToast>
       <Header />
 
       {/* O alvo do link "pular para o conteúdo" do header. */}
@@ -45,6 +52,6 @@ export default async function LayoutLoja({ children }: LayoutProps<'/'>) {
       <Footer settings={settings} />
 
       {settings?.whatsappNumber && <WhatsAppFlutuante numero={settings.whatsappNumber} />}
-    </>
+    </ProvedorDeToast>
   )
 }

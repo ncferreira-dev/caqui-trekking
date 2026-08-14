@@ -139,7 +139,7 @@ da Fase B.
 
 - [x] **06** — Design system → [`docs/06-design-system.md`](docs/06-design-system.md) · vitrine em `/dev/styleguide`
 - [x] **07** — Shell, navegação e botão fantasma → [`docs/07-shell.md`](docs/07-shell.md)
-- [ ] **08** — Catálogo Trekking
+- [x] **08** — Catálogo Trekking → [`docs/08-catalogo.md`](docs/08-catalogo.md)
 - [ ] **09** — Caqui Wear, carrinho e handoff pro WhatsApp
 - [ ] **10** — CRM · **11** — SEO, performance e deploy
 
@@ -179,4 +179,5 @@ está em [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md).
 | [`docs/relatorio-fase-a.md`](docs/relatorio-fase-a.md) | Estado do backend ao fim da Fase A, dívida técnica consciente e a decisão em aberto sobre foto por cor                         |
 | [`docs/06-design-system.md`](docs/06-design-system.md) | Onde o briefing e a logo real divergem, a tabela de contraste que governa a paleta, e por que o botão laranja tem rótulo preto |
 | [`docs/07-shell.md`](docs/07-shell.md)                 | O botão fantasma, o header sobre o herói, o carrinho como store externo e o sistema de movimento                               |
+| [`docs/08-catalogo.md`](docs/08-catalogo.md)           | Agenda com filtros sem JavaScript, o seletor de saída, por que não é `next/image`, e a colisão que só apareceu medindo         |
 | [`assets/README.md`](assets/README.md)                 | A convenção de nome de arquivo para a importação em lote                                                                       |

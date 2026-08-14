@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { EditarRoteiro } from '@/components/crm/editar-roteiro'
 import { CabecalhoDeSecao, Painel, Rotulo, Vazio } from '@/components/crm/pecas'
 import { BadgeDificuldade } from '@/components/ui/badge'
 import { formatarDuracao } from '@/lib/formato'
@@ -51,10 +52,23 @@ export default async function PaginaRoteiros() {
       id: true,
       slug: true,
       title: true,
+      subtitle: true,
+      description: true,
       city: true,
       state: true,
+      region: true,
       difficulty: true,
+      distanceKm: true,
+      elevationGainM: true,
+      maxAltitudeM: true,
       durationMinutes: true,
+      minAge: true,
+      requiresExperience: true,
+      highlights: true,
+      included: true,
+      notIncluded: true,
+      whatToBring: true,
+      cancellationPolicy: true,
       status: true,
       featured: true,
       _count: {
@@ -123,6 +137,31 @@ export default async function PaginaRoteiros() {
                       >
                         {t._count.departures} data(s) futura(s)
                       </span>
+
+                      <EditarRoteiro
+                        roteiro={{
+                          id: t.id,
+                          title: t.title,
+                          subtitle: t.subtitle,
+                          description: t.description,
+                          city: t.city,
+                          state: t.state,
+                          region: t.region,
+                          difficulty: t.difficulty,
+                          distanceKm: t.distanceKm ? t.distanceKm.toString() : null,
+                          elevationGainM: t.elevationGainM,
+                          maxAltitudeM: t.maxAltitudeM,
+                          durationMinutes: t.durationMinutes,
+                          minAge: t.minAge,
+                          requiresExperience: t.requiresExperience,
+                          highlights: t.highlights,
+                          included: t.included,
+                          notIncluded: t.notIncluded,
+                          whatToBring: t.whatToBring,
+                          cancellationPolicy: t.cancellationPolicy,
+                          status: t.status,
+                        }}
+                      />
 
                       <Link
                         href={`/trekking/${t.slug}`}

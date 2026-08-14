@@ -61,7 +61,10 @@ export function FormularioDeLogin() {
         // então navegar. Sem isso, a página de destino renderiza com o estado
         // anterior e "pisca" deslogada.
         router.refresh()
-        router.push('/crm')
+        // Para o PAINEL, não de volta para `/crm` — que é esta mesma tela.
+        // Antes do PROMPT 10 não havia painel, e o `push('/crm')` só
+        // recarregava o login já autenticado.
+        router.push('/crm/painel')
         return
       }
 

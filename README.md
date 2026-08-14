@@ -141,7 +141,8 @@ da Fase B.
 - [x] **07** — Shell, navegação e botão fantasma → [`docs/07-shell.md`](docs/07-shell.md)
 - [x] **08** — Catálogo Trekking → [`docs/08-catalogo.md`](docs/08-catalogo.md)
 - [x] **09** — Caqui Wear, carrinho e handoff pro WhatsApp → [`docs/09-wear-carrinho.md`](docs/09-wear-carrinho.md)
-- [ ] **10** — CRM · **11** — SEO, performance e deploy
+- [x] **10** — CRM → [`docs/10-crm.md`](docs/10-crm.md)
+- [ ] **11** — SEO, performance e deploy
 
 ---
 
@@ -182,4 +183,5 @@ está em [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md).
 | [`docs/08-catalogo.md`](docs/08-catalogo.md)           | Agenda com filtros sem JavaScript, o seletor de saída, por que não é `next/image`, e a colisão que só apareceu medindo         |
 | [`docs/09-wear-carrinho.md`](docs/09-wear-carrinho.md) | A mensagem do WhatsApp, o plano B do desktop, a revalidação da mochila e a submarca da Caqui Wear                              |
 | [`docs/09-oculos.md`](docs/09-oculos.md)               | Levantamento das 26 fotos de óculos e os 10 produtos que saíram delas                                                          |
+| [`docs/10-crm.md`](docs/10-crm.md)                     | A tabela de autorização, a disponibilidade em um toque, e por que o calendário não entrou                                      |
 | [`assets/README.md`](assets/README.md)                 | A convenção de nome de arquivo para a importação em lote                                                                       |

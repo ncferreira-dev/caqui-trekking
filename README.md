@@ -138,7 +138,8 @@ da Fase B.
 **Fase B — Frontend** _(só começa com a Fase A validada)_
 
 - [x] **06** — Design system → [`docs/06-design-system.md`](docs/06-design-system.md) · vitrine em `/dev/styleguide`
-- [ ] **07** — Shell e navegação · **08** — Catálogo Trekking
+- [x] **07** — Shell, navegação e botão fantasma → [`docs/07-shell.md`](docs/07-shell.md)
+- [ ] **08** — Catálogo Trekking
 - [ ] **09** — Caqui Wear, carrinho e handoff pro WhatsApp
 - [ ] **10** — CRM · **11** — SEO, performance e deploy
 
@@ -177,4 +178,5 @@ está em [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md).
 | [`docs/05-midia.md`](docs/05-midia.md)                 | Cloudinary corrigido, validação por bytes, variantes por URL, ciclo de vida sem órfão e a convenção de importação em lote      |
 | [`docs/relatorio-fase-a.md`](docs/relatorio-fase-a.md) | Estado do backend ao fim da Fase A, dívida técnica consciente e a decisão em aberto sobre foto por cor                         |
 | [`docs/06-design-system.md`](docs/06-design-system.md) | Onde o briefing e a logo real divergem, a tabela de contraste que governa a paleta, e por que o botão laranja tem rótulo preto |
+| [`docs/07-shell.md`](docs/07-shell.md)                 | O botão fantasma, o header sobre o herói, o carrinho como store externo e o sistema de movimento                               |
 | [`assets/README.md`](assets/README.md)                 | A convenção de nome de arquivo para a importação em lote                                                                       |

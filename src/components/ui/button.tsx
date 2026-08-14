@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import Link from 'next/link'
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react'
 
 import { cn } from '@/lib/ui/cn'
 
@@ -77,6 +78,32 @@ const TAMANHOS: Record<Tamanho, string> = {
   lg: 'min-h-13 px-7 text-base',
 }
 
+/**
+ * As classes do botão, sem o botão.
+ *
+ * Existe para o `LinkBotao` abaixo — e NÃO existe um `asChild` que troque a
+ * tag renderizada. Um `<button>` que às vezes é `<a>` é a origem mais comum de
+ * navegação quebrada: `<a>` responde a Enter e ao clique do meio, `<button>`
+ * responde a Enter e Espaço; um sem `href` some da lista de links do leitor de
+ * tela. Quem navega precisa saber se aquilo LEVA a algum lugar ou FAZ alguma
+ * coisa, e a resposta tem que estar no HTML.
+ *
+ * Então: dois componentes, duas tags, aparência compartilhada.
+ */
+export function classesDeBotao({
+  variante = 'primary',
+  tamanho = 'md',
+  bloco = false,
+  className,
+}: {
+  variante?: Variante
+  tamanho?: Tamanho
+  bloco?: boolean
+  className?: string
+} = {}): string {
+  return cn(BASE, VARIANTES[variante], TAMANHOS[tamanho], bloco && 'w-full', className)
+}
+
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variante?: Variante
   tamanho?: Tamanho
@@ -109,6 +136,43 @@ export function Button({
       {carregando && <Girando />}
       <span className={cn(carregando && 'opacity-70')}>{children}</span>
     </button>
+  )
+}
+
+/**
+ * O botão com cara de botão, que É um link.
+ *
+ * Use quando a ação LEVA a outra página. Envolve `next/link` por fora:
+ * `<LinkBotao href="/agenda">Ver a agenda</LinkBotao>`.
+ */
+export function LinkBotao({
+  href,
+  variante,
+  tamanho,
+  bloco,
+  className,
+  children,
+  ...props
+}: AnchorHTMLAttributes<HTMLAnchorElement> & {
+  href: string
+  variante?: Variante
+  tamanho?: Tamanho
+  bloco?: boolean
+  children: ReactNode
+}) {
+  return (
+    <Link
+      href={href}
+      className={classesDeBotao({
+        ...(variante ? { variante } : {}),
+        ...(tamanho ? { tamanho } : {}),
+        ...(bloco ? { bloco } : {}),
+        ...(className ? { className } : {}),
+      })}
+      {...props}
+    >
+      <span>{children}</span>
+    </Link>
   )
 }
 

@@ -54,6 +54,15 @@
   --color-caqui-orange-500: #f26522;
   --color-caqui-orange-600: #e04e12;
 
+  /* O MESMO valor de `orange-400`, com outro NOME porque tem outra regra de
+     uso — e o nome é a documentação.
+     Sobre `ink-900` dá 8,31:1: passa como texto normal, em qualquer tamanho.
+     Sobre branco daria 2,34:1 e reprovaria em tudo.
+     Existe para o rodapé e para qualquer superfície escura, e é a única forma
+     sancionada de laranja como texto fora do `.preco`. O ESLint recusa
+     `text-caqui-orange-*` justamente para forçar a passagem por aqui. */
+  --color-caqui-realce-escuro: #ff8a47;
+
   --color-caqui-ink-900: #0d0d0d;
   --color-caqui-ink-700: #2b2b2b;
   --color-caqui-ink-500: #6b6b6b;
@@ -65,12 +74,21 @@
   --color-caqui-sand-100: #f5f1ea;
   --color-caqui-sand-200: #e8e0d3;
 
+  /* Texto secundário SOBRE FUNDO ESCURO. Cinza quente, da família da areia.
+     Existe porque `ink-500` (#6B6B6B) sobre `ink-900` dá 3,65:1 e REPROVA no
+     AA — os rótulos do rodapé ficariam ilegíveis para quem tem baixa visão, e
+     o defeito é invisível para quem enxerga bem. Este dá 6,46:1. */
+  --color-caqui-sand-400: #9a948b;
+
   --color-caqui-danger: #c1121f;
 
   /* Filete de cabelo. É o que dá existência à areia (1,13:1 contra branco não
      delimita nada sozinho) e substitui a sombra difusa no fluxo da página. */
   --color-caqui-rule: rgba(13, 13, 13, 0.16);
   --color-caqui-rule-forte: #0d0d0d;
+  /* O mesmo filete, invertido. `ink-700` sobre `ink-900` dá 1,37:1 — um
+     divisor que ninguém vê não divide nada. */
+  --color-caqui-rule-invertido: rgba(255, 255, 255, 0.2);
 
   /* ── Tipografia ─────────────────────────────────────────────────────────
      Display: ARCHIVO BLACK.
@@ -380,5 +398,62 @@
   }
   50% {
     opacity: 0.55;
+  }
+}
+
+/* Pulso da logo a partir do 3º toque do gesto do CRM.
+   Deliberadamente pequeno: 3% de escala. É retorno, não anúncio — quem não
+   está tentando o gesto não deve nem notar. */
+@keyframes caqui-pulso-logo {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+/* ==========================================================================
+   REVELAR AO ROLAR
+   ==========================================================================
+   O estado inicial escondido é aplicado por JS (`data-revelar="oculto"`), e
+   NÃO pelo CSS. A diferença importa: se o JavaScript falhar, não carregar, ou
+   estiver desligado, o conteúdo continua visível. Uma animação de entrada que
+   esconde conteúdo por padrão é o jeito mais comum de publicar uma página em
+   branco sem perceber.
+   ========================================================================== */
+
+[data-revelar='oculto'] {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+[data-revelar] {
+  transition:
+    opacity 500ms var(--ease-saida),
+    transform 500ms var(--ease-saida);
+}
+
+/* ==========================================================================
+   PARALLAX
+   ==========================================================================
+   `--deslocamento` é escrito por JS dentro de um requestAnimationFrame e lido
+   só aqui. As camadas movem por `translate3d`, que é composição pura — não
+   dispara layout nem paint.
+
+   O efeito é discreto de propósito: parallax exagerado envelhece rápido e, em
+   celular, briga com a rolagem por milissegundo de main thread.
+   ========================================================================== */
+
+.camada-parallax {
+  transform: translate3d(0, calc(var(--deslocamento, 0px) * var(--profundidade, 0)), 0);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .camada-parallax {
+    transform: none;
+    will-change: auto;
   }
 }

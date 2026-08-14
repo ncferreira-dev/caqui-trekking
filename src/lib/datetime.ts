@@ -32,6 +32,28 @@ export function dataCurta(instante: Date): string {
   }).format(instante)
 }
 
+/**
+ * 2026-08-15T09:00Z → "Sáb · 15 ago"
+ *
+ * O formato do card da agenda. O `Intl` em pt-BR devolve o dia da semana em
+ * minúscula e com ponto ("sáb."); aqui ele sai capitalizado e sem ponto,
+ * porque a linha inteira é caixa-alta no design e o ponto vira sujeira.
+ */
+export function diaEMes(instante: Date): string {
+  const partes = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: FUSO_BRASIL,
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+  }).formatToParts(instante)
+
+  const pegar = (tipo: Intl.DateTimeFormatPartTypes) =>
+    partes.find((p) => p.type === tipo)?.value.replace('.', '') ?? ''
+
+  const semana = pegar('weekday')
+  return `${semana.charAt(0).toUpperCase()}${semana.slice(1)} · ${pegar('day')} ${pegar('month')}`
+}
+
 /** 2026-08-15T09:00Z → "06:00" */
 export function horaLocal(instante: Date): string {
   return new Intl.DateTimeFormat('pt-BR', {

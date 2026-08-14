@@ -19,7 +19,8 @@ export function CabecalhoDePagina({
   acao,
   className,
 }: {
-  sobretitulo?: string
+  /** Texto ou nó — a Caqui Wear passa um breadcrumb com link. */
+  sobretitulo?: ReactNode
   titulo: string
   descricao?: string
   /** Número que acompanha a curva. Some quando não faz sentido. */

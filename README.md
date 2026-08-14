@@ -140,7 +140,7 @@ da Fase B.
 - [x] **06** — Design system → [`docs/06-design-system.md`](docs/06-design-system.md) · vitrine em `/dev/styleguide`
 - [x] **07** — Shell, navegação e botão fantasma → [`docs/07-shell.md`](docs/07-shell.md)
 - [x] **08** — Catálogo Trekking → [`docs/08-catalogo.md`](docs/08-catalogo.md)
-- [ ] **09** — Caqui Wear, carrinho e handoff pro WhatsApp
+- [x] **09** — Caqui Wear, carrinho e handoff pro WhatsApp → [`docs/09-wear-carrinho.md`](docs/09-wear-carrinho.md)
 - [ ] **10** — CRM · **11** — SEO, performance e deploy
 
 ---
@@ -180,4 +180,6 @@ está em [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md).
 | [`docs/06-design-system.md`](docs/06-design-system.md) | Onde o briefing e a logo real divergem, a tabela de contraste que governa a paleta, e por que o botão laranja tem rótulo preto |
 | [`docs/07-shell.md`](docs/07-shell.md)                 | O botão fantasma, o header sobre o herói, o carrinho como store externo e o sistema de movimento                               |
 | [`docs/08-catalogo.md`](docs/08-catalogo.md)           | Agenda com filtros sem JavaScript, o seletor de saída, por que não é `next/image`, e a colisão que só apareceu medindo         |
+| [`docs/09-wear-carrinho.md`](docs/09-wear-carrinho.md) | A mensagem do WhatsApp, o plano B do desktop, a revalidação da mochila e a submarca da Caqui Wear                              |
+| [`docs/09-oculos.md`](docs/09-oculos.md)               | Levantamento das 26 fotos de óculos e os 10 produtos que saíram delas                                                          |
 | [`assets/README.md`](assets/README.md)                 | A convenção de nome de arquivo para a importação em lote                                                                       |

@@ -281,6 +281,125 @@ const PRODUTOS = [
     priceCents: 3_500,
     variants: [{ size: 'UNICO', colorName: 'Branca', colorHex: '#FFFFFF' }],
   },
+
+  // ── Óculos de sol ─────────────────────────────────────────────────────────
+  // 10 modelos, levantados foto a foto. Ver docs/09-oculos.md.
+  //
+  // FORMATO é produto e COR é variante, porque o eixo de variante do schema é
+  // `size × colorName` e não existe eixo de formato. Todas com `size: UNICO`.
+  //
+  // O preço acompanha o material da haste — acetato R$ 59,90, madeira R$ 71,90,
+  // espelhado R$ 89,90 — então a linha caiu pronta do próprio catálogo.
+  {
+    slug: 'oculos-glacier-caqui',
+    name: 'Óculos Glacier Caqui',
+    description:
+      'Óculos de sol estilo montanhismo, com aba lateral perfurada que corta a luz que entra pelo canto do olho. Lente marrom, armação em acetato.',
+    category: 'ACESSORIO',
+    priceCents: 5_990,
+    sortOrder: 10,
+    variants: [{ size: 'UNICO', colorName: 'Marrom Escuro', colorHex: '#4A3B32' }],
+  },
+  {
+    slug: 'oculos-quadrado-caqui',
+    name: 'Óculos Quadrado Caqui',
+    description: 'Armação quadrada preta fosca em acetato, com lente espelhada prateada.',
+    category: 'ACESSORIO',
+    priceCents: 5_990,
+    sortOrder: 11,
+    variants: [{ size: 'UNICO', colorName: 'Preto', colorHex: '#0D0D0D' }],
+  },
+  {
+    slug: 'oculos-redondo-caqui',
+    name: 'Óculos Redondo Caqui',
+    description: 'Armação redonda em acetato translúcido, lente marrom. Silhueta clássica.',
+    category: 'ACESSORIO',
+    priceCents: 5_990,
+    sortOrder: 12,
+    variants: [{ size: 'UNICO', colorName: 'Vinho Translúcido', colorHex: '#6B2F2F' }],
+  },
+  {
+    slug: 'oculos-aviador-redondo-caqui',
+    name: 'Óculos Aviador Redondo Caqui',
+    description:
+      'Lentes redondas com ponte dupla — a barra reta ligando os aros, do aviador clássico. Lente cinza escura.',
+    category: 'ACESSORIO',
+    priceCents: 5_990,
+    sortOrder: 13,
+    variants: [{ size: 'UNICO', colorName: 'Marrom Escuro', colorHex: '#3A2E28' }],
+  },
+  {
+    slug: 'oculos-wayfarer-caqui',
+    name: 'Óculos Wayfarer Caqui',
+    description: 'O wayfarer da Caqui em acetato, com a marca gravada na haste. Quatro cores.',
+    category: 'ACESSORIO',
+    priceCents: 5_990,
+    sortOrder: 14,
+    variants: [
+      { size: 'UNICO', colorName: 'Preto', colorHex: '#0D0D0D' },
+      { size: 'UNICO', colorName: 'Preto Degradê', colorHex: '#2B2B2B' },
+      { size: 'UNICO', colorName: 'Marrom Degradê', colorHex: '#6E6058' },
+      { size: 'UNICO', colorName: 'Marrom Avermelhado', colorHex: '#5A3A32' },
+    ],
+  },
+  {
+    slug: 'oculos-quadrado-madeira-caqui',
+    name: 'Óculos Quadrado Madeira Caqui',
+    description: 'Armação quadrada com haste de madeira e a marca gravada. Lente polarizada.',
+    category: 'ACESSORIO',
+    priceCents: 7_190,
+    sortOrder: 15,
+    variants: [
+      { size: 'UNICO', colorName: 'Preto', colorHex: '#0D0D0D' },
+      { size: 'UNICO', colorName: 'Vinho Translúcido', colorHex: '#6B2F2F' },
+    ],
+  },
+  {
+    slug: 'oculos-redondo-madeira-caqui',
+    name: 'Óculos Redondo Madeira Caqui',
+    description: 'Aro redondo com haste de madeira. Lente marrom.',
+    category: 'ACESSORIO',
+    priceCents: 7_190,
+    sortOrder: 16,
+    variants: [
+      { size: 'UNICO', colorName: 'Preto', colorHex: '#0D0D0D' },
+      { size: 'UNICO', colorName: 'Marrom Avermelhado', colorHex: '#5A3A32' },
+    ],
+  },
+  {
+    slug: 'oculos-wayfarer-madeira-caqui',
+    name: 'Óculos Wayfarer Madeira Caqui',
+    description: 'O wayfarer com haste de madeira e a marca gravada. Três cores.',
+    category: 'ACESSORIO',
+    priceCents: 7_190,
+    sortOrder: 17,
+    variants: [
+      { size: 'UNICO', colorName: 'Preto', colorHex: '#0D0D0D' },
+      { size: 'UNICO', colorName: 'Marrom Escuro', colorHex: '#4A3B32' },
+      { size: 'UNICO', colorName: 'Vinho Translúcido', colorHex: '#6B2F2F' },
+    ],
+  },
+  {
+    slug: 'oculos-hexagonal-madeira-caqui',
+    name: 'Óculos Hexagonal Madeira Caqui',
+    description: 'Aro hexagonal com haste de madeira e lente espelhada dourada.',
+    category: 'ACESSORIO',
+    priceCents: 7_190,
+    sortOrder: 18,
+    variants: [{ size: 'UNICO', colorName: 'Preto', colorHex: '#0D0D0D' }],
+  },
+  {
+    slug: 'oculos-espelhado-laranja-caqui',
+    name: 'Óculos Espelhado Laranja Caqui',
+    description:
+      'Wayfarer laranja fosco com lente espelhada laranja — a cor da marca inteira, do aro à lente.',
+    category: 'ACESSORIO',
+    priceCents: 8_990,
+    sortOrder: 19,
+    // O único com a cor da marca do aro à lente. Vitrine.
+    featured: true,
+    variants: [{ size: 'UNICO', colorName: 'Laranja', colorHex: '#F26522' }],
+  },
 ] as const
 
 // =============================================================================

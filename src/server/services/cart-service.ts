@@ -173,7 +173,7 @@ export async function validarCarrinho(
       return itemInvalido(
         item,
         'VARIANT_UNAVAILABLE',
-        `${v.product.name} — ${v.size} / ${v.colorName} indisponível.`,
+        `${v.product.name} — ${descreverVariante(v.size, v.colorName)} indisponível.`,
       )
     }
 
@@ -191,7 +191,7 @@ export async function validarCarrinho(
       quantidade: item.quantidade,
       subtotalCentavos: preco * item.quantidade,
       descricao: v.product.name,
-      detalhe: `Tam ${v.size} · ${v.colorName}`,
+      detalhe: descreverVariante(v.size, v.colorName),
     }
   })
 
@@ -211,6 +211,21 @@ export async function validarCarrinho(
     temDivergencia,
     podeFinalizar: itens.length > 0 && itens.every((i) => i.ok),
   }
+}
+
+/**
+ * Como a variante é DESCRITA para uma pessoa.
+ *
+ * `VariantSize.UNICO` é valor de enum, não português. "Tam UNICO · Preto" saía
+ * na mensagem do WhatsApp e na linha da mochila — a Caqui recebendo o vocabulário
+ * interno do banco no pedido do cliente. Pior no catálogo de óculos, que é todo
+ * de tamanho único: a informação inteira daquela linha era ruído.
+ *
+ * Com tamanho único, a cor sozinha já identifica a variante — e é ela que
+ * importa. Com grade de verdade, os dois aparecem.
+ */
+function descreverVariante(tamanho: string, cor: string): string {
+  return tamanho === 'UNICO' ? cor : `Tam ${tamanho} · ${cor}`
 }
 
 /** Item com preço mudado ainda soma (o preço novo); item indisponível não. */

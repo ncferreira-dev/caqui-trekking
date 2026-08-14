@@ -1,5 +1,7 @@
 import { Footer } from '@/components/shell/footer'
 import { Header } from '@/components/shell/header'
+import { DrawerDaMochila } from '@/components/carrinho/drawer'
+import { ProvedorDaMochila } from '@/components/carrinho/contexto'
 import { WhatsAppFlutuante } from '@/components/shell/whatsapp-flutuante'
 import { ProvedorDeToast } from '@/components/ui/toast'
 import { buscarSettings } from '@/server/services/institucional-service'
@@ -42,16 +44,26 @@ export default async function LayoutLoja({ children }: LayoutProps<'/'>) {
     // ser anunciado, porque o leitor de tela precisa já estar observando o nó.
     // Ver o comentário de `components/ui/toast.tsx`.
     <ProvedorDeToast>
-      <Header />
+      {/* O número e o template do WhatsApp descem do servidor por aqui. Eles já
+          foram buscados acima para o rodapé — o drawer os recebe de graça, em
+          vez de fazer uma segunda requisição a `/api/settings` na montagem. */}
+      <ProvedorDaMochila
+        whatsapp={settings?.whatsappNumber ?? null}
+        template={settings?.whatsappMessageTemplate ?? null}
+      >
+        <Header />
 
-      {/* O alvo do link "pular para o conteúdo" do header. */}
-      <main id="conteudo" className="flex flex-1 flex-col">
-        {children}
-      </main>
+        {/* O alvo do link "pular para o conteúdo" do header. */}
+        <main id="conteudo" className="flex flex-1 flex-col">
+          {children}
+        </main>
 
-      <Footer settings={settings} />
+        <Footer settings={settings} />
 
-      {settings?.whatsappNumber && <WhatsAppFlutuante numero={settings.whatsappNumber} />}
+        {settings?.whatsappNumber && <WhatsAppFlutuante numero={settings.whatsappNumber} />}
+
+        <DrawerDaMochila />
+      </ProvedorDaMochila>
     </ProvedorDeToast>
   )
 }

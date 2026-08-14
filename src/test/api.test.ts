@@ -293,6 +293,43 @@ describe('GET /api/products', () => {
 
 // =============================================================================
 describe('POST /api/cart/validate — o fluxo que decide a venda', () => {
+  it('não vaza o valor cru do enum de tamanho para o cliente', async () => {
+    // `Tam UNICO · Preto` saía na linha da mochila E na mensagem do WhatsApp.
+    // O catálogo de óculos é todo de tamanho único, então a informação inteira
+    // daquela linha virava vocabulário interno do banco no pedido do cliente.
+    const unica = await prisma.productVariant.create({
+      data: {
+        productId: f.produto.id,
+        size: 'UNICO',
+        colorName: 'Laranja',
+        colorHex: '#F26522',
+        sortOrder: 99,
+      },
+    })
+
+    const res = await validarCarrinhoRota(
+      post('/api/cart/validate', {
+        itens: [{ lineId: 'v1', tipo: 'WEAR', variantId: unica.id, quantidade: 1 }],
+      }) as never,
+    )
+    const corpo = (await res.json()) as { data: { itens: { detalhe: string | null }[] } }
+
+    // Tamanho único: a cor sozinha já identifica a variante.
+    expect(corpo.data.itens[0]?.detalhe).toBe('Laranja')
+    expect(JSON.stringify(corpo.data)).not.toContain('UNICO')
+  })
+
+  it('com grade de verdade, tamanho e cor aparecem os dois', async () => {
+    const res = await validarCarrinhoRota(
+      post('/api/cart/validate', {
+        itens: [{ lineId: 'v1', tipo: 'WEAR', variantId: f.varianteDisponivel.id, quantidade: 1 }],
+      }) as never,
+    )
+    const corpo = (await res.json()) as { data: { itens: { detalhe: string | null }[] } }
+
+    expect(corpo.data.itens[0]?.detalhe).toBe('Tam M · Preto')
+  })
+
   it('devolve o preço do BANCO, ignorando o que o cliente mandou', async () => {
     const res = await validarCarrinhoRota(
       post('/api/cart/validate', {

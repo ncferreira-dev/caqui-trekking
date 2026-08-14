@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { LogoFantasma } from '@/components/shell/logo-fantasma'
+import { useMochila } from '@/components/carrinho/contexto'
 import { useCarrinho } from '@/lib/carrinho/store'
 import { cn } from '@/lib/ui/cn'
 
@@ -176,10 +177,21 @@ export function Header() {
 
 function BotaoCarrinho() {
   const { quantidadeTotal, pronto } = useCarrinho()
+  const { abrir } = useMochila()
 
   return (
     <Link
       href="/carrinho"
+      // CONTINUA sendo um link para `/carrinho`, e o clique é interceptado para
+      // abrir o drawer. Não é firula: sem JavaScript, com o bundle ainda a
+      // caminho, ou no clique do meio, ele leva à página de verdade. Um
+      // `<button>` puro seria um ícone morto nos três casos — e a mochila é o
+      // fim do funil.
+      onClick={(evento) => {
+        if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.button !== 0) return
+        evento.preventDefault()
+        abrir()
+      }}
       className={cn(
         'text-caqui-ink-900 relative inline-flex size-11 items-center justify-center',
         'hover:bg-caqui-sand-100 rounded-xs transition-colors',

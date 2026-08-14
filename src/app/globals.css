@@ -90,6 +90,11 @@
      divisor que ninguém vê não divide nada. */
   --color-caqui-rule-invertido: rgba(255, 255, 255, 0.2);
 
+  /* O filete da CAQUI WEAR. Verde da mata a 22%, sobre areia.
+     A submarca troca de SUPERFÍCIE e de ACENTO, não de tokens — ver
+     `secao-wear` mais abaixo e docs/09-wear-carrinho.md. */
+  --color-caqui-rule-wear: rgba(27, 67, 50, 0.22);
+
   /* ── Tipografia ─────────────────────────────────────────────────────────
      Display: ARCHIVO BLACK.
 
@@ -339,6 +344,30 @@
 @utility secao-areia {
   background-color: var(--color-caqui-sand-100);
   border-block: 1px solid var(--color-caqui-rule);
+}
+
+/* ── A SUBMARCA CAQUI WEAR ────────────────────────────────────────────────
+   O briefing pede "mesma família, identidade própria — puxe mais pro verde e
+   off-white, laranja só nos CTAs. Sensação de trocar de seção, não de
+   empresa".
+
+   A troca é de SUPERFÍCIE e de ACENTO. Ela NÃO redefine `--color-caqui-*`
+   dentro de um escopo, e essa é a decisão: um token que muda de valor conforme
+   o ancestral faz o design system mentir. `text-caqui-ink-900` passaria a
+   significar duas coisas, a tabela de contraste do topo deste arquivo deixaria
+   de valer, e a próxima pessoa mediria a combinação errada.
+
+   O que muda, medido sobre `sand-100`:
+
+     ink-900    17,26:1   corpo e título continuam pretos — a família é a mesma
+     forest-800  9,84:1   rótulo, sobretítulo e filete: é aqui que mora o verde
+     forest-600  5,68:1   estado e selo
+     ink-500     4,73:1   passa raspando; abaixo disso não desce
+
+   O laranja aparece só no botão, onde já é `ink-900` sobre `orange-500`
+   (6,16:1). */
+@utility secao-wear {
+  background-color: var(--color-caqui-sand-100);
 }
 
 /* ==========================================================================

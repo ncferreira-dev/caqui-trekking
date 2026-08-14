@@ -121,6 +121,15 @@ export type ProdutoResumoDTO = {
   precoCentavos: number
   precoDecimal: string
   capa: MediaDTO | null
+  /**
+   * A SEGUNDA foto da galeria, quando existe.
+   *
+   * Existe para a troca no hover do card. Vem do mesmo `findMany` com
+   * `take: 2` — não custa uma consulta a mais, e sem ela o card teria que
+   * buscar a segunda imagem no `mouseenter`, que é tarde: a imagem chegaria
+   * depois de o ponteiro já ter saído.
+   */
+  capaAlternativa: MediaDTO | null
   cores: { nome: string; hex: string | null }[]
 }
 

@@ -1,97 +1,116 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 
+import { CardProduto } from '@/components/wear/card-produto'
+import { FiltroDeCategoria } from '@/components/wear/filtro-categoria'
 import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
-import { Etiqueta } from '@/components/ui/badge'
-import { Card, CardCorpo, CardMidia, CardRodape } from '@/components/ui/card'
-import { formatarBRL } from '@/lib/money'
-import { listarProdutos } from '@/server/services/product-service'
+import { LinkBotao } from '@/components/ui/button'
+import { categoriaProdutoSchema } from '@/lib/api/schemas'
+import {
+  categoriasDisponiveis,
+  listarProdutos,
+  ROTULO_CATEGORIA,
+} from '@/server/services/product-service'
 
 export const metadata: Metadata = {
   title: 'Caqui Wear',
-  description: 'Camisetas, baby looks, canecas e acessórios da Caqui Trekking.',
+  description:
+    'Camiseta, baby look, regata, caneca e óculos da Caqui Trekking. A marca fora da trilha.',
 }
 
 /**
  * ────────────────────────────────────────────────────────────────────────────
  * DINÂMICA, E ISSO PRECISA SER DECLARADO
  * ────────────────────────────────────────────────────────────────────────────
- * Esta página não usa nenhuma API dinâmica do Next — só chama o serviço, que
- * fala direto com o Prisma. Sem `fetch` para o Next observar e sem `cookies()`
- * ou `searchParams`, ela é PRÉ-RENDERIZADA no build e servida do Full Route
- * Cache até o próximo deploy.
- *
- * Isso quebra a regra central do projeto: disponibilidade é editada à mão no
- * CRM, e `encerrada` é derivada de `new Date()` no momento do render. Estática,
- * a página serviria para sempre o estado do build — SOLD_OUT invisível, preço
- * reajustado que não chega, e saída já realizada listada como futura.
- *
- * É a mesma doutrina do carrinho, do outro lado: dado guardado envelhece.
- * As 30 rotas de `src/app/api/*` declaram o mesmo `force-dynamic` pelo mesmo
- * motivo.
+ * Preço e disponibilidade vêm do CRM. Pré-renderizada, a página serviria o
+ * estado do build até o próximo deploy. Ver o mesmo bloco na home.
  */
 export const dynamic = 'force-dynamic'
 
-/** Seletor de cor e tamanho, e o carrinho, são o PROMPT 09. */
-export default async function PaginaWear() {
-  const { produtos, total } = await listarProdutos({ limit: 40, offset: 0 })
+/**
+ * A loja da marca.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * A SUBMARCA É SUPERFÍCIE E ACENTO, NÃO OUTRA PALETA
+ * ────────────────────────────────────────────────────────────────────────────
+ * O briefing pede "mesma família, identidade própria — sensação de trocar de
+ * seção, não de empresa". O que muda aqui é o fundo (areia em vez de branco) e
+ * o acento (verde da mata no rótulo e no filete). O preto do texto, a
+ * tipografia, o chanfro do card e o laranja do botão continuam idênticos ao
+ * resto do site.
+ *
+ * Os números estão medidos em `globals.css`, no utilitário `secao-wear`.
+ */
+export default async function PaginaWear({ searchParams }: PageProps<'/wear'>) {
+  const params = await searchParams
+
+  // Mesma disciplina da agenda: a query string é entrada não confiável, e
+  // `categoria` vai para um filtro de enum que o Prisma valida em runtime.
+  // Valor inválido degrada para "sem filtro", nunca para 500.
+  const bruto = params['categoria']
+  const categoria = categoriaProdutoSchema.safeParse(Array.isArray(bruto) ? bruto[0] : bruto).data
+
+  const [{ produtos }, categorias] = await Promise.all([
+    listarProdutos({ categoria, limit: 40, offset: 0 }),
+    categoriasDisponiveis(),
+  ])
+
+  const totalGeral = categorias.reduce((n, c) => n + c.total, 0)
 
   return (
-    <>
+    <div className="secao-wear flex flex-1 flex-col">
       <CabecalhoDePagina
         sobretitulo="A marca fora da trilha"
         titulo="Caqui Wear"
-        descricao="Peças da Caqui em dry fit e poliamida, feitas para usar na trilha e depois dela."
-        cota={`${total} ${total === 1 ? 'peça' : 'peças'}`}
+        descricao="Peças em dry fit e poliamida, canecas e óculos com a marca gravada. Feito para usar na trilha e depois dela."
+        cota={`${totalGeral} ${totalGeral === 1 ? 'peça' : 'peças'}`}
       />
 
-      <section className="mx-auto w-full max-w-7xl px-5 py-16 sm:px-8">
+      <FiltroDeCategoria categorias={categorias} atual={categoria} total={totalGeral} />
+
+      <section className="mx-auto w-full max-w-7xl px-5 py-14 sm:px-8 sm:py-16">
         {produtos.length === 0 ? (
-          <p className="text-caqui-ink-700 text-corpo-lg">Nenhuma peça publicada ainda.</p>
+          <Vazia categoria={categoria} />
         ) : (
           <ul className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {produtos.map((produto) => (
+            {produtos.map((produto, indice) => (
               <li key={produto.slug}>
-                <Link href={`/wear/${produto.slug}`} className="block h-full rounded-xs">
-                  <Card interativo className="h-full">
-                    <CardMidia proporcao="quadrado">
-                      {produto.capa ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={produto.capa.url}
-                          alt={produto.capa.alt}
-                          width={produto.capa.width}
-                          height={produto.capa.height}
-                          loading="lazy"
-                          decoding="async"
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        <div className="bg-caqui-sand-200 size-full" />
-                      )}
-                    </CardMidia>
-
-                    <CardCorpo>
-                      <h2 className="text-display-s uppercase">{produto.nome}</h2>
-                      {produto.cores.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {produto.cores.map((cor) => (
-                            <Etiqueta key={cor.nome}>{cor.nome}</Etiqueta>
-                          ))}
-                        </div>
-                      )}
-                    </CardCorpo>
-
-                    <CardRodape>
-                      <span className="preco">{formatarBRL(produto.precoCentavos)}</span>
-                    </CardRodape>
-                  </Card>
-                </Link>
+                <CardProduto produto={produto} prioridade={indice < 4} />
               </li>
             ))}
           </ul>
         )}
+
+        <p className="border-caqui-rule-wear text-caqui-ink-700 text-corpo-sm mt-14 border-t pt-6">
+          O site não processa pagamento. Você monta o pedido na mochila e fecha na conversa do
+          WhatsApp, com um guia — mesmo fluxo das expedições.
+        </p>
       </section>
-    </>
+    </div>
+  )
+}
+
+function Vazia({ categoria }: { categoria: string | undefined }) {
+  const rotulo = categoria ? (ROTULO_CATEGORIA[categoria] ?? categoria) : null
+
+  return (
+    <div className="border-caqui-rule-wear chanfro-md mx-auto max-w-xl border bg-white px-6 py-12 text-center">
+      <p className="text-caqui-forest-800 text-rotulo font-mono uppercase">
+        {rotulo ? `Nada em ${rotulo}` : 'Catálogo em montagem'}
+      </p>
+      <h2 className="text-display-s mt-3 uppercase">
+        {rotulo ? 'Essa categoria está vazia' : 'Nenhuma peça publicada'}
+      </h2>
+      <p className="text-caqui-ink-700 text-corpo mt-4">
+        {rotulo
+          ? 'Ainda não há peça publicada nessa categoria. As outras continuam ali.'
+          : 'As peças entram no catálogo assim que as fotos e os preços forem cadastrados.'}
+      </p>
+      <div className="mt-7 flex flex-wrap justify-center gap-3">
+        <LinkBotao href="/wear">Ver tudo</LinkBotao>
+        <LinkBotao href="/agenda" variante="secondary">
+          Ver a agenda
+        </LinkBotao>
+      </div>
+    </div>
   )
 }

@@ -6,11 +6,13 @@ import { linkWhatsApp, telefoneBR } from '@/lib/formato'
 import { buscarSettings } from '@/server/services/institucional-service'
 
 import { FormularioDeContato } from './formulario'
+import { metadataDaPagina } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Contato',
-  description: 'Fale com a Caqui Trekking por WhatsApp, e-mail ou pelo formulário.',
-}
+export const metadata: Metadata = metadataDaPagina({
+  titulo: 'Contato',
+  descricao: 'Fale com a Caqui Trekking por WhatsApp, e-mail ou pelo formulário.',
+  caminho: '/contato',
+})
 
 export default async function PaginaContato() {
   const settings = await buscarSettings()

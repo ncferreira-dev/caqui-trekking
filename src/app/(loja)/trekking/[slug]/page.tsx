@@ -14,6 +14,7 @@ import { Ficha } from '@/components/ui/card'
 import { Compartilhar } from '@/components/ui/compartilhar'
 import { AppError } from '@/lib/api/errors'
 import { eventosDoRoteiro, migalhas } from '@/lib/seo/json-ld'
+import { metadataDaPagina } from '@/lib/seo/metadata'
 import { URL_BASE } from '@/lib/seo/site'
 import { formatarDuracao, rotuloDificuldade } from '@/lib/formato'
 import { buscarSettings } from '@/server/services/institucional-service'
@@ -28,10 +29,11 @@ export async function generateMetadata({
 
   try {
     const trip = await buscarTripPorSlug(slug)
-    return {
-      title: trip.titulo,
-      description: trip.subtitulo ?? trip.descricao.slice(0, 160),
-    }
+    return metadataDaPagina({
+      titulo: trip.titulo,
+      descricao: trip.subtitulo ?? trip.descricao.slice(0, 160),
+      caminho: `/trekking/${trip.slug}`,
+    })
   } catch {
     // Metadado de página inexistente não deve derrubar o render — o próprio
     // componente devolve 404 logo em seguida, e ali a mensagem é melhor.

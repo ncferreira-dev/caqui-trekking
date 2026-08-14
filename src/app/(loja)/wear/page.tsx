@@ -5,17 +5,19 @@ import { FiltroDeCategoria } from '@/components/wear/filtro-categoria'
 import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { LinkBotao } from '@/components/ui/button'
 import { categoriaProdutoSchema } from '@/lib/api/schemas'
+import { metadataDaPagina } from '@/lib/seo/metadata'
 import {
   categoriasDisponiveis,
   listarProdutos,
   ROTULO_CATEGORIA,
 } from '@/server/services/product-service'
 
-export const metadata: Metadata = {
-  title: 'Caqui Wear',
-  description:
+export const metadata: Metadata = metadataDaPagina({
+  titulo: 'Caqui Wear',
+  descricao:
     'Camiseta, baby look, regata, caneca e óculos da Caqui Trekking. A marca fora da trilha.',
-}
+  caminho: '/wear',
+})
 
 /**
  * ────────────────────────────────────────────────────────────────────────────

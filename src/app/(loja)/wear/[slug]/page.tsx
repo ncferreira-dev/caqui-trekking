@@ -11,6 +11,7 @@ import { JsonLdScript } from '@/components/seo/json-ld'
 import { Compartilhar } from '@/components/ui/compartilhar'
 import { AppError } from '@/lib/api/errors'
 import { migalhas, produtoJsonLd } from '@/lib/seo/json-ld'
+import { metadataDaPagina } from '@/lib/seo/metadata'
 import { URL_BASE } from '@/lib/seo/site'
 import { buscarProdutoPorSlug, ROTULO_CATEGORIA } from '@/server/services/product-service'
 import type { ProdutoDetalheDTO } from '@/server/dto/public-dto'
@@ -20,7 +21,13 @@ export async function generateMetadata({ params }: PageProps<'/wear/[slug]'>): P
 
   try {
     const produto = await buscarProdutoPorSlug(slug)
-    return { title: produto.nome, description: produto.descricao ?? undefined }
+    return metadataDaPagina({
+      titulo: produto.nome,
+      descricao:
+        produto.descricao ??
+        `${produto.nome} da Caqui Wear. Peça com a marca gravada, feita para a trilha e para o dia a dia.`,
+      caminho: `/wear/${produto.slug}`,
+    })
   } catch {
     return { title: 'Peça não encontrada' }
   }

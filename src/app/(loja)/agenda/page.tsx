@@ -12,12 +12,13 @@ import { chaveMesSchema, dificuldadeSchema, slugSchema } from '@/lib/api/schemas
 import { chaveMes, deslocarMes, inicioDoMes, intervaloDoMes, mesPorExtenso } from '@/lib/datetime'
 import { listarDepartures, opcoesDeAgenda } from '@/server/services/departure-service'
 import type { ItemAgendaDTO } from '@/server/services/departure-service'
+import { metadataDaPagina } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Agenda',
-  description:
-    'Próximas saídas da Caqui Trekking, com data, dificuldade, duração e disponibilidade.',
-}
+export const metadata: Metadata = metadataDaPagina({
+  titulo: 'Agenda',
+  descricao: 'Próximas saídas da Caqui Trekking, com data, dificuldade, duração e disponibilidade.',
+  caminho: '/agenda',
+})
 
 /**
  * A agenda — a página central do site.

@@ -4,12 +4,14 @@ import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { Etiqueta } from '@/components/ui/badge'
 import { Card, CardCorpo } from '@/components/ui/card'
 import { buscarSettings, listarGuias } from '@/server/services/institucional-service'
+import { metadataDaPagina } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Sobre',
-  description:
+export const metadata: Metadata = metadataDaPagina({
+  titulo: 'Sobre',
+  descricao:
     'Quem é a Caqui Trekking: guias cadastrados no Cadastur e monitores credenciados pelo PESM, em Mogi das Cruzes.',
-}
+  caminho: '/sobre',
+})
 
 /**
  * ────────────────────────────────────────────────────────────────────────────

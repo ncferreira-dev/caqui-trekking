@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { CardSaida } from '@/components/catalogo/card-saida'
@@ -10,7 +11,7 @@ import { Revelar } from '@/components/movimento/revelar'
 import { JsonLdScript } from '@/components/seo/json-ld'
 import { LinkBotao } from '@/components/ui/button'
 import { listaDaAgenda, negocioLocal, website } from '@/lib/seo/json-ld'
-import { URL_BASE } from '@/lib/seo/site'
+import { absoluto, URL_BASE } from '@/lib/seo/site'
 import { listarDepartures } from '@/server/services/departure-service'
 import { buscarSettings } from '@/server/services/institucional-service'
 import { listarProdutos } from '@/server/services/product-service'
@@ -34,6 +35,14 @@ import { listarProdutos } from '@/server/services/product-service'
  * motivo.
  */
 export const dynamic = 'force-dynamic'
+
+// A home herda título e descrição do layout (o `title.default`, sem o sufixo do
+// template). Aqui entra só a canônica e a `og:url` apontando para a raiz — sem
+// passar pelo helper, para não reescrever o título com o template "%s · …".
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+  openGraph: { url: absoluto('/') },
+}
 
 /**
  * Home.

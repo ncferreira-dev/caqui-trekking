@@ -11,12 +11,14 @@ import { formatarDuracao, rotuloDificuldade } from '@/lib/formato'
 import { formatarBRL } from '@/lib/money'
 import { listarTrips } from '@/server/services/trip-service'
 import type { Dificuldade } from '@/components/ui/badge'
+import { metadataDaPagina } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = {
-  title: 'Expedições',
-  description:
+export const metadata: Metadata = metadataDaPagina({
+  titulo: 'Expedições',
+  descricao:
     'Roteiros guiados na Serra do Mar: distância, altimetria, dificuldade e duração de cada trilha.',
-}
+  caminho: '/trekking',
+})
 
 /**
  * ────────────────────────────────────────────────────────────────────────────

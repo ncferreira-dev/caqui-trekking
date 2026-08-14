@@ -1,5 +1,6 @@
 'use client'
 
+import { MAX_UNIDADES } from '@/lib/carrinho/limites'
 import { useCarrinho } from '@/lib/carrinho/store'
 import { formatarBRL } from '@/lib/money'
 import { cn } from '@/lib/ui/cn'
@@ -157,6 +158,7 @@ function Linha({ item }: { item: ItemValidado }) {
               <Quantidade
                 valor={item.quantidade}
                 rotulo={item.descricao ?? 'item'}
+                max={MAX_UNIDADES[item.tipo]}
                 aoMudar={(n) => alterarQuantidade(item.lineId, n)}
               />
             ) : (
@@ -208,10 +210,13 @@ function Linha({ item }: { item: ItemValidado }) {
 function Quantidade({
   valor,
   rotulo,
+  max,
   aoMudar,
 }: {
   valor: number
   rotulo: string
+  /** Teto por tipo: 20 para saída, 50 para peça. Vem de MAX_UNIDADES. */
+  max: number
   aoMudar: (n: number) => void
 }) {
   return (
@@ -235,7 +240,7 @@ function Quantidade({
       <button
         type="button"
         onClick={() => aoMudar(valor + 1)}
-        disabled={valor >= 20}
+        disabled={valor >= max}
         aria-label={`Aumentar ${rotulo}`}
         className="hover:bg-caqui-sand-100 inline-flex size-9 items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
       >

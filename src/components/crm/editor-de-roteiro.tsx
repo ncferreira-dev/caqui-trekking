@@ -114,11 +114,20 @@ export function EditorDeRoteiro({
   const [naoIncluso, setNaoIncluso] = useState(roteiro.notIncluded.join('\n'))
   const [oQueLevar, setOQueLevar] = useState(roteiro.whatToBring.join('\n'))
   const [cancelamento, setCancelamento] = useState(roteiro.cancellationPolicy ?? '')
-  // Roteiro arquivado não é reativado por este formulário — o select só oferece
-  // rascunho e publicado. Se chegou arquivado, mantém o valor até troca explícita.
-  const [status, setStatus] = useState(roteiro.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT')
+  // Preserva o status REAL, inclusive ARCHIVED. O bug antigo colapsava ARCHIVED
+  // em DRAFT aqui e, como o corpo do PATCH sempre manda `status`, salvar um
+  // roteiro arquivado sem tocar no select o rebaixava para rascunho em silêncio.
+  // Agora ele mantém ARCHIVED até uma troca EXPLÍCITA para rascunho/publicado.
+  const [status, setStatus] = useState<string>(roteiro.status)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+
+  // Se o roteiro chega arquivado, o select mostra e mantém "Arquivado"; trocar
+  // para rascunho/publicado passa a ser uma reativação explícita, nunca acidental.
+  const opcoesEstado =
+    roteiro.status === 'ARCHIVED'
+      ? [...ESTADOS, { valor: 'ARCHIVED', rotulo: 'Arquivado (fora do ar)' }]
+      : ESTADOS
 
   async function enviar(evento: React.FormEvent) {
     evento.preventDefault()
@@ -330,7 +339,7 @@ export function EditorDeRoteiro({
           rotulo="Estado de publicação"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          opcoes={ESTADOS}
+          opcoes={opcoesEstado}
         />
 
         {erro && (

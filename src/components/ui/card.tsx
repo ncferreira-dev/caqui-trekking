@@ -146,7 +146,10 @@ export function Ficha({
           key={item.rotulo}
           className={cn(
             'px-3 py-2.5',
-            i > 0 && 'border-caqui-rule border-l',
+            // Grade de 3 colunas: a borda esquerda é de toda célula MENOS a
+            // primeira de cada linha (i % 3 === 0), não só a primeira de todas.
+            // Com `i > 0` a primeira coluna da 2ª linha ganhava uma borda solta.
+            i % 3 !== 0 && 'border-caqui-rule border-l',
             i > 2 && 'border-caqui-rule border-t',
           )}
         >

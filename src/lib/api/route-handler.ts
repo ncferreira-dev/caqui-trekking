@@ -37,6 +37,17 @@ export function rota<T extends unknown[]>(
         })
       }
 
+      // Prisma P2025: a operação dependia de um registro que não existe (ex.:
+      // `update` inline num id já apagado). É 404, não 500 — e vale para a
+      // CLASSE toda, não só para a rota onde apareceu.
+      if (
+        erro instanceof Error &&
+        'code' in erro &&
+        (erro as { code?: unknown }).code === 'P2025'
+      ) {
+        return fail(ErrorCode.NOT_FOUND, 'Registro não encontrado.', { status: 404 })
+      }
+
       // Desconhecido: o cliente recebe um id para reportar, e nada mais.
       const requestId = crypto.randomUUID()
       console.error(`[api] erro não tratado (requestId=${requestId}):`, erro)

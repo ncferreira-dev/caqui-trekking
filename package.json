@@ -22,7 +22,7 @@
     "test:watch": "vitest",
     "media:importar": "tsx scripts/importar-midia.ts",
     "media:orfaos": "tsx scripts/orfaos.ts",
-    "db:test:setup": "DATABASE_URL=$(grep ^DATABASE_URL .env | cut -d= -f2- | tr -d \"'\\\"\" | sed s/caqui_trekking_dev/caqui_trekking_test/) prisma migrate deploy"
+    "db:test:setup": "URL=$(grep ^DATABASE_URL .env | cut -d= -f2- | tr -d \"'\\\"\" | sed s/caqui_trekking_dev/caqui_trekking_test/); case \"$URL\" in *_test*) DATABASE_URL=\"$URL\" prisma migrate deploy;; *) echo \"Recusando: DATABASE_URL nao aponta para um banco _test\"; exit 1;; esac"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

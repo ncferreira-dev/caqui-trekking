@@ -142,7 +142,7 @@ da Fase B.
 - [x] **08** — Catálogo Trekking → [`docs/08-catalogo.md`](docs/08-catalogo.md)
 - [x] **09** — Caqui Wear, carrinho e handoff pro WhatsApp → [`docs/09-wear-carrinho.md`](docs/09-wear-carrinho.md)
 - [x] **10** — CRM → [`docs/10-crm.md`](docs/10-crm.md)
-- [ ] **11** — SEO, performance e deploy
+- [x] **11** — SEO, performance e deploy → [`docs/11-deploy.md`](docs/11-deploy.md) · no ar em produção (Vercel + Neon)
 
 ---
 
@@ -184,4 +184,5 @@ está em [`docs/00-analise-dalia.md`](docs/00-analise-dalia.md).
 | [`docs/09-wear-carrinho.md`](docs/09-wear-carrinho.md) | A mensagem do WhatsApp, o plano B do desktop, a revalidação da mochila e a submarca da Caqui Wear                              |
 | [`docs/09-oculos.md`](docs/09-oculos.md)               | Levantamento das 26 fotos de óculos e os 10 produtos que saíram delas                                                          |
 | [`docs/10-crm.md`](docs/10-crm.md)                     | A tabela de autorização, a disponibilidade em um toque, e por que o calendário não entrou                                      |
+| [`docs/11-deploy.md`](docs/11-deploy.md)               | JSON-LD, sitemap, robots, metadata, o rate-limit persistente e o procedimento de deploy e rollback na Vercel                   |
 | [`assets/README.md`](assets/README.md)                 | A convenção de nome de arquivo para a importação em lote                                                                       |

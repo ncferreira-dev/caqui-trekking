@@ -14,6 +14,11 @@ export const metadata: Metadata = metadataDaPagina({
   caminho: '/contato',
 })
 
+// Lê WhatsApp/Instagram do banco (editáveis no CRM sem deploy). Sem isto a
+// página pré-renderiza no build e serve o número congelado até o próximo deploy
+// — o mesmo opt-out que home, sobre, trekking e wear já declaram.
+export const dynamic = 'force-dynamic'
+
 export default async function PaginaContato() {
   const settings = await buscarSettings()
 

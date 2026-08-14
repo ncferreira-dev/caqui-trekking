@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { MAX_UNIDADES } from '@/lib/carrinho/limites'
+
 /**
  * Schemas de entrada compartilhados.
  *
@@ -101,14 +103,14 @@ export const itemCarrinhoSchema = z.discriminatedUnion('tipo', [
     lineId: z.string().min(1).max(120),
     tipo: z.literal('DEPARTURE'),
     departureId: idSchema,
-    quantidade: z.number().int().min(1).max(20),
+    quantidade: z.number().int().min(1).max(MAX_UNIDADES.DEPARTURE),
     precoCentavosNoCarrinho: z.number().int().min(0).optional(),
   }),
   z.object({
     lineId: z.string().min(1).max(120),
     tipo: z.literal('WEAR'),
     variantId: idSchema,
-    quantidade: z.number().int().min(1).max(50),
+    quantidade: z.number().int().min(1).max(MAX_UNIDADES.WEAR),
     precoCentavosNoCarrinho: z.number().int().min(0).optional(),
   }),
 ])

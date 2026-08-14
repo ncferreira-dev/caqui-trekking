@@ -16,13 +16,19 @@
  * palavras e sem hífen nas pontas.
  */
 export function gerarSlug(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 120)
+  return (
+    texto
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      // Corta ANTES de aparar o hífen das pontas. A ordem importa: aparar e
+      // depois cortar em 120 pode deixar um hífen final quando o corte cai em
+      // cima de um separador — e o slug congela como URL canônica, não pode
+      // nascer terminando em '-'.
+      .slice(0, 120)
+      .replace(/^-+|-+$/g, '')
+  )
 }
 
 /**

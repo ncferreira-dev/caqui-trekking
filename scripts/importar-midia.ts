@@ -46,6 +46,16 @@ import { enviarMidias, type TipoDeDono } from '@/server/services/admin/media-adm
  * O `publicId` é derivado do nome: `caqui/<tipo>/<slug>/<NN>`. Rodar duas
  * vezes não duplica nada — o que já existe é pulado. Mesma disciplina do seed.
  *
+ * ── O NN define a ordem no PRIMEIRO import, não em reimport incremental ──────
+ *
+ * A galeria é ordenada por `sortOrder`, e `enviarMidias` atribui `sortOrder`
+ * por ACRÉSCIMO (continua a numeração já existente daquele dono), não relendo o
+ * NN. No primeiro import de um item a galeria está vazia, então o NN manda e o
+ * `01` fica sendo a principal. Num import incremental posterior, as fotos novas
+ * entram DEPOIS das existentes, independentemente do NN — para reordenar depois,
+ * use a tela de mídia do CRM. É de propósito a mesma regra de acréscimo do
+ * upload do CRM: importador e CRM não podem discordar sobre ordem.
+ *
  * ════════════════════════════════════════════════════════════════════════════
  * USO
  * ════════════════════════════════════════════════════════════════════════════

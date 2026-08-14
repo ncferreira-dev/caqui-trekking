@@ -3,8 +3,11 @@ import Link from 'next/link'
 
 import { CardSaida } from '@/components/catalogo/card-saida'
 import { FiltrosAgenda, faixaDePreco } from '@/components/catalogo/filtros-agenda'
+import { JsonLdScript } from '@/components/seo/json-ld'
 import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { LinkBotao } from '@/components/ui/button'
+import { listaDaAgenda } from '@/lib/seo/json-ld'
+import { URL_BASE } from '@/lib/seo/site'
 import { chaveMesSchema, dificuldadeSchema, slugSchema } from '@/lib/api/schemas'
 import { chaveMes, deslocarMes, inicioDoMes, intervaloDoMes, mesPorExtenso } from '@/lib/datetime'
 import { listarDepartures, opcoesDeAgenda } from '@/server/services/departure-service'
@@ -103,8 +106,16 @@ export default async function PaginaAgenda({ searchParams }: PageProps<'/agenda'
   const grupos = agruparPorMes(saidas)
   const futurasNaVista = saidas.filter((s) => !s.encerrada).length
 
+  // A agenda como lista ordenada de saídas — só as futuras, que é o que a
+  // página promete. O `Event` completo de cada uma vive na página do roteiro.
+  const naoEncerradas = saidas.filter((s) => !s.encerrada)
+
   return (
     <>
+      {naoEncerradas.length > 0 && (
+        <JsonLdScript dados={listaDaAgenda(URL_BASE, naoEncerradas)} />
+      )}
+
       <CabecalhoDePagina
         sobretitulo="Próximas saídas"
         titulo="Agenda"

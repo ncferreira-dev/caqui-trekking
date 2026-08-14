@@ -7,8 +7,11 @@ import { SeletorDeVariante } from '@/components/wear/seletor-de-variante'
 import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { Acordeao, AcordeaoItem } from '@/components/ui/acordeao'
 import { Etiqueta } from '@/components/ui/badge'
+import { JsonLdScript } from '@/components/seo/json-ld'
 import { Compartilhar } from '@/components/ui/compartilhar'
 import { AppError } from '@/lib/api/errors'
+import { migalhas, produtoJsonLd } from '@/lib/seo/json-ld'
+import { URL_BASE } from '@/lib/seo/site'
 import { buscarProdutoPorSlug, ROTULO_CATEGORIA } from '@/server/services/product-service'
 import type { ProdutoDetalheDTO } from '@/server/dto/public-dto'
 
@@ -48,8 +51,19 @@ export default async function PaginaDoProduto({ params }: PageProps<'/wear/[slug
 
   const disponiveis = produto.variantes.filter((v) => v.disponivel)
 
+  const dadosEstruturados = [
+    produtoJsonLd(URL_BASE, produto),
+    migalhas(URL_BASE, [
+      { nome: 'Início', caminho: '/' },
+      { nome: 'Caqui Wear', caminho: '/wear' },
+      { nome: produto.nome, caminho: `/wear/${produto.slug}` },
+    ]),
+  ]
+
   return (
     <div className="secao-wear flex flex-1 flex-col">
+      <JsonLdScript dados={dadosEstruturados} />
+
       <CabecalhoDePagina
         sobretitulo={
           <>

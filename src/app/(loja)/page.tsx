@@ -7,7 +7,10 @@ import { Montanhas, Nuvens } from '@/components/marca/grafismos'
 import { Capa } from '@/components/midia/imagem'
 import { CamadaHero, Hero } from '@/components/movimento/hero'
 import { Revelar } from '@/components/movimento/revelar'
+import { JsonLdScript } from '@/components/seo/json-ld'
 import { LinkBotao } from '@/components/ui/button'
+import { listaDaAgenda, negocioLocal, website } from '@/lib/seo/json-ld'
+import { URL_BASE } from '@/lib/seo/site'
 import { listarDepartures } from '@/server/services/departure-service'
 import { buscarSettings } from '@/server/services/institucional-service'
 import { listarProdutos } from '@/server/services/product-service'
@@ -59,8 +62,19 @@ export default async function PaginaInicial() {
     settings?.heroSubtitulo ??
     'Trilhas guiadas na Serra do Mar, saindo de Mogi das Cruzes. Guias com Cadastur e monitores credenciados pelo PESM.'
 
+  // Os três nós da home: a empresa (LocalBusiness), o site (para a caixa de
+  // busca), e a lista das próximas saídas. Os `Event` completos ficam na página
+  // de cada roteiro — aqui a agenda é só o índice ordenado.
+  const dadosEstruturados = [
+    negocioLocal(URL_BASE, settings),
+    website(URL_BASE),
+    ...(agenda.saidas.length > 0 ? [listaDaAgenda(URL_BASE, agenda.saidas)] : []),
+  ]
+
   return (
     <>
+      <JsonLdScript dados={dadosEstruturados} />
+
       <Hero
         className="flex min-h-[88svh] items-end"
         fundo={

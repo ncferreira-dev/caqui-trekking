@@ -9,9 +9,12 @@ import { SeletorDeSaida } from '@/components/catalogo/seletor-de-saida'
 import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { Acordeao, AcordeaoItem } from '@/components/ui/acordeao'
 import { BadgeDificuldade, Etiqueta } from '@/components/ui/badge'
+import { JsonLdScript } from '@/components/seo/json-ld'
 import { Ficha } from '@/components/ui/card'
 import { Compartilhar } from '@/components/ui/compartilhar'
 import { AppError } from '@/lib/api/errors'
+import { eventosDoRoteiro, migalhas } from '@/lib/seo/json-ld'
+import { URL_BASE } from '@/lib/seo/site'
 import { formatarDuracao, rotuloDificuldade } from '@/lib/formato'
 import { buscarSettings } from '@/server/services/institucional-service'
 import { buscarTripPorSlug } from '@/server/services/trip-service'
@@ -90,8 +93,21 @@ export default async function PaginaDoRoteiro({ params }: PageProps<'/trekking/[
   const referencia = maisBarata ?? futuras[0] ?? null
   const encontro = pontoDeEncontro(futuras)
 
+  // Cada saída futura vira um `Event`; a migalha reconstrói a trilha de
+  // navegação que o Google mostra no lugar da URL crua.
+  const dadosEstruturados = [
+    ...eventosDoRoteiro(URL_BASE, trip),
+    migalhas(URL_BASE, [
+      { nome: 'Início', caminho: '/' },
+      { nome: 'Expedições', caminho: '/trekking' },
+      { nome: trip.titulo, caminho: `/trekking/${trip.slug}` },
+    ]),
+  ]
+
   return (
     <>
+      <JsonLdScript dados={dadosEstruturados} />
+
       <CabecalhoDePagina
         sobretitulo={`${trip.cidade} · ${trip.estado}${trip.regiao ? ` · ${trip.regiao}` : ''}`}
         titulo={trip.titulo}

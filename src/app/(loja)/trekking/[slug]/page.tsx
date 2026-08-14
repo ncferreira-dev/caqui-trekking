@@ -73,7 +73,20 @@ export default async function PaginaDoRoteiro({ params }: PageProps<'/trekking/[
 
   const futuras = trip.saidas.filter((s) => !s.encerrada)
   const disponiveis = futuras.filter((s) => s.disponibilidade !== 'SOLD_OUT')
-  const referencia = disponiveis[0] ?? futuras[0] ?? null
+
+  // "A partir de" afirma um MÍNIMO, então tem que ser o menor preço — não o da
+  // próxima data. O serviço devolve as saídas por `startAt` crescente, e cada
+  // Departure tem preço próprio (feriado custa mais que baixa temporada), então
+  // `disponiveis[0]` é a mais PRÓXIMA e frequentemente não é a mais barata.
+  // Dizer "a partir de R$ 425" quando existe uma a R$ 279 é preço enganoso.
+  const maisBarata =
+    disponiveis.length > 0
+      ? disponiveis.reduce((a, b) => (b.precoCentavos < a.precoCentavos ? b : a))
+      : null
+
+  // Sem data disponível, cai na primeira futura e o rótulo deixa de afirmar
+  // piso — vira "Preço por pessoa".
+  const referencia = maisBarata ?? futuras[0] ?? null
   const encontro = pontoDeEncontro(futuras)
 
   return (

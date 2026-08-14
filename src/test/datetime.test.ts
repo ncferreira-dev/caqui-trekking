@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { chaveMes, instanteLocal, intervaloDoMes, mesPorExtenso, partesDaData } from '@/lib/datetime'
+import {
+  chaveMes,
+  deslocarMes,
+  instanteLocal,
+  intervaloDoMes,
+  mesPorExtenso,
+  partesDaData,
+} from '@/lib/datetime'
 
 /**
  * O fuso da agenda.
@@ -91,5 +98,34 @@ describe('partesDaData — o carimbo do card', () => {
     // 03:00Z do dia 16 = 00:00 do dia 16 em Mogi.
     expect(partesDaData(new Date('2026-08-16T02:59:00Z')).dia).toBe('15')
     expect(partesDaData(new Date('2026-08-16T03:00:00Z')).dia).toBe('16')
+  })
+})
+
+describe('deslocarMes — "12 meses atrás" não é "365 dias atrás"', () => {
+  it('anda para trás e para frente em meses inteiros', () => {
+    expect(deslocarMes('2026-08', -12)).toBe('2025-08')
+    expect(deslocarMes('2026-08', 1)).toBe('2026-09')
+    expect(deslocarMes('2026-08', -1)).toBe('2026-07')
+  })
+
+  it('atravessa a virada de ano nas duas direções', () => {
+    expect(deslocarMes('2026-01', -1)).toBe('2025-12')
+    expect(deslocarMes('2026-12', 1)).toBe('2027-01')
+    expect(deslocarMes('2026-01', -13)).toBe('2024-12')
+  })
+
+  it('cai sempre no dia 1º, inclusive atravessando ano bissexto', () => {
+    // 2024 é bissexto. Subtrair 365 dias de 2025-03-01 daria 2024-03-02 —
+    // meio de mês. A janela da agenda começaria no dia 2, e a agenda de março
+    // de 2024 apareceria cortada.
+    const { de } = intervaloDoMes(deslocarMes('2025-03', -12))
+    expect(de.toISOString()).toBe('2024-03-01T03:00:00.000Z')
+    expect(chaveMes(de)).toBe('2024-03')
+  })
+
+  it('é reversível', () => {
+    for (const chave of ['2026-01', '2026-06', '2026-12']) {
+      expect(deslocarMes(deslocarMes(chave, -12), 12)).toBe(chave)
+    }
   })
 })

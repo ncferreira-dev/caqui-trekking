@@ -5,7 +5,8 @@ import { CardSaida } from '@/components/catalogo/card-saida'
 import { FiltrosAgenda, faixaDePreco } from '@/components/catalogo/filtros-agenda'
 import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { LinkBotao } from '@/components/ui/button'
-import { chaveMes, inicioDoMes, intervaloDoMes, mesPorExtenso } from '@/lib/datetime'
+import { chaveMesSchema, dificuldadeSchema, slugSchema } from '@/lib/api/schemas'
+import { chaveMes, deslocarMes, inicioDoMes, intervaloDoMes, mesPorExtenso } from '@/lib/datetime'
 import { listarDepartures, opcoesDeAgenda } from '@/server/services/departure-service'
 import type { ItemAgendaDTO } from '@/server/services/departure-service'
 
@@ -44,9 +45,25 @@ export const metadata: Metadata = {
 export default async function PaginaAgenda({ searchParams }: PageProps<'/agenda'>) {
   const params = await searchParams
 
-  const mes = texto(params['mes'])
-  const dificuldade = texto(params['dificuldade'])
-  const atividade = texto(params['atividade'])
+  // ──────────────────────────────────────────────────────────────────────────
+  // A QUERY STRING É ENTRADA NÃO CONFIÁVEL AQUI TAMBÉM
+  // ──────────────────────────────────────────────────────────────────────────
+  // `GET /api/departures` valida estes mesmos parâmetros com estes mesmos
+  // schemas. Esta página consome o SERVIÇO direto, sem passar pela rota HTTP —
+  // e por isso pulava a validação inteira.
+  //
+  // O custo era 500, não filtro errado: `?mes=abc` chega em `intervaloDoMes`,
+  // vira `Invalid Date` e o `Intl` lança `RangeError` no meio do render do
+  // Server Component; `?dificuldade=xyz` entra no `where` do Prisma, que
+  // valida enum em runtime e recusa. Um link velho ou um crawler derrubava a
+  // página central do site.
+  //
+  // `.data` sai `undefined` quando o parse falha — inclusive para `undefined`.
+  // Então valor inválido degrada para "filtro ignorado", que é exatamente o
+  // que o estado vazio desta página já sabe tratar.
+  const mes = chaveMesSchema.safeParse(texto(params['mes'])).data
+  const dificuldade = dificuldadeSchema.safeParse(texto(params['dificuldade'])).data
+  const atividade = slugSchema.safeParse(texto(params['atividade'])).data
   const preco = texto(params['preco'])
   const passadas = texto(params['passadas']) === '1'
 
@@ -55,8 +72,12 @@ export default async function PaginaAgenda({ searchParams }: PageProps<'/agenda'
 
   // 12 meses para trás é o histórico útil: cobre a temporada inteira e o
   // mesmo feriado do ano passado, sem virar arquivo morto.
+  //
+  // `deslocarMes` e não `- 365 * 24 * 60 * 60 * 1000`: "12 meses" e "365 dias"
+  // são coisas diferentes em ano bissexto, e a janela começaria no meio de um
+  // mês em vez de no dia 1º.
   const inicioDaJanela = passadas
-    ? new Date(inicioDoMesAtual.getTime() - 365 * 24 * 60 * 60 * 1000)
+    ? intervaloDoMes(deslocarMes(chaveMes(agora), -12)).de
     : inicioDoMesAtual
 
   // O filtro de mês é mais específico que a janela: escolher "março" quando a

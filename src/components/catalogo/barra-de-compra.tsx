@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { classesDeBotao } from '@/components/ui/button'
 import { formatarBRL } from '@/lib/money'
 import { cn } from '@/lib/ui/cn'
 
@@ -32,6 +33,8 @@ import { cn } from '@/lib/ui/cn'
  * `lg:hidden` porque no desktop o seletor é uma coluna fixa que já acompanha a
  * rolagem. Duas âncoras permanentes para a mesma ação seria ruído.
  */
+const VARIANTE_ESGOTADO = { variante: 'secondary' } as const
+
 export function BarraDeCompra({
   precoCentavos,
   rotulo,
@@ -112,18 +115,24 @@ export function BarraDeCompra({
             destino entra no histórico, funciona com o clique do meio e
             respeita o `scroll-behavior: smooth` do CSS — que já está
             desligado sob `prefers-reduced-motion`. */}
+        {/* `classesDeBotao()` e não a string remontada à mão: a versão manual
+            perdia `text-sm`, `tracking-tight`, a transição e os estados de
+            hover e active do sistema.
+
+            E o estado esgotado usa `secondary`, uma variante que EXISTE, em vez
+            de inventar `bg-caqui-sand-200` — que era uma quinta variante
+            informal. Passá-la por `className` também não funcionaria: `cn` é
+            `filter(Boolean).join(' ')`, não tailwind-merge (decisão documentada
+            em lib/ui/cn.ts), então ela conviveria com `bg-caqui-orange-500` e
+            quem venceria seria a ordem do CSS gerado.
+
+            O link nunca é de fato desabilitado: com tudo esgotado ele ainda
+            leva às datas, que é onde mora o "Avise-me". O que muda é a ênfase. */}
         <a
           href="#seletor-de-saida"
-          className={cn(
-            'font-display border-caqui-ink-900 inline-flex min-h-11 items-center justify-center',
-            'rounded-xs border px-5 uppercase shadow-[var(--shadow-corte-2)]',
-            'focus-visible:ring-2 focus-visible:ring-white',
-            desabilitada
-              ? 'bg-caqui-sand-200 text-caqui-ink-700'
-              : 'bg-caqui-orange-500 text-caqui-ink-900',
-          )}
+          className={classesDeBotao(desabilitada ? VARIANTE_ESGOTADO : {})}
         >
-          {desabilitada ? 'Ver datas' : 'Escolher data'}
+          <span>{desabilitada ? 'Ver datas' : 'Escolher data'}</span>
         </a>
       </div>
     </div>

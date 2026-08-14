@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { classesDeBotao } from '@/components/ui/button'
 import { SelectNativo } from '@/components/ui/select-nativo'
+import { mesPorExtenso } from '@/lib/datetime'
 import { rotuloDificuldade } from '@/lib/formato'
 import type { OpcoesDeAgenda } from '@/server/services/departure-service'
 
@@ -81,6 +82,16 @@ export function FiltrosAgenda({
     valores.mes ?? valores.dificuldade ?? valores.atividade ?? valores.preco,
   )
 
+  // O mês escolhido pode estar FORA da janela que gerou as opções — é o caso
+  // de `?mes=2025-03` com a janela começando no mês corrente. Sem esta linha o
+  // `<select>` não teria a opção, cairia em "Todos os meses", e o próximo
+  // "Aplicar" descartaria em silêncio o filtro que a pessoa está vendo aplicado
+  // na tela. Aqui ele entra na lista como qualquer outro.
+  const meses =
+    valores.mes && !opcoes.meses.some((m) => m.chave === valores.mes)
+      ? [{ chave: valores.mes, rotulo: mesPorExtenso(valores.mes), total: 0 }, ...opcoes.meses]
+      : opcoes.meses
+
   return (
     <form
       method="get"
@@ -97,7 +108,13 @@ export function FiltrosAgenda({
             defaultValue={valores.mes ?? ''}
             opcoes={[
               { valor: '', rotulo: 'Todos os meses' },
-              ...opcoes.meses.map((m) => ({ valor: m.chave, rotulo: `${m.rotulo} (${m.total})` })),
+              ...meses.map((m) => ({
+                valor: m.chave,
+                // Sem a contagem quando ela é 0: "(0)" ao lado de um mês que a
+                // pessoa acabou de escolher lê como defeito, não como
+                // informação. A contagem real aparece na lista abaixo.
+                rotulo: m.total > 0 ? `${m.rotulo} (${m.total})` : m.rotulo,
+              })),
             ]}
           />
 

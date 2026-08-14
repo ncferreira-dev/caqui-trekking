@@ -179,7 +179,14 @@ function Lightbox({
     if (aberta && !dialogo.open) {
       gatilho.current = document.activeElement as HTMLElement | null
       dialogo.showModal()
+
+      // A trava de rolagem PRECISA compensar a barra: sem isto a barra some
+      // junto com o `overflow`, o corpo ganha os ~15px dela de largura e a
+      // página inteira salta para o lado no instante em que o lightbox abre —
+      // e salta de volta ao fechar. É a mesma compensação de `dialogo.tsx`.
+      const larguraBarra = window.innerWidth - document.documentElement.clientWidth
       document.body.style.overflow = 'hidden'
+      if (larguraBarra > 0) document.body.style.paddingRight = `${larguraBarra}px`
     }
     if (!aberta && dialogo.open) dialogo.close()
   }, [aberta])
@@ -187,12 +194,14 @@ function Lightbox({
   useEffect(() => {
     if (aberta) return
     document.body.style.overflow = ''
+    document.body.style.paddingRight = ''
     gatilho.current?.focus()
   }, [aberta])
 
   useEffect(() => {
     return () => {
       document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
     }
   }, [])
 
@@ -243,7 +252,15 @@ function Lightbox({
       {atual && (
         <div className="flex h-full w-full flex-col">
           <div className="flex items-center justify-between gap-4 px-4 py-3">
-            <p aria-live="polite" className="text-caqui-sand-400 text-rotulo font-mono uppercase">
+            {/* Branco, não `sand-400`.
+                Medido: o `<dialog>` é `bg-transparent`, então este texto fica
+                sobre o `::backdrop` — `rgba(13,13,13,0.72)` composto sobre a
+                página branca dá #515151. `sand-400` ali é 2,65:1 e reprova até
+                o mínimo de 3:1 de elemento de interface. O token foi calibrado
+                para 6,46:1 sobre `ink-900` SÓLIDO (globals.css), e a
+                translucidez desfaz exatamente essa medição. Branco dá 7,97:1 —
+                e continua passando se a página atrás for escura. */}
+            <p aria-live="polite" className="text-rotulo font-mono text-white uppercase">
               {(indice ?? 0) + 1} / {imagens.length}
             </p>
 
@@ -284,8 +301,10 @@ function Lightbox({
             {imagens.length > 1 && <Seta direcao="proxima" aoClicar={() => ir(1)} />}
           </div>
 
+          {/* Mesma medição do contador acima: sobre o backdrop translúcido,
+              só o branco passa. */}
           {atual.alt && (
-            <p className="text-caqui-sand-400 text-corpo-sm px-4 pb-4 text-center">{atual.alt}</p>
+            <p className="text-corpo-sm px-4 pb-4 text-center text-white">{atual.alt}</p>
           )}
         </div>
       )}

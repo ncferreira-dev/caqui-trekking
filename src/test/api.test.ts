@@ -196,9 +196,22 @@ describe('GET /api/departures — filtros da agenda', () => {
   it('mês malformado devolve 400, não 500', async () => {
     // Sem o `refine` do schema, `2026-99` viraria uma data inválida lá dentro
     // e a consulta explodiria com `NaN` — 500 no lugar de 400.
-    for (const valor of ['2026-99', 'agosto', '2026-8']) {
+    //
+    // `9999-12` é o caso que passou despercebido na primeira versão: forma
+    // válida e mês válido, mas `intervaloDoMes` precisa montar "10000-01", e
+    // ISO exige ano expandido com sinal acima de 9999. `new Date` devolve
+    // Invalid Date e o `Intl` lança RangeError — o mesmo 500 pela porta dos
+    // fundos. Daí o limite de ano no schema.
+    for (const valor of ['2026-99', '2026-00', 'agosto', '2026-8', '9999-12', '0001-01']) {
       const res = await listarDeparturesRota(get(`/api/departures?mes=${valor}`) as never)
       expect(res.status, valor).toBe(400)
+    }
+  })
+
+  it('mês válido dentro do intervalo permitido passa', async () => {
+    for (const valor of ['2000-01', '2026-08', '2100-12']) {
+      const res = await listarDeparturesRota(get(`/api/departures?mes=${valor}`) as never)
+      expect(res.status, valor).toBe(200)
     }
   })
 

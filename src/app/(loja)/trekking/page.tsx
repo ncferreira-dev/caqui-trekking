@@ -19,6 +19,26 @@ export const metadata: Metadata = {
 }
 
 /**
+ * ────────────────────────────────────────────────────────────────────────────
+ * DINÂMICA, E ISSO PRECISA SER DECLARADO
+ * ────────────────────────────────────────────────────────────────────────────
+ * Esta página não usa nenhuma API dinâmica do Next — só chama o serviço, que
+ * fala direto com o Prisma. Sem `fetch` para o Next observar e sem `cookies()`
+ * ou `searchParams`, ela é PRÉ-RENDERIZADA no build e servida do Full Route
+ * Cache até o próximo deploy.
+ *
+ * Isso quebra a regra central do projeto: disponibilidade é editada à mão no
+ * CRM, e `encerrada` é derivada de `new Date()` no momento do render. Estática,
+ * a página serviria para sempre o estado do build — SOLD_OUT invisível, preço
+ * reajustado que não chega, e saída já realizada listada como futura.
+ *
+ * É a mesma doutrina do carrinho, do outro lado: dado guardado envelhece.
+ * As 30 rotas de `src/app/api/*` declaram o mesmo `force-dynamic` pelo mesmo
+ * motivo.
+ */
+export const dynamic = 'force-dynamic'
+
+/**
  * A vitrine dos roteiros.
  *
  * A diferença entre esta página e a agenda é a pergunta que cada uma responde.

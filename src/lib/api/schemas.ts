@@ -51,13 +51,23 @@ export const filtrosTripSchema = paginacaoSchema.extend({
  * O regex trava o formato, e o `refine` trava o INTERVALO — sem ele,
  * `?mes=2026-99` passaria pela forma e viraria um `Date` inválido lá dentro,
  * produzindo uma consulta com `NaN` e um 500 no lugar de um 400.
+ *
+ * O ANO também é limitado, e não por preciosismo: `?mes=9999-12` passa no
+ * regex e no intervalo do mês, mas `intervaloDoMes` precisa montar o mês
+ * SEGUINTE — "10000-01" — e o formato ISO exige ano expandido com sinal
+ * (`+010000`) acima de 9999. `new Date('10000-01-01T00:00:00Z')` devolve
+ * Invalid Date, e o `Intl` lá dentro lança `RangeError`. Mesmo 500 pela porta
+ * dos fundos.
+ *
+ * 2000–2100 cobre qualquer agenda que este site vá ter.
  */
 export const chaveMesSchema = z
   .string()
   .regex(/^\d{4}-\d{2}$/, 'Mês inválido.')
   .refine((v) => {
+    const ano = Number(v.slice(0, 4))
     const mes = Number(v.slice(5, 7))
-    return mes >= 1 && mes <= 12
+    return ano >= 2000 && ano <= 2100 && mes >= 1 && mes <= 12
   }, 'Mês inválido.')
 
 /** Filtros de `GET /api/departures`. */

@@ -129,7 +129,14 @@ export function Button({
       // `aria-busy` em vez de trocar o rótulo por "Carregando…": leitor de
       // tela anuncia o estado sem perder o nome acessível do botão.
       aria-busy={carregando || undefined}
-      disabled={disabled ?? carregando}
+      // `||` e não `??`.
+      //
+      // `??` só cai no fallback quando o valor é `null`/`undefined`. Quem
+      // escrevesse `disabled={!consentimento}` com a caixa marcada passava
+      // `false` — e `false ?? carregando` é `false`. O atributo `disabled`
+      // NUNCA era aplicado durante o envio, e `carregando` virava puramente
+      // cosmético: spinner girando com o botão clicável, um POST por clique.
+      disabled={disabled || carregando}
       className={cn(BASE, VARIANTES[variante], TAMANHOS[tamanho], bloco && 'w-full', className)}
       {...props}
     >

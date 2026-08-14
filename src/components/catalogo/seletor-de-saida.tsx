@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import { AviseMe } from '@/components/catalogo/avise-me'
 import { BadgeDisponibilidade } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, classesDeBotao } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { lineIdDeSaida, useCarrinho } from '@/lib/carrinho/store'
 import { diaEMes } from '@/lib/datetime'
@@ -64,7 +64,19 @@ export function SeletorDeSaida({
   const [selecionadaId, setSelecionadaId] = useState<number | null>(primeiraLivre?.id ?? null)
   const [quantidade, setQuantidade] = useState(1)
   const [adicionada, setAdicionada] = useState(false)
+
+  // DOIS estados para um modal, e não um só.
+  //
+  // Desmontar o `<AviseMe>` para fechá-lo parece equivalente e não é: o
+  // `useDialogoNativo` de `ui/dialogo.tsx` devolve o foco ao gatilho num efeito
+  // que começa com `if (aberto) return`. Se o componente some com `aberto`
+  // ainda `true`, esse efeito nunca roda, `dialogo.close()` nunca é chamado, e
+  // o foco do teclado cai no `<body>` — a pessoa perde o lugar na página.
+  //
+  // Então: `aviseMe` guarda QUAL saída, `aviseMeAberto` guarda SE está aberto.
+  // Fechar só troca o booleano, e o diálogo faz o resto sozinho.
   const [aviseMe, setAviseMe] = useState<SaidaDTO | null>(null)
+  const [aviseMeAberto, setAviseMeAberto] = useState(false)
 
   const { adicionar } = useCarrinho()
   const { mostrar } = useToast()
@@ -108,7 +120,10 @@ export function SeletorDeSaida({
       // O alvo do `IntersectionObserver` da barra fixa do mobile, e o destino
       // do link "escolher data" dela.
       id="seletor-de-saida"
-      className="border-caqui-ink-900 bg-white shadow-[var(--shadow-corte-2)]"
+      // `border` junto com `border-caqui-ink-900`: a classe de cor sozinha só
+      // escreve `border-color`, e o Preflight mantém `border-width: 0`. O
+      // contêiner do ponto de conversão estava sem borda nenhuma.
+      className="border-caqui-ink-900 border bg-white shadow-[var(--shadow-corte-2)]"
     >
       <div className="border-caqui-ink-900 border-b px-5 py-4">
         <h2 className="text-display-s uppercase">Escolha a data</h2>
@@ -127,7 +142,10 @@ export function SeletorDeSaida({
               saida={saida}
               selecionada={saida.id === selecionadaId}
               aoEscolher={() => escolher(saida)}
-              aoAvisar={() => setAviseMe(saida)}
+              aoAvisar={() => {
+                setAviseMe(saida)
+                setAviseMeAberto(true)
+              }}
             />
           ))}
         </ul>
@@ -198,11 +216,15 @@ export function SeletorDeSaida({
 
       {aviseMe && (
         <AviseMe
+          // `key` pela saída: trocar de data remonta o formulário, então o
+          // estado "pronto" de um envio anterior não reaparece já preenchido
+          // na próxima data.
+          key={aviseMe.id}
           departureId={aviseMe.id}
           inicioUtc={aviseMe.inicioUtc}
           tituloDoRoteiro={tituloDoRoteiro}
-          aberto
-          aoFechar={() => setAviseMe(null)}
+          aberto={aviseMeAberto}
+          aoFechar={() => setAviseMeAberto(false)}
         />
       )}
     </div>
@@ -385,7 +407,11 @@ function SemData({
             )}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-caqui-orange-500 text-caqui-ink-900 border-caqui-ink-900 font-display inline-flex min-h-11 items-center justify-center rounded-xs border px-5 uppercase shadow-[var(--shadow-corte-2)] focus-visible:ring-2 focus-visible:ring-white"
+            // `classesDeBotao()` e não a string remontada à mão: a versão
+            // manual perdia `text-sm`, `tracking-tight`, a transição e os
+            // estados de hover e active. Um botão primário que não afunda no
+            // clique é o único do site que não afunda.
+            className={classesDeBotao()}
           >
             Pedir data no WhatsApp
           </a>

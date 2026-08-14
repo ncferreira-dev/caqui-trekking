@@ -12,6 +12,26 @@ export const metadata: Metadata = {
   description: 'Camisetas, baby looks, canecas e acessórios da Caqui Trekking.',
 }
 
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * DINÂMICA, E ISSO PRECISA SER DECLARADO
+ * ────────────────────────────────────────────────────────────────────────────
+ * Esta página não usa nenhuma API dinâmica do Next — só chama o serviço, que
+ * fala direto com o Prisma. Sem `fetch` para o Next observar e sem `cookies()`
+ * ou `searchParams`, ela é PRÉ-RENDERIZADA no build e servida do Full Route
+ * Cache até o próximo deploy.
+ *
+ * Isso quebra a regra central do projeto: disponibilidade é editada à mão no
+ * CRM, e `encerrada` é derivada de `new Date()` no momento do render. Estática,
+ * a página serviria para sempre o estado do build — SOLD_OUT invisível, preço
+ * reajustado que não chega, e saída já realizada listada como futura.
+ *
+ * É a mesma doutrina do carrinho, do outro lado: dado guardado envelhece.
+ * As 30 rotas de `src/app/api/*` declaram o mesmo `force-dynamic` pelo mesmo
+ * motivo.
+ */
+export const dynamic = 'force-dynamic'
+
 /** Seletor de cor e tamanho, e o carrinho, são o PROMPT 09. */
 export default async function PaginaWear() {
   const { produtos, total } = await listarProdutos({ limit: 40, offset: 0 })

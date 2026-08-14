@@ -82,6 +82,14 @@ function RegiaoDeAvisos({ avisos, aoFechar }: { avisos: Aviso[]; aoFechar: (id: 
       // A região existe no DOM desde o início, mesmo vazia: um live region
       // criado junto com a mensagem costuma não ser anunciado, porque o leitor
       // de tela precisa estar observando o nó antes de ele mudar.
+      //
+      // ⚠️ E o `aria-live` PRECISA estar aqui, não no toast.
+      // Ele estava só no `role="status"` de cada `<Toast>` — que é inserido
+      // junto com o texto, exatamente o caso que o comentário acima diz
+      // evitar. O contêiner permanente existia mas não era uma live region,
+      // então nada era anunciado: "adicionado à mochila" era silencioso para
+      // quem usa leitor de tela, no ponto de conversão do site.
+      aria-live="polite"
       className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 p-4 sm:items-end"
     >
       {avisos.map((aviso) => (
@@ -132,7 +140,12 @@ export function Toast({ aviso, aoFechar }: { aviso: Omit<Aviso, 'id'>; aoFechar:
 
   return (
     <div
-      role={aviso.tom === 'erro' ? 'alert' : 'status'}
+      // `alert` continua no erro: é assertivo e deve interromper a leitura.
+      // Para o resto, NENHUM `role` — quem anuncia é o contêiner permanente
+      // com `aria-live="polite"`. Um `status` aqui dentro seria uma live
+      // region polida dentro de outra, e parte dos leitores de tela anuncia
+      // duas vezes.
+      role={aviso.tom === 'erro' ? 'alert' : undefined}
       className={cn(
         'pointer-events-auto flex w-full max-w-sm items-start gap-3',
         'border-caqui-ink-900 rounded-xs border bg-white py-3 pr-3 pl-0',

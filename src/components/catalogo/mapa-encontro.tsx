@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 
@@ -44,6 +44,16 @@ export function MapaEncontro({
   coordenadas: { lat: number; lng: number } | null
 }) {
   const [carregado, setCarregado] = useState(false)
+  const quadro = useRef<HTMLIFrameElement>(null)
+
+  // O botão "Carregar mapa" REMOVE a si mesmo ao ser clicado — o `<iframe>`
+  // toma o lugar dele. Sem isto, o foco do teclado cai no `<body>` e a pessoa
+  // volta para o topo do documento no meio da leitura da página. Mandar o foco
+  // para o mapa é o destino óbvio: é o que ela acabou de pedir, e o `<iframe>`
+  // é focável e rolável por teclado.
+  useEffect(() => {
+    if (carregado) quadro.current?.focus()
+  }, [carregado])
 
   if (!ponto && !coordenadas) return null
 
@@ -74,6 +84,7 @@ export function MapaEncontro({
           <div className="border-caqui-ink-900 aspect-[16/9] border-t">
             {carregado ? (
               <iframe
+                ref={quadro}
                 title="Mapa do ponto de encontro"
                 loading="lazy"
                 // `referrerPolicy` corta o `Referer`: mesmo depois do

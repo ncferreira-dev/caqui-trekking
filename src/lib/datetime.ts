@@ -178,6 +178,22 @@ export function inicioDoMes(instante: Date): Date {
 }
 
 /**
+ * Anda `n` meses na chave: `deslocarMes('2026-01', -12)` → `'2025-01'`.
+ *
+ * Existe porque "12 meses atrás" NÃO é "365 dias atrás". A subtração em
+ * milissegundos erra em todo ano bissexto e, dependendo do dia, cai no mês
+ * vizinho — o histórico da agenda apareceria começando no meio de um mês.
+ * Aqui a conta é em meses inteiros desde o ano 0, então ela é exata e a virada
+ * de ano sai de graça.
+ */
+export function deslocarMes(chave: string, meses: number): string {
+  const total = Number(chave.slice(0, 4)) * 12 + (Number(chave.slice(5, 7)) - 1) + meses
+  const ano = Math.floor(total / 12)
+  const mes = total - ano * 12 + 1
+  return `${String(ano).padStart(4, '0')}-${String(mes).padStart(2, '0')}`
+}
+
+/**
  * "2026-08" → "agosto de 2026".
  *
  * Formata a partir do DIA 15 ao meio-dia, e não do dia 1º à meia-noite: o meio

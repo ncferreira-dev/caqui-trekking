@@ -59,11 +59,26 @@ export function AviseMe({
     evento.preventDefault()
     const dados = new FormData(evento.currentTarget)
 
+    const nome = String(dados.get('nome') ?? '').trim()
     const email = String(dados.get('email') ?? '').trim()
     const telefone = String(dados.get('telefone') ?? '').trim()
 
     if (!email && !telefone) {
       setErro('Informe um e-mail ou um WhatsApp para podermos avisar.')
+      return
+    }
+
+    // As mesmas regras do `leadSchema`, checadas AQUI para a pessoa poder
+    // corrigir. Sem isto, um "Jo" no nome ou um telefone pela metade voltava
+    // do servidor como 400 e virava a frase genérica "não foi possível
+    // registrar agora" — a pessoa não descobre o que arrumar, fecha o modal, e
+    // o lead do momento de maior intenção da página se perde.
+    if (nome && nome.length < 2) {
+      setErro('O nome precisa ter ao menos 2 letras — ou deixe em branco.')
+      return
+    }
+    if (telefone && telefone.length < 8) {
+      setErro('O WhatsApp parece incompleto. Inclua o DDD.')
       return
     }
 
@@ -75,7 +90,7 @@ export function AviseMe({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...(dados.get('nome') ? { nome: String(dados.get('nome')).trim() } : {}),
+          ...(nome ? { nome } : {}),
           ...(email ? { email } : {}),
           ...(telefone ? { telefone } : {}),
           // `origem` tem teto de 60 caracteres no schema. O id da saída cabe
@@ -103,7 +118,12 @@ export function AviseMe({
   return (
     <Modal aberto={aberto} aoFechar={aoFechar} titulo={estado === 'pronto' ? 'Pronto' : 'Avise-me'}>
       {estado === 'pronto' ? (
-        <div className="flex flex-col gap-4">
+        // `role="status"`: o `<form>` inteiro é trocado por este painel, então
+        // o botão que tinha o foco some do DOM e o título do `<h2>` muda — e
+        // trocar o texto de um cabeçalho não é anunciado. Sem isto, a única
+        // confirmação de que o lead foi registrado não chega a quem usa leitor
+        // de tela. O foco em si o `<dialog>` nativo já segura.
+        <div role="status" className="flex flex-col gap-4">
           <p className="text-corpo">
             Anotado. Se abrir vaga em <strong>{data}</strong>, a Caqui chama você antes de anunciar.
           </p>

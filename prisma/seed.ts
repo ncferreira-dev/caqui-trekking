@@ -450,7 +450,7 @@ async function main() {
       // Cadastur e PESM ficam VAZIOS de propósito: são credenciais reais, e o
       // rodapé só mostra a linha quando há valor (footer.tsx). Preencher com um
       // texto-placeholder ("a preencher", "monitores credenciados") fazia o
-      // site exibir isso como se fosse a credencial. A dona coloca a real no
+      // site exibir isso como se fosse a credencial. O dono coloca a real no
       // CRM (Config); até lá, não aparece nada — melhor que aparecer um rótulo.
       heroTitle: 'Venha viver novas experiências',
       heroSubtitle: 'Ecoturismo e aventura em Mogi das Cruzes e região',

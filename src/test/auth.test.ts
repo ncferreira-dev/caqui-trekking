@@ -31,7 +31,7 @@ beforeEach(async () => {
   await prisma.user.createMany({
     data: [
       {
-        name: 'Dona da Caqui',
+        name: 'Dono da Caqui',
         email: 'owner@caqui.test',
         passwordHash: await gerarHash(SENHA_OWNER),
         role: 'OWNER',

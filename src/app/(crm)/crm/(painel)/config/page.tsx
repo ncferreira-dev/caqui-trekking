@@ -102,7 +102,7 @@ export default async function PaginaConfig() {
         </Painel>
 
         {usuario.role === 'OWNER' && (
-          <Painel titulo="Quem tem acesso" acao={<Rotulo>só a dona vê isto</Rotulo>}>
+          <Painel titulo="Quem tem acesso" acao={<Rotulo>só o dono vê isto</Rotulo>}>
             <ul className="divide-caqui-rule divide-y">
               {usuarios.map((u) => (
                 <li
@@ -111,7 +111,7 @@ export default async function PaginaConfig() {
                 >
                   <span className="text-corpo-sm">{u.name}</span>
                   <span className="text-caqui-ink-700 text-micro font-mono">{u.email}</span>
-                  <Rotulo>{u.role === 'OWNER' ? 'Dona' : 'Equipe'}</Rotulo>
+                  <Rotulo>{u.role === 'OWNER' ? 'Dono' : 'Equipe'}</Rotulo>
                   {!u.active && (
                     <span className="text-caqui-danger text-micro font-mono uppercase">
                       Desativado

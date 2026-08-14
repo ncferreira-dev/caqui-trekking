@@ -33,7 +33,7 @@ beforeEach(async () => {
 
   await prisma.user.create({
     data: {
-      name: 'Dona da Caqui',
+      name: 'Dono da Caqui',
       email: 'owner@caqui.test',
       passwordHash: await gerarHash(SENHA),
       role: 'OWNER',

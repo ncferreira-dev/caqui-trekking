@@ -30,7 +30,7 @@ export async function criarUsuarios(): Promise<void> {
   await prisma.user.createMany({
     data: [
       {
-        name: 'Dona da Caqui',
+        name: 'Dono da Caqui',
         email: EMAILS.OWNER,
         passwordHash: await gerarHash(SENHAS.OWNER),
         role: 'OWNER',

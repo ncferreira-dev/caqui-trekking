@@ -88,7 +88,7 @@ export default async function LayoutPainel({ children }: LayoutProps<'/crm'>) {
               <div className="hidden text-right leading-tight sm:block">
                 <p className="text-corpo-sm">{usuario.nome}</p>
                 <p className="text-caqui-ink-500 text-micro font-mono uppercase">
-                  {usuario.role === 'OWNER' ? 'Dona' : 'Equipe'}
+                  {usuario.role === 'OWNER' ? 'Dono' : 'Equipe'}
                 </p>
               </div>
               <BotaoSair nome={usuario.nome} />

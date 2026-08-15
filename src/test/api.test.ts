@@ -455,24 +455,33 @@ describe('internalNotes NUNCA vaza na API pública', () => {
   const SEGREDO = 'SEGREDO-INTERNO-NAO-PODE-VAZAR'
 
   it('não aparece em nenhuma resposta pública', async () => {
-    const respostas = await Promise.all([
-      listarTripsRota(get('/api/trips') as never),
-      getTrip(get('/api/trips/trilha-de-teste'), ctx({ slug: 'trilha-de-teste' })),
-      listarDeparturesRota(get('/api/departures?incluirEncerradas=true') as never),
-      getDeparture(
-        get(`/api/departures/${f.saidaDisponivel.id}`),
-        ctx({ id: String(f.saidaDisponivel.id) }),
-      ),
-      validarCarrinhoRota(
-        post('/api/cart/validate', {
-          itens: [
-            { lineId: 'l1', tipo: 'DEPARTURE', departureId: f.saidaDisponivel.id, quantidade: 1 },
-          ],
-        }) as never,
-      ),
-    ])
+    // Sequencial, não Promise.all: disparar os cinco handlers de uma vez fazia
+    // ~10 queries concorrerem pelo pool (max 10) do cliente Prisma compartilhado,
+    // e na borda uma delas às vezes não pegava conexão — o teste ficava flaky.
+    // A verificação (nada interno vaza na resposta) não depende de concorrência,
+    // então uma por vez cobre o mesmo e é determinística. É a mesma política já
+    // declarada em vitest.config: com um banco só, o caminho é sequencial.
+    const chamadas = [
+      () => listarTripsRota(get('/api/trips') as never),
+      () => getTrip(get('/api/trips/trilha-de-teste'), ctx({ slug: 'trilha-de-teste' })),
+      () => listarDeparturesRota(get('/api/departures?incluirEncerradas=true') as never),
+      () =>
+        getDeparture(
+          get(`/api/departures/${f.saidaDisponivel.id}`),
+          ctx({ id: String(f.saidaDisponivel.id) }),
+        ),
+      () =>
+        validarCarrinhoRota(
+          post('/api/cart/validate', {
+            itens: [
+              { lineId: 'l1', tipo: 'DEPARTURE', departureId: f.saidaDisponivel.id, quantidade: 1 },
+            ],
+          }) as never,
+        ),
+    ]
 
-    for (const res of respostas) {
+    for (const chamada of chamadas) {
+      const res = await chamada()
       const texto = await res.text()
       expect(texto).not.toContain(SEGREDO)
       expect(texto).not.toContain('internalNotes')

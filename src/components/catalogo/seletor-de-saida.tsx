@@ -61,6 +61,7 @@ export function SeletorDeSaida({
 }) {
   const futuras = saidas.filter((s) => !s.encerrada)
   const primeiraLivre = futuras.find((s) => s.disponibilidade !== 'SOLD_OUT')
+  const esgotadas = futuras.filter((s) => s.disponibilidade === 'SOLD_OUT').length
 
   const [selecionadaId, setSelecionadaId] = useState<number | null>(primeiraLivre?.id ?? null)
   const [quantidade, setQuantidade] = useState(1)
@@ -134,7 +135,14 @@ export function SeletorDeSaida({
       <div className="border-caqui-ink-900 border-b px-5 py-4">
         <h2 className="text-display-s uppercase">Escolha a data</h2>
         <p className="text-caqui-ink-700 text-corpo-sm mt-1">
-          {futuras.length} {futuras.length === 1 ? 'data disponível' : 'datas disponíveis'}
+          {/* NAO diga "disponiveis" aqui.
+              `futuras` e tudo que ainda nao aconteceu, esgotado inclusive: a
+              saida esgotada continua na lista de proposito, para a pessoa ver
+              que existe e pedir para ser avisada. Chamar o total de
+              "disponiveis" e uma promessa que a propria lista desmente duas
+              linhas abaixo, onde aparece o selo ESGOTADO. */}
+          {futuras.length} {futuras.length === 1 ? 'data' : 'datas'}
+          {esgotadas > 0 && ` · ${esgotadas} esgotada${esgotadas === 1 ? '' : 's'}`}
         </p>
       </div>
 

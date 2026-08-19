@@ -123,28 +123,42 @@ escondido.
 
 ### Sob `prefers-reduced-motion`, nada é instalado
 
-Não é só zerar a duração: o observer não é criado, o listener de rolagem não é
-registrado, o `will-change` não é aplicado. Zero trabalho e zero risco de
-conteúdo preso invisível.
+Não é só zerar a duração: o observer não é criado, o `will-change` não é
+aplicado. Zero trabalho e zero risco de conteúdo preso invisível.
 
 O bloco nuclear `*{transition-duration:0.01ms!important}` **não** é usado — com
 `!important` ele mataria também as transições que devem sobreviver com duração
 zero, e impediria qualquer alternativa em fade.
 
-### O parallax não atrapalha
+### O parallax por JavaScript foi removido em 18/08/2026
 
-Listener `passive` (senão o navegador espera para saber se haverá
-`preventDefault` e a rolagem engasga), escrita dentro de `requestAnimationFrame`
-no máximo uma vez por quadro, e uma única variável CSS lida por `translate3d` —
-composição pura, sem layout e sem paint. Quando o herói sai da tela, o cálculo
-para.
+O herói antigo era um empilhado de camadas movidas por um listener de rolagem
+(`Hero`, `CamadaHero`, `.camada-parallax`), com um céu de nuvens derivando
+(`Nuvem`, `Nuvens`, `.nuvem-derivando`, `.serra-respirando`).
 
-**O conteúdo do herói não se move; só o fundo.** Texto em parallax é o que
-torna o efeito enjoativo e prejudica a leitura.
+O herói novo é **vídeo**, e nada disso é renderizado por página nenhuma desde
+o redesenho. Os dois componentes, os três grafismos e as 98 linhas de CSS
+saíram do repositório.
+
+Ficou o que substituiu: `VideoDeFundo` (com botão de pausa, WCAG 2.2.2) e o
+bloco CENA em `globals.css`, que faz efeito contínuo por `animation-timeline`
+— no compositor, com zero trabalho de main thread e zero byte de biblioteca.
 
 ---
 
 ## Rodapé e dados
+
+O rodapé é a **última cena**, não um depósito de links: abre com uma frase em
+escala de cartaz e dois botões que dizem a mesma coisa que ela, segue com a
+legenda (navegação numerada, contato em ficha, newsletter) e fecha no colofão.
+
+Ele é `palco-noite`, a mesma chapa do herói e da abertura de capítulo. Até
+18/08/2026 era `ink-900`, preto neutro, herdado de quando o rodapé era a única
+superfície escura do site. Dois pretos quase iguais empilhados na mesma rolagem
+não leem como duas decisões: leem como erro de renderização.
+
+A marca do rodapé também responde ao **gesto dos cinco toques** que leva ao CRM,
+e a contagem é compartilhada com a do topo pelo `sessionStorage`.
 
 Nada é `hardcoded`: número, Instagram, Cadastur e credencial do PESM vêm do
 banco, editáveis no CRM. No projeto de referência, trocar o número de WhatsApp
@@ -160,12 +174,19 @@ A newsletter usa `POST /api/leads`, que exige `consentimento: true`. A caixa
 começa desmarcada e o botão não envia sem ela — "assinou porque não desmarcou"
 não é consentimento sob a LGPD.
 
-### Duas correções de contraste que só apareceram medindo
+### Quatro correções de contraste que só apareceram medindo
 
-| Achado                                 | Medido               | Correção                                    |
-| -------------------------------------- | -------------------- | ------------------------------------------- |
-| `ink-500` nos rótulos do rodapé escuro | **3,65:1** — reprova | novo token `sand-400` (#9A948B), **6,46:1** |
-| `ink-700` como filete no escuro        | **1,37:1**           | `rule-invertido`, branco a 20%              |
+| Achado                                    | Medido               | Correção                                    |
+| ----------------------------------------- | -------------------- | ------------------------------------------- |
+| `ink-500` nos rótulos do rodapé escuro    | **3,65:1** — reprova | novo token `sand-400` (#9A948B), 6,32:1     |
+| `ink-700` como filete no escuro           | **1,37:1**           | filete próprio, areia a 22%                 |
+| branco a 20% como filete sobre a noite    | some                 | `rule-noite`; `rule-invertido` foi apagado  |
+| `danger` no erro do formulário, no escuro | **3,05:1** — reprova | novo token `danger-claro` (#EF6B73), 6,36:1 |
+
+A terceira e a quarta são de 18/08/2026, e as duas são do mesmo tipo: um token
+nascido para uma superfície e usado noutra. `rule-invertido` não foi corrigido,
+foi **apagado** — depois da varredura não sobrava nenhum uso certo dele, e um
+token que só dá para usar errado não precisa de comentário avisando.
 
 E um falso positivo legítimo da regra de lint: laranja **sobre fundo escuro**
 passa (8,31:1 em `orange-400` sobre `ink-900`). Em vez de abrir exceção, o

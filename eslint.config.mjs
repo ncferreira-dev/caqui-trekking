@@ -88,6 +88,70 @@ const eslintConfig = defineConfig([
     },
   },
 
+  {
+    // ──────────────────────────────────────────────────────────────────────
+    // TRAVESSAO NAO ENTRA EM TEXTO DO SITE
+    // ──────────────────────────────────────────────────────────────────────
+    // Decisao de voz da marca, pedida pelo cliente em 18/08/2026: o texto do
+    // site nao usa travessao nem meia-risca. Frase que pediria um deles vira
+    // duas frases, ou ganha dois-pontos, ou uma virgula.
+    //
+    // E trava, e nao conselho, porque travessao e a coisa mais natural do mundo
+    // de se digitar em portugues escrito com cuidado, e porque o defeito nao
+    // quebra nada: ele so aparece na tela, semanas depois, num paragrafo que
+    // ninguem esta mais olhando. Foram 34 ocorrencias na primeira varredura.
+    //
+    // ESCOPO: so `app/` e `components/`, que e onde a copy mora.
+    //   - `src/test/**` fica de fora: a descricao de um teste e documentacao
+    //     para quem le o codigo, nao texto que alguem ve no site.
+    //   - comentario de codigo tambem fica de fora em qualquer arquivo, porque
+    //     nao e `JSXText` nem `Literal`. A documentacao deste projeto usa
+    //     travessao e continua usando.
+    //
+    // ⚠️ AS DUAS REGRAS DO LARANJA ESTAO REPETIDAS AQUI DE PROPOSITO.
+    //
+    // Em flat config, as opcoes de uma MESMA regra nao se somam entre blocos:
+    // o ultimo bloco que casa com o arquivo SUBSTITUI a configuracao inteira.
+    // Quando este bloco nasceu, em 18/08/2026, ele apagou em silencio a trava
+    // do laranja dentro de `app/` e `components/` — exatamente as duas pastas
+    // onde `className` existe. Em `lib/` e `server/`, onde ela sobreviveu, ha
+    // 1 `className` contra 1.312 nas duas de cima.
+    //
+    // Ou seja: a trava continuou verde, continuou documentada em tres lugares,
+    // e parou de olhar qualquer coisa. E o defeito que a skill chama de "o pior
+    // estado possivel": uma checagem que existe e nao ve nada.
+    //
+    // Provado assim, e este comando precisa continuar acusando erro:
+    //   printf 'export const a = "text-caqui-orange-500"' \
+    //     | npx eslint --stdin --stdin-filename src/components/prova.tsx
+    files: ['src/app/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/text-caqui-orange-/]',
+          message:
+            'Laranja como cor de texto reprova no WCAG AA (3,15:1 sobre branco). Use a classe `.preco` para o preço, ou text-caqui-ink-900 / text-caqui-orange-600 sobre fundo escuro.',
+        },
+        {
+          selector: 'TemplateElement[value.raw=/text-caqui-orange-/]',
+          message:
+            'Laranja como cor de texto reprova no WCAG AA (3,15:1 sobre branco). Use a classe `.preco` para o preço.',
+        },
+        {
+          selector: 'JSXText[value=/[\u2014\u2013]/]',
+          message:
+            'Travessao e meia-risca nao entram em texto do site. Use ponto, dois-pontos ou virgula.',
+        },
+        {
+          selector: 'Literal[value=/[\u2014\u2013]/]',
+          message:
+            'Travessao e meia-risca nao entram em texto do site. Use ponto, dois-pontos ou virgula.',
+        },
+      ],
+    },
+  },
+
   globalIgnores([
     '.next/**',
     'out/**',

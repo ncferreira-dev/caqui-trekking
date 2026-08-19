@@ -1,10 +1,13 @@
 import type { NextRequest } from 'next/server'
+import { z } from 'zod'
 
 import { ok } from '@/lib/api/respond'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
 import { paginacaoSchema, queryParaObjeto } from '@/lib/api/schemas'
 import { exigirPapel } from '@/lib/auth/guard'
 import { prisma } from '@/lib/prisma'
+import { criarTrip } from '@/server/services/admin/content-admin-service'
+import { ipDaRequest } from '@/server/services/audit-service'
 
 export const dynamic = 'force-dynamic'
 
@@ -84,4 +87,78 @@ export const GET = rota(async (request: NextRequest) => {
   }))
 
   return ok(dados, { meta: { total, limit, offset, hasMore: offset + dados.length < total } })
+})
+
+/**
+ * O QUE É OBRIGATÓRIO PARA UM ROTEIRO NASCER.
+ *
+ * Cinco campos, e nenhum a mais: título, descrição, cidade, estado e
+ * dificuldade. Todo o resto (distância, desnível, o que levar, política) é
+ * preenchido depois, editando.
+ *
+ * Isso é decisão de produto, não preguiça de schema. Um formulário de criação
+ * com vinte campos obrigatórios faz a pessoa abandonar no meio ou preencher
+ * qualquer coisa para conseguir salvar, e "qualquer coisa" vira o texto que o
+ * site publica. Os cinco de baixo são os que não dá para adivinhar depois.
+ *
+ * `state` com exatamente 2 letras: é a sigla, e o banco tem `VarChar(2)`.
+ */
+const criarSchema = z
+  .object({
+    title: z.string().trim().min(3).max(200),
+    description: z.string().trim().min(10),
+    city: z.string().trim().min(2).max(120),
+    state: z
+      .string()
+      .trim()
+      .length(2)
+      .transform((s) => s.toUpperCase()),
+    difficulty: z.enum(['FACIL', 'MODERADO', 'DIFICIL', 'EXTREMO']),
+
+    // Daqui para baixo é tudo opcional: dá para preencher agora, se a pessoa
+    // já tiver o dado na mão, ou deixar para a edição.
+    subtitle: z.string().trim().max(300).nullable().optional(),
+    region: z.string().trim().max(120).nullable().optional(),
+    durationMinutes: z.number().int().min(0).nullable().optional(),
+    distanceKm: z
+      .string()
+      .regex(/^\d{1,3}([.,]\d{1,2})?$/, 'Distância em km, ex.: 8.5')
+      .transform((s) => s.replace(',', '.'))
+      .nullable()
+      .optional(),
+    elevationGainM: z.number().int().min(0).nullable().optional(),
+  })
+  .strict()
+
+/**
+ * POST /api/admin/trips — cria um roteiro, em RASCUNHO.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * ESTA ROTA FALTAVA, E ERA O GARGALO DO CRM
+ * ════════════════════════════════════════════════════════════════════════════
+ * Até 18/08/2026 este arquivo tinha apenas GET. Dava para editar, publicar,
+ * destacar e arquivar roteiro, e não dava para criar nenhum: os cinco que
+ * existiam vieram do seed. `Trip` é a entidade central do sistema, e sem esta
+ * rota o CRM não atendia o primeiro roteiro novo que a Caqui abrisse.
+ *
+ * ADMIN pode: escrever roteiro é o trabalho do dia a dia de quem opera. Quem
+ * PUBLICA também é ADMIN (`PATCH`), e destruir continua sendo só do OWNER.
+ *
+ * Nasce em `DRAFT` sem opção de nascer publicado. Ver `criarTrip`.
+ */
+export const POST = rota(async (request: NextRequest) => {
+  const usuario = await exigirPapel(request, ['OWNER', 'ADMIN'])
+
+  const corpo: unknown = await request.json().catch(() => null)
+  const campos = validarOuFalhar(criarSchema.safeParse(corpo))
+
+  const trip = await criarTrip(campos, {
+    userId: usuario.userId,
+    ip: ipDaRequest(request),
+  })
+
+  // `ok` e não um 201 próprio: o projeto inteiro responde 200 com `{ data }` em
+  // POST administrativo (ver `criarProduto` e `duplicarSaida`), e um único
+  // endpoint com contrato diferente é a pedra que o cliente tropeça.
+  return ok(trip)
 })

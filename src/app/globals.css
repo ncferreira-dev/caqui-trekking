@@ -56,8 +56,9 @@
 
   /* O MESMO valor de `orange-400`, com outro NOME porque tem outra regra de
      uso — e o nome é a documentação.
-     Sobre `ink-900` dá 8,31:1: passa como texto normal, em qualquer tamanho.
-     Sobre branco daria 2,34:1 e reprovaria em tudo.
+     Sobre `noite-900` dá 8,13:1 e sobre `ink-900` dá 8,31:1: passa como texto
+     normal, em qualquer tamanho. Sobre branco daria 2,34:1 e reprovaria em
+     tudo.
      Existe para o rodapé e para qualquer superfície escura, e é a única forma
      sancionada de laranja como texto fora do `.preco`. O ESLint recusa
      `text-caqui-orange-*` justamente para forçar a passagem por aqui. */
@@ -75,20 +76,90 @@
   --color-caqui-sand-200: #e8e0d3;
 
   /* Texto secundário SOBRE FUNDO ESCURO. Cinza quente, da família da areia.
-     Existe porque `ink-500` (#6B6B6B) sobre `ink-900` dá 3,65:1 e REPROVA no
+     Existe porque `ink-500` (#6B6B6B) sobre a noite dá 3,57:1 e REPROVA no
      AA — os rótulos do rodapé ficariam ilegíveis para quem tem baixa visão, e
-     o defeito é invisível para quem enxerga bem. Este dá 6,46:1. */
+     o defeito é invisível para quem enxerga bem. Este dá 6,32:1. */
   --color-caqui-sand-400: #9a948b;
 
+  /* ── A NOITE ────────────────────────────────────────────────────────────
+     Superfície escura para as cenas de palco: herói, abertura de capítulo,
+     manifesto, Caqui Wear e rodapé. Em 18/08/2026 o rodapé era a última
+     superfície escura ainda em `ink-900`, e dois pretos quase iguais na mesma
+     rolagem leem como erro de renderização, não como duas decisões.
+
+     Por que não reusar `ink-900` (#0D0D0D), que já existe: ink-900 é preto
+     NEUTRO — é tinta, o registro da gravura. Estas três são
+     azuladas, e o azul não é enfeite: é a hora azul, o céu entre 04:00 e o
+     nascer do sol. É literalmente o horário de encontro de uma saída de
+     nascer do sol da Caqui. Preto neutro atrás de uma serra lê como estúdio;
+     azul-escuro lê como madrugada na estrada.
+
+     Medido sobre `noite-900` (#0B1114) — a família de texto que já existe
+     continua inteira, sem exceção nova:
+
+       branco          19,01:1  AAA
+       sand-100        16,89:1  AAA
+       sand-200        14,52:1  AAA
+       forest-300      11,26:1  AAA
+       realce-escuro    8,13:1  AAA  ← o laranja como texto, igual ao rodapé
+       sand-400         6,32:1  AA   ← texto secundário
+       orange-500       6,03:1  AA
+
+     E o que continua PROIBIDO, com o número que reprova:
+
+       ink-500          3,57:1  ← cinza neutro morre aqui, como morre no rodapé
+
+     `noite-700` é o degrau de superfície elevada (filete, campo, aba ativa).
+     Sobre ele `sand-400` cai para 5,26:1 — ainda AA, e é o piso: um
+     `noite-600` levaria para 4,39:1 e reprovaria texto normal. Por isso a
+     escala para em três e não em cinco. */
+  --color-caqui-noite-900: #0b1114;
+  --color-caqui-noite-800: #121a1f;
+  --color-caqui-noite-700: #1a2429;
+
+  /* Filete sobre a noite. Areia a 22%, da mesma família da tipografia.
+
+     É o ÚNICO filete de superfície escura do projeto, e isso é uma decisão de
+     18/08/2026. Existia também `rule-invertido` (branco puro a 20%), nascido
+     quando a única superfície escura era o rodapé preto — ele resolvia um
+     achado real, `ink-700` sobre `ink-900` dando 1,37:1, que é um divisor que
+     ninguém vê.
+
+     Depois que as cenas viraram azul-escuro, branco puro passou a ser frio
+     demais sobre azul e a sumir. Havia dois usos errados na mesma tarde (o
+     rodapé e a vitrine da Caqui Wear na home) e nenhum uso certo sobrando.
+
+     Então o token não foi corrigido: foi APAGADO. Um token que só dá para usar
+     errado não precisa de comentário avisando, precisa deixar de existir. */
+  --color-caqui-rule-noite: rgba(245, 241, 234, 0.22);
+
+  /* Neblina. Areia a alfa baixo — é o que separa uma crista da outra sem
+     desenhar nada, e é o único jeito de dar profundidade a um desenho de
+     linha sem recorrer a sombra difusa (proibida no projeto). */
+  --color-caqui-neblina: rgba(245, 241, 234, 0.07);
+
   --color-caqui-danger: #c1121f;
+
+  /* O MESMO papel de `danger`, com outro valor porque a superfície é outra.
+
+     Medido em 18/08/2026, ao levar o rodapé para a noite: `danger` (#C1121F)
+     sobre `noite-900` dá 3,05:1 e REPROVA no AA para texto normal (mínimo
+     4,5:1). E o defeito já existia antes, no rodapé preto: 3,12:1 sobre
+     `ink-900`. Ou seja, a mensagem de erro do formulário de newsletter estava
+     ilegível para quem tem baixa visão desde que o rodapé existe, e ninguém
+     via, porque o formulário só mostra erro quando o envio falha.
+
+     Este dá 6,36:1 sobre `noite-900` e 6,50:1 sobre `ink-900`. Mesma matiz
+     (356°) do vermelho da marca, para não virar uma segunda cor de alerta.
+
+     ⚠️ É EXCLUSIVO DE FUNDO ESCURO. Sobre branco dá 2,99:1 e reprova em tudo.
+     A regra é a mesma de `realce-escuro`, e o nome é a documentação. */
+  --color-caqui-danger-claro: #ef6b73;
 
   /* Filete de cabelo. É o que dá existência à areia (1,13:1 contra branco não
      delimita nada sozinho) e substitui a sombra difusa no fluxo da página. */
   --color-caqui-rule: rgba(13, 13, 13, 0.16);
   --color-caqui-rule-forte: #0d0d0d;
-  /* O mesmo filete, invertido. `ink-700` sobre `ink-900` dá 1,37:1 — um
-     divisor que ninguém vê não divide nada. */
-  --color-caqui-rule-invertido: rgba(255, 255, 255, 0.2);
 
   /* O filete da CAQUI WEAR. Verde da mata a 22%, sobre areia.
      A submarca troca de SUPERFÍCIE e de ACENTO, não de tokens — ver
@@ -124,6 +195,44 @@
   /* Escala de tipo. Razão ~1,5 no display, ~1,2 no corpo.
      `clamp` nos dois maiores: o hero precisa caber em 320px sem quebrar a
      palavra "EXPEDIÇÕES" no meio. */
+  /* ── ESCALA DE CARTAZ ───────────────────────────────────────────────────
+     Dois degraus ACIMA do `display-xl`, para quando a tipografia é a imagem
+     e não o rótulo da imagem. Existem porque o site não tem fotografia: sem
+     foto, o que ocupa a tela é a letra, e `5,5rem` de teto não ocupa tela
+     nenhuma em 1440px.
+
+     `line-height` 0.82 e tracking -0.04em: em Archivo Black, nesta escala, o
+     espaço entre linhas do padrão abre buraco e o tracking normal faz as
+     palavras parecerem soltas. Cartaz se compõe apertado.
+
+     O piso do `clamp` é o que importa mais que o teto: `display-3xl` começa em
+     3rem para "EXPEDIÇÕES" caber em 320px sem hifenizar. Testado nessa
+     largura, que é o piso real de tráfego. */
+  /* O teto de 12,5vw NÃO é gosto, é a conta.
+     Medido no navegador: "EXPERIÊNCIAS" em Archivo Black caixa-alta com este
+     tracking ocupa 7,78em. Para caber na coluna (viewport menos 2×32px de
+     respiro) o corpo tem que ficar abaixo de (100vw − 64px) / 7,78, que dá
+     ~0,1285·vw. 12,5vw − 8px fica logo abaixo dessa reta em toda a faixa,
+     de 375px a 1920px.
+
+     A versão anterior era 13vw e VAZAVA: a 822px ela pedia 114,86px onde só
+     cabiam 97,4px, e a palavra saía cortada pela direita — invisível em
+     desenvolvimento, porque a janela do desenvolvedor é larga.
+
+     E o TETO é 9,5rem, não 11,5rem, por um motivo que a primeira conta errou:
+     acima de 1280px a coluna PARA DE CRESCER, porque o contêiner é `max-w-7xl`.
+     A largura disponível trava em 1280 − 64 = 1216px, o que limita o corpo a
+     1216 / 7,78 = 156px ≈ 9,75rem. Com 11,5rem a palavra não cabia e o
+     `hyphens: auto` entrava em ação — "EX-PERIÊNCIAS" apareceu na tela em
+     1440px. A rede de segurança funcionou; o número é que estava errado. */
+  --text-display-3xl: clamp(2.25rem, 12.5vw - 8px, 9.5rem);
+  --text-display-3xl--line-height: 0.84;
+  --text-display-3xl--letter-spacing: -0.035em;
+
+  --text-display-2xl: clamp(2.75rem, 0.9rem + 9vw, 7.5rem);
+  --text-display-2xl--line-height: 0.86;
+  --text-display-2xl--letter-spacing: -0.03em;
+
   --text-display-xl: clamp(2.5rem, 1.2rem + 6.5vw, 5.5rem);
   --text-display-xl--line-height: 0.92;
   --text-display-xl--letter-spacing: -0.02em;
@@ -157,13 +266,44 @@
   --text-dado: 1rem;
   --text-dado--line-height: 1.2;
 
+  /* O numeral gigante. É a resposta da direção de arte ao fato de não haver
+     fotografia: sem foto, o DADO carrega o peso visual. `03:00` do encontro,
+     `1.293m` de altitude, `+840m` de ganho, `01`/`02` do índice — em mono, em
+     escala de imagem.
+
+     Fica em mono e não em display porque estes números precisam ALINHAR entre
+     linhas de uma lista (é o mesmo motivo do `tabular-nums` global no body).
+     Archivo Black não tem figuras tabulares. */
+  --text-numeral-xl: clamp(2.75rem, 1rem + 8vw, 6.5rem);
+  --text-numeral-xl--line-height: 0.9;
+  --text-numeral-xl--letter-spacing: -0.03em;
+
+  --text-numeral: clamp(1.75rem, 1rem + 3vw, 3rem);
+  --text-numeral--line-height: 0.95;
+  --text-numeral--letter-spacing: -0.02em;
+
+  /* A ETIQUETA EM MONO.
+
+     `0.12em` e não `0.08em`, mudado em 18/08/2026. Caixa-alta em corpo 12 é
+     lida glifo a glifo, não pela silhueta da palavra, e nesse tamanho o
+     espacejamento normal do desenho da fonte empilha as hastes. Abrir a
+     entreletra é o gesto que separa uma etiqueta impressa de um texto pequeno
+     em maiúsculas, e é o mesmo motivo pelo qual legenda de carta topográfica,
+     rótulo de equipamento e ficha técnica sempre vêm espacejados.
+
+     O teto é o comprimento: a etiqueta mais longa do site ("O pagamento não
+     acontece aqui") tem 30 caracteres, e cada degrau de 0,01em custa 0,12px
+     por caractere. De 0,08 para 0,12 ela cresce 14px, o que cabe. Acima disso
+     ela passa a disputar a linha com o copyright no rodapé em 375px. */
   --text-rotulo: 0.75rem;
   --text-rotulo--line-height: 1.2;
-  --text-rotulo--letter-spacing: 0.08em;
+  --text-rotulo--letter-spacing: 0.12em;
 
+  /* Um degrau abaixo da etiqueta, e por isso um degrau ATRÁS no espacejamento:
+     em 11px a mesma abertura de `rotulo` desmancharia a palavra. */
   --text-micro: 0.6875rem;
   --text-micro--line-height: 1.3;
-  --text-micro--letter-spacing: 0.06em;
+  --text-micro--letter-spacing: 0.1em;
 
   /* ── Forma ──────────────────────────────────────────────────────────────
      Raios pequenos e um chanfro. O chanfro é a geometria da logo: o brasão é
@@ -199,6 +339,18 @@
      compra é atraso disfarçado de charme. */
   --ease-saida: cubic-bezier(0.2, 0, 0, 1);
   --ease-padrao: cubic-bezier(0.4, 0, 0.2, 1);
+  /* A curva NARRATIVA, e por que ela pode passar dos 240ms.
+
+     A regra acima ("nada acima de 240ms") foi escrita para INTERFACE DE
+     COMPRA: botão, campo, aba, drawer. Ali atraso é atraso, e charme é
+     desculpa. Cena não é interface — a entrada de uma seção durante a rolagem
+     não está no caminho de ninguém que está tentando clicar em algo, e a
+     mesma velocidade que deixa um botão gostoso deixa uma paisagem nervosa.
+
+     Só pode ser usada em elemento NÃO INTERATIVO que entra por rolagem. Se
+     estiver num botão, é bug. */
+  --ease-cena: cubic-bezier(0.16, 1, 0.3, 1);
+  --duracao-cena: 900ms;
 }
 
 /* ==========================================================================
@@ -207,16 +359,33 @@
 
 @layer base {
   html {
-    scroll-behavior: smooth;
+    /* ══════════════════════════════════════════════════════════════════════
+       ⚠️ NÃO VOLTE COM `scroll-behavior: smooth` AQUI.
+       ══════════════════════════════════════════════════════════════════════
+       Ele esteve nesta regra e QUEBRAVA TODA NAVEGAÇÃO DO SITE.
+
+       O sintoma, relatado em 19/08/2026: estando em `/trekking` com a página
+       rolada e clicando na logo, o site abria a home já rolada, com o vídeo do
+       herói acima da dobra. Parecia problema da logo. Não era: medido, a
+       rolagem se mantinha em TODA troca de rota — `/trekking` → `/wear`,
+       `/sobre`, `/agenda`. Quem saía de uma página no meio chegava na próxima
+       no meio.
+
+       A causa: o reset de rolagem que o roteador faz a cada navegação sai como
+       uma rolagem SUAVE por causa desta propriedade, e ela é cancelada pelo
+       render da página nova antes de chegar ao topo. Medido no navegador, lado
+       a lado: com `smooth`, a rolagem ficava em 900; com `auto`, ia para 0.
+
+       O que se perde: âncora (`#dia-2026-08-15`, o pular-para-o-conteúdo)
+       passa a saltar em vez de deslizar. É o comportamento PADRÃO da web,
+       ninguém estranha, e quem pediu movimento reduzido já recebia exatamente
+       isto. O que se ganha é a página abrindo onde a pessoa espera.
+
+       Coberto por `src/test/travas-do-css.test.ts`. */
+
     /* Compensa o header fixo quando alguém chega por âncora. */
     scroll-padding-top: 5rem;
     -webkit-text-size-adjust: 100%;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    html {
-      scroll-behavior: auto;
-    }
   }
 
   body {
@@ -304,10 +473,10 @@
 
    `clip-path` corta o conteúdo, então quem usa precisa deixar respiro no
    canto — os componentes já fazem isso. */
-@utility chanfro-sm {
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
-}
-
+/* Só existe o `md`. Houve um `chanfro-sm` de 10px, e ele nunca foi usado por
+   nenhum componente: dois tamanhos de chanfro convidam a escolher o menor "só
+   nesta peça", e o corte da marca deixa de ser uma constante. Um tamanho é
+   vocabulário; dois são preferência. */
 @utility chanfro-md {
   clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
 }
@@ -318,12 +487,38 @@
    branco dá 3,15:1. Por isso `font-size` está travado no utilitário em vez de
    ficar a cargo de quem usa — o dia em que alguém aplicar isto num
    `text-sm` a regra quebra em silêncio. */
+/* O PREÇO. A ÚNICA exceção sancionada ao laranja como cor de texto.
+   ══════════════════════════════════════════════════════════════════════════
+   Ela existe porque o tamanho está TRAVADO em 28px aqui dentro: acima de 24px
+   o mínimo do WCAG cai de 4,5:1 para 3:1, e é isso que abre a exceção. Quem
+   escrever `text-caqui-orange-*` num rótulo de 12px continua sendo recusado
+   pelo ESLint.
+
+   ⚠️ A COR É `orange-600`, E A TROCA FOI MEDIDA EM 18/08/2026.
+   Era `orange-500` (#F26522), e ele só passa sobre BRANCO, por 0,15 de margem:
+
+     superfície      orange-500      orange-600
+     branco            3,15 ✓          3,99 ✓
+     sand-100          2,80 ✗          3,54 ✓
+     sand-200          2,41 ✗          3,04 ✓
+     noite-900         6,03 ✓          4,77 ✓
+
+   E o preço vive fora do branco em três lugares: a página da peça inteira é
+   `secao-wear` (areia), e as linhas da agenda e do índice de roteiros pintam
+   `hover:bg-caqui-sand-100` — ou seja, o preço reprovava PARADO na Caqui Wear
+   e reprovava NO HOVER em toda lista do site.
+
+   A saída poderia ter sido um segundo utilitário para superfície clara. Não
+   foi, de propósito: dois utilitários é mais uma escolha para alguém errar, e
+   o defeito reapareceria no primeiro preço colocado num fundo novo. Com
+   `orange-600` não sobra superfície do projeto em que a exceção falhe, e a
+   escolha deixa de existir. */
 @utility preco {
   font-family: var(--font-display);
   font-size: 1.75rem;
   line-height: 1;
   letter-spacing: -0.01em;
-  color: var(--color-caqui-orange-500);
+  color: var(--color-caqui-orange-600);
 }
 
 /* Trama diagonal. Marca superfície indisponível (saída esgotada, variante em
@@ -370,6 +565,118 @@
   background-color: var(--color-caqui-sand-100);
 }
 
+/* ── O PALCO NOTURNO ──────────────────────────────────────────────────────
+   A superfície das cenas: herói, manifesto, Caqui Wear, rodapé.
+
+   Só troca FUNDO e FILETE — não redefine `--color-caqui-*` dentro de escopo,
+   pela mesma razão escrita lá em cima na Caqui Wear: token que muda de valor
+   conforme o ancestral faz o design system mentir. Quem escreve texto aqui
+   dentro usa `text-white`, `text-caqui-sand-400` e `text-caqui-realce-escuro`,
+   que são exatamente os três já sancionados para fundo escuro no rodapé.
+
+   `color-scheme: dark` avisa o navegador que a caixa é escura, e com isso a
+   barra de rolagem interna, o autofill e os controles nativos param de vir
+   claros por cima. NÃO é modo escuro do site — a regra 1 do topo continua de
+   pé; é uma seção escura numa página clara, que é outra coisa. */
+@utility palco-noite {
+  background-color: var(--color-caqui-noite-900);
+  color: var(--color-caqui-sand-200);
+  color-scheme: dark;
+
+  /* A LUZ QUE VEM DE CIMA.
+
+     Uma superfície escura chapada não parece escuridão, parece tinta. A
+     diferença entre as duas é que escuridão tem uma fonte de luz em algum
+     lugar, mesmo fraca, e é o gradiente dessa fonte que o olho lê como AR
+     entre ele e o fundo.
+
+     Aqui a fonte é a única que faz sentido nesta marca: a claridade que sobe
+     atrás da serra antes do sol aparecer. Por isso ela vem de cima, é larga,
+     e é areia e não branco.
+
+     Medido no ponto mais claro do gradiente (topo, centro), que é onde ele
+     mais estraga contraste. A composição dá #181D20, e a família de texto do
+     palco continua inteira:
+
+       branco          17,00:1  AAA
+       sand-200        12,98:1  AAA
+       realce-escuro    7,27:1  AAA
+       sand-400         5,65:1  AA   ← o pior caso, e ainda passa com folga
+       orange-500       5,39:1  AA
+
+     5,5% é o teto: a 8% o `sand-400` cai para 5,1:1 e o degradê começa a
+     aparecer como uma mancha em vez de sumir como atmosfera. */
+  background-image: radial-gradient(
+    128% 74% at 50% 0%,
+    rgba(245, 241, 234, 0.055) 0%,
+    rgba(245, 241, 234, 0.022) 34%,
+    transparent 68%
+  );
+}
+
+/* Tipografia em escala de cartaz.
+   Junta o que a escala sozinha não resolve: `text-wrap: balance` para a
+   headline não deixar uma palavra órfã na última linha, e a supressão da
+   ligadura, que em Archivo Black nessa escala produz colisão visível em
+   "fi"/"fl" (aparece em "PERFIL" e "REFLEXO"). */
+@utility texto-cartaz {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  text-wrap: balance;
+  font-variant-ligatures: none;
+  /* A rede de segurança. A escala acima foi calculada para a palavra mais
+     longa que a headline tem HOJE — e a headline é editável no CRM. Sem isto,
+     uma palavra mais longa sairia cortada em silêncio pelo `overflow-hidden`
+     do herói. Com `hyphens: auto` e o `lang="pt-BR"` do documento, o
+     navegador só hifeniza quando de fato não couber; enquanto a conta valer,
+     esta linha não faz nada. Quebra visível é melhor que corte invisível. */
+  hyphens: auto;
+}
+
+/* O numeral como imagem. Mono, tabular, com o zero cortado ligado — em
+   `03:00` e `01` o zero é a maioria dos glifos, e o zero sem corte em escala
+   grande lê como a letra O. */
+@utility numeral {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: 'zero' 1;
+}
+
+/* A linha topográfica — textura de superfície.
+
+   HORIZONTAL de propósito. A diagonal a 45° já tem dono neste projeto:
+   `trama-indisponivel` significa "esgotado / em falta". Usar o mesmo ângulo
+   como decoração faria o vocabulário mentir — a pessoa aprenderia que listra
+   diagonal quer dizer indisponível e depois veria a mesma listra num herói.
+
+   A horizontal cita outra coisa: a curva de nível da carta topográfica, que é
+   a mesma família do `CurvaDeNivel` e do desenho da logo. */
+@utility linha-topografica {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 7px,
+    var(--color-caqui-neblina) 7px,
+    var(--color-caqui-neblina) 8px
+  );
+}
+
+/* Grão de papel.
+
+   É o que separa "SVG num fundo chapado" de "impresso". Ruído fractal gerado
+   pelo próprio SVG como data URI: nenhuma requisição, ~300 bytes, e escala
+   sem pixelar porque é um filtro, não um bitmap.
+
+   `mix-blend-mode: overlay` para o grão escurecer e clarear em vez de só
+   esbranquiçar, e `pointer-events: none` porque ele fica por cima de tudo.
+   Sempre em elemento próprio com `aria-hidden`. */
+@utility grao {
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)' opacity='0.32'/%3E%3C/svg%3E");
+}
+
 /* ==========================================================================
    O BOTÃO DO WHATSAPP CEDE LUGAR À BARRA DE COMPRA
    ==========================================================================
@@ -414,13 +721,6 @@
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
     transition-duration: 0.01ms;
-  }
-
-  /* Sem `!important` acima, isto vale: o revelar por scroll não pode deixar
-     conteúdo invisível para sempre se a transição não roda. */
-  [data-revelar] {
-    opacity: 1;
-    transform: none;
   }
 }
 
@@ -491,101 +791,204 @@
     transform 500ms var(--ease-saida);
 }
 
-/* ==========================================================================
-   PARALLAX
-   ==========================================================================
-   `--deslocamento` é escrito por JS dentro de um requestAnimationFrame e lido
-   só aqui. As camadas movem por `translate3d`, que é composição pura — não
-   dispara layout nem paint.
+/* ⚠️ ESTE BLOCO PRECISA FICAR DEPOIS DAS DUAS REGRAS ACIMA. NÃO SUBA ELE.
+   ──────────────────────────────────────────────────────────────────────────
+   `[data-revelar='oculto']` e `[data-revelar]` têm a MESMA especificidade
+   (0,1,0). Entre iguais quem vence é quem vem por último, e `@media` não
+   acrescenta peso nenhum.
 
-   O efeito é discreto de propósito: parallax exagerado envelhece rápido e, em
-   celular, briga com a rolagem por milissegundo de main thread.
-   ========================================================================== */
+   Este mesmo override morava no bloco geral de `prefers-reduced-motion`, umas
+   setenta linhas acima do `opacity: 0`. Ou seja: ele estava escrito, estava
+   comentado, e perdia.
 
-.camada-parallax {
-  transform: translate3d(0, calc(var(--deslocamento, 0px) * var(--profundidade, 0)), 0);
-  will-change: transform;
-}
+   O caminho em que isso morde: alguém rola a página, o observer marca a peça
+   como `oculto`, e SÓ ENTÃO o movimento reduzido passa a valer — o macOS liga
+   sozinho ao ativar "reduzir movimento", e o Windows tem agendamento. A peça
+   fica presa invisível, com o texto no DOM e nada na tela.
 
+   Coberto por `src/test/travas-do-css.test.ts`. */
 @media (prefers-reduced-motion: reduce) {
-  .camada-parallax {
+  [data-revelar],
+  [data-revelar='oculto'] {
+    opacity: 1;
     transform: none;
-    will-change: auto;
+    transition: none;
   }
 }
 
 /* ==========================================================================
-   O CÉU
+   CENA — ANIMAÇÃO CONDUZIDA PELA ROLAGEM, SEM JAVASCRIPT
    ==========================================================================
-   Duas coisas se movem sozinhas no herói: as nuvens atravessam, e a serra
-   respira. Nenhuma das duas responde a input — são pano de fundo, e a régua é
-   a mesma do parallax: só `transform`, nunca `left`/`top`/`background-position`,
-   que forçariam layout ou paint a cada quadro.
+   O projeto já tem `Revelar` (IntersectionObserver) para revelar UMA VEZ. Ele
+   fica, e continua sendo o certo para isso.
 
-   O percurso é medido em `vw` e não em `%`, porque `%` no `translateX` é
-   relativo à LARGURA DO PRÓPRIO ELEMENTO: uma nuvem de 160px andaria 190px e
-   voltaria, o que na tela lê como tremor, não como travessia.
+   O que ele não faz é efeito CONTÍNUO — algo que acompanha a rolagem quadro a
+   quadro em vez de disparar num limiar. Fazer isso com listener de scroll
+   significa trabalho de JS na main thread a cada quadro, competindo com a
+   própria rolagem, e é exatamente o que faz um site "cinematográfico" travar
+   no celular fraco.
+
+   `animation-timeline` roda no compositor. Custo de main thread: zero.
+   Bytes de biblioteca: zero.
+
+   ────────────────────────────────────────────────────────────────────────────
+   POR QUE ISTO NÃO PODE ESCONDER CONTEÚDO
+   ────────────────────────────────────────────────────────────────────────────
+   Mesma doutrina do `Revelar`, e aqui ela sai de graça: o estado escondido
+   mora DENTRO do `@supports`. Navegador sem suporte não aplica animação
+   nenhuma, e o elemento fica no estado natural dele — visível. Não existe
+   caminho em que o conteúdo suma.
+
+   Por isso o `@supports` está por FORA e não há nenhuma regra `opacity: 0`
+   solta neste arquivo para estes atributos.
    ========================================================================== */
 
-@keyframes caqui-nuvem {
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    /* A cena entra: sobe e materializa enquanto cruza a borda de baixo.
+       `entry 5% → entry 45%` termina bem antes do elemento estar centralizado —
+       animação que ainda está acontecendo quando você já está lendo o texto é
+       animação atrapalhando a leitura. */
+    [data-cena] {
+      animation: caqui-cena linear both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 45%;
+    }
+
+    /* Escalonamento sem JS: cada filho direto entra um pouco depois do
+       anterior, porque cada um cruza a borda num momento diferente. É o
+       stagger de graça — e ele respeita a ordem visual real, inclusive quando
+       o grid reflui no celular. */
+    [data-cena-lista] > * {
+      animation: caqui-cena linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 50%;
+    }
+
+    /* Deriva contínua. Para camada de FUNDO apenas — a mesma regra do
+       parallax: nunca em texto, nunca em controle.
+       `--deriva` é a distância em % que a camada percorre da entrada à saída;
+       o padrão é discreto de propósito. */
+    [data-deriva] {
+      animation: caqui-deriva linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+  }
+}
+
+@keyframes caqui-cena {
   from {
-    transform: translate3d(-45vw, 0, 0);
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
   }
   to {
-    transform: translate3d(130vw, 0, 0);
-  }
-}
-
-.nuvem-derivando {
-  position: absolute;
-  left: 0;
-  animation: caqui-nuvem var(--duracao, 120s) linear infinite;
-  animation-delay: var(--atraso, 0s);
-  will-change: transform;
-}
-
-/* A serra respira: 1% de deslocamento horizontal em 40s.
-
-   O `scale(1.04)` não é enfeite e não pode sair. `Montanhas` usa
-   `preserveAspectRatio="slice"`, então em tela larga o desenho preenche a
-   largura EXATA do contêiner. Deslocar 1% sem sobra descobriria uma faixa vazia
-   na borda a cada meio ciclo. Os 4% de escala dão 2% de material sobrando de
-   cada lado — o dobro do que o movimento consome.
-
-   `transform-origin: bottom` mantém a base da serra colada no rodapé do herói
-   enquanto ela cresce; com origem no centro, a linha d'água subiria. */
-@keyframes caqui-respiro-serra {
-  0%,
-  100% {
-    transform: translate3d(-1%, 0, 0) scale(1.04);
-  }
-  50% {
-    transform: translate3d(1%, 0, 0) scale(1.04);
-  }
-}
-
-.serra-respirando {
-  transform-origin: bottom center;
-  animation: caqui-respiro-serra var(--duracao, 44s) ease-in-out infinite;
-  animation-delay: var(--atraso, 0s);
-  will-change: transform;
-}
-
-/* Sob redução de movimento nada disso roda. As nuvens continuam no céu, paradas
-   na posição em que o atraso negativo as colocaria — elas existem para dar
-   escala à serra, e isso funciona sem elas andarem. A regra global do topo já
-   zera a duração; aqui o `transform` é fixado no estado de repouso para as
-   camadas não pararem num meio-quadro qualquer. */
-@media (prefers-reduced-motion: reduce) {
-  .nuvem-derivando {
-    animation: none;
-    transform: translate3d(var(--parada, 30vw), 0, 0);
-    will-change: auto;
-  }
-
-  .serra-respirando {
-    animation: none;
+    opacity: 1;
     transform: none;
-    will-change: auto;
+  }
+}
+
+@keyframes caqui-deriva {
+  from {
+    transform: translate3d(0, calc(var(--deriva, 6%) * -1), 0);
+  }
+  to {
+    transform: translate3d(0, var(--deriva, 6%), 0);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   O FIO DE PROGRESSO DE LEITURA
+   ──────────────────────────────────────────────────────────────────────────
+   Um filete no pé do header que preenche conforme a página rola.
+
+   `scroll(root block)` é a linha do tempo da rolagem do documento inteiro.
+   O elemento nasce com `scaleX(0)` DENTRO do @supports, e sem suporte ele
+   simplesmente não recebe transform nenhum — por isso ele também nasce com
+   `scale-x-0` na classe utilitária do componente, e não aqui: sem suporte, um
+   fio 100% cheio parado no topo é ruído, e um fio 0% é invisível. Invisível é
+   o degradê correto para um enfeite. */
+.fio-progresso {
+  transform-origin: 0 50%;
+}
+
+@supports (animation-timeline: scroll()) {
+  .fio-progresso {
+    animation: caqui-progresso linear both;
+    animation-timeline: scroll(root block);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   A RECOMPOSIÇÃO DA VITRINE
+   ──────────────────────────────────────────────────────────────────────────
+   Quando a Caqui Wear troca de densidade, cada peça vai da caixa antiga para a
+   nova. É o mesmo efeito que uma biblioteca de animação chama de FLIP, feito
+   pelo navegador: ele fotografa o antes, fotografa o depois e interpola, fora
+   do main thread.
+
+   Quem liga isso é `document.startViewTransition` em `wear/vitrine.tsx`; quem
+   diz QUEM é quem entre os dois quadros é o `view-transition-name` que cada
+   peça carrega. Sem o nome, o navegador só teria dois retratos da página
+   inteira e faria um `crossfade`, que é justamente o que não se quer.
+
+   O `root` é silenciado de propósito: o `crossfade` da página inteira brigaria
+   com o movimento das peças e deixaria tudo turvo por 250ms. O que se move é a
+   grade, não o documento.
+
+   Sem suporte (Firefox, até esta data) nada disto existe e a troca é
+   instantânea, que é a degradação certa: a informação é a mesma, só chega sem
+   o gesto. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(*) {
+    animation-duration: 320ms;
+    animation-timing-function: var(--ease-saida);
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   A TROCA DE PÁGINA
+   ──────────────────────────────────────────────────────────────────────────
+   Quem dispara é a `key` do `<main>` em `miolo-da-loja.tsx`: trocar de rota
+   remonta o elemento, e elemento recém-montado reinicia a `animation`.
+
+   O conteúdo chega DE BAIXO e materializa. É a convenção de continuidade: o
+   que entra vem de dentro da página, não aparece do nada no lugar do anterior.
+
+   Curta de propósito. 260ms é o ponto em que o gesto é percebido sem que
+   alguém espere por ele — acima disso a navegação começa a parecer lenta
+   justamente por causa do enfeite que deveria deixá-la agradável.
+
+   `translate` e `opacity`, nada mais: as duas propriedades que o compositor
+   anima sem tocar em layout. Cabeçalho e rodapé estão fora do `<main>` e por
+   isso ficam parados, que é o que faz parecer uma página virando em vez do
+   site recarregando.
+
+   Sob movimento reduzido não existe: o conteúdo simplesmente está lá. */
+@media (prefers-reduced-motion: no-preference) {
+  .cena-da-pagina {
+    animation: caqui-pagina-entra 260ms var(--ease-saida) both;
+  }
+}
+
+@keyframes caqui-pagina-entra {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes caqui-progresso {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
   }
 }

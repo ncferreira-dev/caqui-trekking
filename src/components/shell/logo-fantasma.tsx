@@ -6,6 +6,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Brasao } from '@/components/marca/grafismos'
 import { cn } from '@/lib/ui/cn'
+import {
+  decidirToque,
+  JANELA_MS,
+  TOQUES_ATE_FEEDBACK,
+  TOQUES_NECESSARIOS,
+  type Contagem,
+} from '@/lib/ui/gesto-do-painel'
 
 /**
  * A logo, e o gesto que leva ao CRM.
@@ -41,6 +48,22 @@ import { cn } from '@/lib/ui/cn'
  * painel. Nada é persistido: a contagem morre em 3 segundos parada.
  *
  * ════════════════════════════════════════════════════════════════════════════
+ * O GESTO VIVE EM DOIS LUGARES, E A CONTAGEM É UMA SÓ
+ * ════════════════════════════════════════════════════════════════════════════
+ * Desde 18/08/2026 a marca do RODAPÉ também responde ao gesto, a pedido do
+ * cliente. As duas instâncias compartilham a contagem, porque ela mora no
+ * `sessionStorage` e não no estado do componente.
+ *
+ * Isso não é efeito colateral, é o comportamento certo: quem opera o CRM
+ * conhece o gesto, não a implementação, e cinco toques na marca deve significar
+ * a mesma coisa nos dois lugares. Toques distribuídos entre as duas (três em
+ * cima, dois embaixo) contam juntos, o que é uma consequência inofensiva de a
+ * contagem ser do documento e não do elemento.
+ *
+ * O único estado LOCAL é o pulso a partir do 3º toque, e ele é local de
+ * propósito: o retorno visual pertence à marca que a pessoa está tocando.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
  * A ARMADILHA: A LOGO É UM LINK
  * ════════════════════════════════════════════════════════════════════════════
  * Se cada toque navegasse, o componente desmontaria no primeiro e a contagem
@@ -63,14 +86,20 @@ import { cn } from '@/lib/ui/cn'
  * não ser frustrante de acertar.
  */
 
+/**
+ * A REGRA MORA EM `lib/ui/gesto-do-painel.ts`, E ISSO NÃO É ARRUMAÇÃO.
+ *
+ * Ela saiu daqui em 18/08/2026 porque, aqui dentro, o gesto estava quebrado e
+ * era impossível perceber: cinco toques levavam à home em vez do painel, sem
+ * erro nenhum. A causa era uma ordem de eventos, e ordem de evento não aparece
+ * lendo o arquivo. Ver o bloco no topo daquele módulo e o teste que reproduz
+ * o defeito em `src/test/gesto-do-painel.test.ts`.
+ *
+ * O que ficou neste arquivo é só o que precisa de navegador: ler e gravar o
+ * `sessionStorage`, ouvir o ponteiro e navegar.
+ */
+
 const CHAVE_CONTAGEM = 'caqui:toques'
-
-const TOQUES_NECESSARIOS = 5
-/** A partir daqui a logo dá sinal de vida. Antes disso, nada acontece. */
-const TOQUES_ATE_FEEDBACK = 3
-const JANELA_MS = 3000
-
-type Contagem = { total: number; ultimoToque: number }
 
 function lerContagem(): Contagem {
   try {
@@ -95,7 +124,21 @@ function gravarContagem(contagem: Contagem): void {
   }
 }
 
-export function LogoFantasma({ className }: { className?: string }) {
+export function LogoFantasma({
+  className,
+  /**
+   * O tamanho do brasão. O padrão é o do header.
+   *
+   * Existe porque o gesto passou a viver em DOIS lugares (header e rodapé) e
+   * as duas marcas têm tamanhos diferentes. A alternativa seria duplicar o
+   * componente, e duas cópias do mesmo gesto é a receita para uma delas ficar
+   * para trás quando a regra mudar.
+   */
+  classeDaMarca = 'h-12 w-auto sm:h-14',
+}: {
+  className?: string
+  classeDaMarca?: string
+}) {
   const router = useRouter()
   const [toques, setToques] = useState(0)
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -110,14 +153,22 @@ export function LogoFantasma({ className }: { className?: string }) {
     }
   }, [])
 
+  /**
+   * A decisão tomada no `pointerdown`, esperando o `click` que vem logo atrás.
+   *
+   * É um `ref` e não estado porque o `click` do MESMO toque precisa lê-la, e
+   * estado só estaria atualizado no render seguinte. Foi exatamente aqui que o
+   * defeito de 18/08/2026 morava: o `click` refazia a conta em vez de obedecer
+   * a uma decisão já tomada.
+   */
+  const engolirClique = useRef(false)
+
   const registrarToque = useCallback(() => {
-    const agora = Date.now()
-    const anterior = lerContagem()
+    const decisao = decidirToque(lerContagem(), Date.now())
 
-    const total = agora - anterior.ultimoToque > JANELA_MS ? 1 : anterior.total + 1
-
-    gravarContagem({ total, ultimoToque: agora })
-    setToques(total)
+    gravarContagem(decisao.contagem)
+    setToques(decisao.toque)
+    engolirClique.current = decisao.engolirClique
 
     if (temporizador.current) clearTimeout(temporizador.current)
     temporizador.current = setTimeout(() => {
@@ -125,14 +176,20 @@ export function LogoFantasma({ className }: { className?: string }) {
       setToques(0)
     }, JANELA_MS)
 
-    if (total >= TOQUES_NECESSARIOS) {
-      // Zera ANTES de navegar: sem isto, voltar para o site e tocar uma vez na
-      // logo dispararia o 6º toque da mesma sequência e jogaria a pessoa no
-      // painel de novo, sem ela ter pedido nada.
-      gravarContagem({ total: 0, ultimoToque: 0 })
-      setToques(0)
-      router.push('/crm')
-    }
+    // A PARTIR DO 3º TOQUE, O PAINEL COMEÇA A CHEGAR.
+    //
+    // `(crm)` é um grupo de rota separado justamente para que quem entra na
+    // loja não baixe o código do painel (ver docs/07-shell.md). O preço disso
+    // é que, no 5º toque, o `push` ainda precisaria buscar o chunk, e o gesto
+    // terminaria numa tela parada. O cliente pediu que a página já esteja
+    // carregando quando o 5º toque acontecer.
+    //
+    // O 3º toque é o ponto certo: é onde o pulso já começou, ou seja, onde o
+    // sistema já reconheceu que ISTO é o gesto e não um toque acidental. Quem
+    // tocou uma vez na marca continua sem baixar nada do painel.
+    if (decisao.prefetchDoPainel) router.prefetch('/crm')
+
+    if (decisao.irAoPainel) router.push('/crm')
   }, [router])
 
   /**
@@ -142,9 +199,11 @@ export function LogoFantasma({ className }: { className?: string }) {
   const aoApontar = useCallback(() => registrarToque(), [registrarToque])
 
   const aoClicar = useCallback((evento: React.MouseEvent) => {
-    // A contagem já subiu no `pointerdown`. Se este é o 2º ou seguinte da
-    // sequência, engole a navegação: o primeiro já levou para a home.
-    if (lerContagem().total > 1) evento.preventDefault()
+    // Obedece à decisão do `pointerdown`. NÃO recalcula: a contagem pode ter
+    // sido zerada no meio do caminho, e foi assim que o gesto passou meses
+    // levando para a home em vez do painel.
+    if (engolirClique.current) evento.preventDefault()
+    engolirClique.current = false
   }, [])
 
   const pulsando = toques >= TOQUES_ATE_FEEDBACK && toques < TOQUES_NECESSARIOS
@@ -163,7 +222,7 @@ export function LogoFantasma({ className }: { className?: string }) {
           pulsando && 'motion-safe:animate-[caqui-pulso-logo_600ms_ease-in-out_infinite]',
         )}
       >
-        <Brasao className="h-12 w-auto sm:h-14" titulo="" />
+        <Brasao className={classeDaMarca} titulo="" />
 
         {/* Sinal a partir do 3º toque.
             Existe separado da animação porque, sob `prefers-reduced-motion`, o

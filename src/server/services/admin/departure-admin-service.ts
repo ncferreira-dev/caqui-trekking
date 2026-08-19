@@ -1,5 +1,7 @@
 import { AppError, ErrorCode } from '@/lib/api/errors'
 import { prisma } from '@/lib/prisma'
+import { estadoDeVagas } from '@/lib/vagas'
+import type { Prisma } from '@/generated/prisma/client'
 import { registrarAuditoria } from '@/server/services/audit-service'
 
 /**
@@ -123,7 +125,6 @@ export async function duplicarSaida(
         meetingTimeLocal: original.meetingTimeLocal,
         priceCents: original.priceCents,
         compareAtPriceCents: original.compareAtPriceCents,
-        availability: 'AVAILABLE',
         status: 'DRAFT',
         internalNotes: original.internalNotes,
         guides: { create: original.guides.map((g) => ({ guideId: g.guideId })) },
@@ -149,74 +150,257 @@ export async function duplicarSaida(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DISPONIBILIDADE — o campo mais mexido do sistema
+// VAGAS E DISPONIBILIDADE
 // ─────────────────────────────────────────────────────────────────────────────
+//
+// Até 18/08/2026 esta seção se chamava "o campo mais mexido do sistema", e o
+// nome era honesto: a disponibilidade era um enum que alguém escolhia na mão,
+// várias vezes por semana. A Caqui fecha vaga no WhatsApp, e entre fechar a
+// última e lembrar de abrir o CRM existia uma janela em que o site anunciava
+// vaga já vendida.
+//
+// Agora são duas operações diferentes, e a distinção é o ponto:
+//
+//   lancarVagas             o livro do operador. "fechei mais duas."
+//   declararDisponibilidade a exceção. "hoje não sai, o parque interditou."
+//
+// A primeira é o dia a dia; a segunda é rara e precisa de motivo. As duas
+// gravam no mesmo histórico, porque quem pergunta "por que essa saída ficou
+// esgotada no dia 3?" não quer saber por qual das duas portas isso passou.
 
 export type Disponibilidade = 'AVAILABLE' | 'LAST_SPOTS' | 'SOLD_OUT'
 
+const SELECT_VAGAS = {
+  id: true,
+  capacity: true,
+  seatsTaken: true,
+  lastSpotsAt: true,
+  availabilityOverride: true,
+} as const
+
+type LinhaDeVagas = {
+  id: number
+  capacity: number | null
+  seatsTaken: number
+  lastSpotsAt: number
+  availabilityOverride: Disponibilidade | null
+}
+
+/** O selo que o SITE mostra hoje para esta saída. */
+function seloDe(linha: LinhaDeVagas): Disponibilidade {
+  return estadoDeVagas(linha).disponibilidade
+}
+
+async function exigirSaida(departureId: number): Promise<LinhaDeVagas> {
+  const linha = await prisma.departure.findUnique({
+    where: { id: departureId },
+    select: SELECT_VAGAS,
+  })
+  if (!linha) {
+    throw new AppError(ErrorCode.DEPARTURE_NOT_FOUND, 'Saída não encontrada.', { status: 404 })
+  }
+  return linha as LinhaDeVagas
+}
+
 /**
- * Muda a disponibilidade em uma operação.
+ * Registra a mudança de selo no histórico, quando houve mudança.
  *
- * Precisa ser UM toque na listagem, não um formulário: é o campo mais alterado
- * do sistema inteiro e a pessoa mexe nele do celular.
- *
- * A mudança e o registro do histórico caem na MESMA transação. No projeto de
- * referência, o saldo e o ledger eram duas escritas soltas: se a segunda
- * falhasse, o número mudava sem rastro — exatamente o que a auditoria existe
- * para impedir.
+ * `from` e `to` guardam o que o SITE mostrava, não o valor cru da coluna. É a
+ * pergunta que alguém realmente faz seis meses depois, e ela não distingue se
+ * o selo mudou porque a última vaga fechou ou porque choveu.
  */
-export async function alterarDisponibilidade(
+async function registrarSelo(
+  tx: Prisma.TransactionClient,
   departureId: number,
-  nova: Disponibilidade,
+  de: Disponibilidade,
+  para: Disponibilidade,
+  motivo: string | null,
+  ctx: Contexto,
+): Promise<void> {
+  if (de === para) return
+  await tx.departureAvailabilityChange.create({
+    data: { departureId, from: de, to: para, reason: motivo, userId: ctx.userId },
+  })
+}
+
+/**
+ * O LIVRO DO OPERADOR: quantas vagas já fecharam.
+ *
+ * `seatsTaken` é lançado, não decrementado por reserva: a Caqui não vende no
+ * site. Quem fecha a venda na conversa abre o CRM e lança o número total, não
+ * um delta — total é o que a pessoa tem na cabeça ("são cinco agora"), e delta
+ * exige que ela lembre do valor anterior.
+ *
+ * ⚠️ OVERBOOKING É ACEITO. Dois guias vendendo ao mesmo tempo acontece, e um
+ * sistema que recusa o lançamento faz a pessoa mentir o número para conseguir
+ * salvar — e aí o relatório de lucro nasce errado. O excedente vira alerta no
+ * painel, não erro na tela.
+ */
+export async function lancarVagas(
+  departureId: number,
+  entrada: { seatsTaken: number; capacity?: number | null; lastSpotsAt?: number },
+  ctx: Contexto,
+): Promise<LinhaDeVagas> {
+  const atual = await exigirSaida(departureId)
+  const seloAntes = seloDe(atual)
+
+  const dados = {
+    seatsTaken: entrada.seatsTaken,
+    ...(entrada.capacity !== undefined ? { capacity: entrada.capacity } : {}),
+    ...(entrada.lastSpotsAt !== undefined ? { lastSpotsAt: entrada.lastSpotsAt } : {}),
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const depois = (await tx.departure.update({
+      where: { id: departureId },
+      data: dados,
+      select: SELECT_VAGAS,
+    })) as LinhaDeVagas
+
+    await registrarSelo(tx, departureId, seloAntes, seloDe(depois), 'lançamento de vagas', ctx)
+
+    await registrarAuditoria(
+      {
+        userId: ctx.userId,
+        action: 'departure.vagas',
+        entityType: 'Departure',
+        entityId: departureId,
+        before: { seatsTaken: atual.seatsTaken, capacity: atual.capacity },
+        after: { seatsTaken: depois.seatsTaken, capacity: depois.capacity },
+        ip: ctx.ip,
+      },
+      tx,
+    )
+
+    return depois
+  })
+}
+
+/**
+ * A EXCEÇÃO: forçar um selo contra a conta, ou desfazer a exceção.
+ *
+ * `null` devolve o controle para a contagem. É a operação que faltava no
+ * sistema antigo: com um campo só, não havia como dizer "esqueça o que eu
+ * marquei, use o número" — a pessoa tinha que adivinhar qual valor recolocar.
+ *
+ * Exige motivo justamente porque é exceção. Um override sem motivo, seis meses
+ * depois, é indistinguível de um clique errado.
+ */
+export async function declararDisponibilidade(
+  departureId: number,
+  excecao: Disponibilidade | null,
   motivo: string | undefined,
   ctx: Contexto,
-): Promise<{ id: number; availability: Disponibilidade }> {
+): Promise<LinhaDeVagas> {
+  const atual = await exigirSaida(departureId)
+
+  if (atual.availabilityOverride === excecao) {
+    // A pessoa tocou no botão que já estava ativo. Devolve o estado sem gravar
+    // histórico de uma mudança que não houve.
+    return atual
+  }
+
+  const seloAntes = seloDe(atual)
+
+  return prisma.$transaction(async (tx) => {
+    const depois = (await tx.departure.update({
+      where: { id: departureId },
+      data: { availabilityOverride: excecao },
+      select: SELECT_VAGAS,
+    })) as LinhaDeVagas
+
+    await registrarSelo(tx, departureId, seloAntes, seloDe(depois), motivo ?? null, ctx)
+
+    await registrarAuditoria(
+      {
+        userId: ctx.userId,
+        action: 'departure.disponibilidade',
+        entityType: 'Departure',
+        entityId: departureId,
+        before: { override: atual.availabilityOverride, selo: seloAntes },
+        after: { override: excecao, selo: seloDe(depois), motivo: motivo ?? null },
+        ip: ctx.ip,
+      },
+      tx,
+    )
+
+    return depois
+  })
+}
+
+/**
+ * O FECHAMENTO, depois de a saída acontecer.
+ *
+ * Receita e custo são LANÇADOS, nunca calculados de `preço × pessoas`. Essa
+ * conta está errada em quase toda saída real — desconto, cortesia, criança,
+ * guia convidado, pagamento parcial — e calculada ela produz um relatório de
+ * lucro bonito e falso, do tipo que alguém usa para decidir preço.
+ *
+ * `closedAt` é o que tira a saída da fila "por fechar" do painel. A fila é uma
+ * busca que precisa voltar vazia, não um botão que alguém lembra de apertar.
+ */
+export async function fecharSaida(
+  departureId: number,
+  entrada: {
+    attendeeCount: number
+    revenueCents: number | null
+    costCents: number | null
+    closingNotes?: string | null
+  },
+  ctx: Contexto,
+): Promise<{ id: number; closedAt: Date | null }> {
   const atual = await prisma.departure.findUnique({
     where: { id: departureId },
-    select: { id: true, availability: true },
+    select: { id: true, closedAt: true, startAt: true },
   })
 
   if (!atual) {
     throw new AppError(ErrorCode.DEPARTURE_NOT_FOUND, 'Saída não encontrada.', { status: 404 })
   }
 
-  if (atual.availability === nova) {
-    // Não é erro: a pessoa tocou no botão que já estava ativo. Devolve o
-    // estado sem gravar histórico de uma mudança que não houve.
-    return { id: atual.id, availability: nova }
+  // Fechar uma saída que ainda não aconteceu não é erro de digitação: é o
+  // relatório do mês nascendo com uma viagem que não saiu. O guard é aqui e
+  // não na tela porque a tela não é a única porta.
+  if (atual.startAt > new Date()) {
+    throw new AppError(
+      ErrorCode.CONFLICT,
+      'Esta saída ainda não aconteceu. Só dá para fechar depois da data.',
+      { status: 409 },
+    )
   }
 
   return prisma.$transaction(async (tx) => {
-    const atualizada = await tx.departure.update({
+    const fechada = await tx.departure.update({
       where: { id: departureId },
-      data: { availability: nova },
-      select: { id: true, availability: true },
-    })
-
-    await tx.departureAvailabilityChange.create({
       data: {
-        departureId,
-        from: atual.availability,
-        to: nova,
-        reason: motivo ?? null,
-        userId: ctx.userId,
+        closedAt: new Date(),
+        attendeeCount: entrada.attendeeCount,
+        revenueCents: entrada.revenueCents,
+        costCents: entrada.costCents,
+        closingNotes: entrada.closingNotes ?? null,
       },
+      select: { id: true, closedAt: true },
     })
 
     await registrarAuditoria(
       {
         userId: ctx.userId,
-        action: 'departure.availability',
+        action: atual.closedAt ? 'departure.refechar' : 'departure.fechar',
         entityType: 'Departure',
         entityId: departureId,
-        before: { availability: atual.availability },
-        after: { availability: nova, motivo: motivo ?? null },
+        before: { closedAt: atual.closedAt },
+        after: {
+          closedAt: fechada.closedAt,
+          attendeeCount: entrada.attendeeCount,
+          revenueCents: entrada.revenueCents,
+          costCents: entrada.costCents,
+        },
         ip: ctx.ip,
       },
       tx,
     )
 
-    return { id: atualizada.id, availability: atualizada.availability }
+    return fechada
   })
 }
 
@@ -247,6 +431,15 @@ export async function atualizarSaida(
     meetingTimeLocal?: string | null
     meetingLat?: number | null
     meetingLng?: number | null
+    /**
+     * O recado interno da saída. NUNCA sai em rota pública: `SELECT_DEPARTURE_PUBLICA`
+     * não o inclui, e `api.test.ts` procura a string do fixture em toda resposta.
+     *
+     * Ele era gravável só na CRIAÇÃO: o POST aceitava o campo, o PATCH não, e
+     * nenhuma tela o mostrava. Uma nota escrita ali era imutável e invisível
+     * para sempre, o que é a mesma coisa que não existir.
+     */
+    internalNotes?: string | null
     status?: 'DRAFT' | 'PUBLISHED'
   },
   ctx: Contexto,
@@ -382,7 +575,9 @@ export async function excluirSaida(departureId: number, ctx: Contexto): Promise<
       startAt: true,
       status: true,
       priceCents: true,
-      availability: true,
+      capacity: true,
+      seatsTaken: true,
+      availabilityOverride: true,
       meetingPoint: true,
     },
   })
@@ -412,7 +607,9 @@ export async function excluirSaida(departureId: number, ctx: Contexto): Promise<
           startAt: atual.startAt,
           status: atual.status,
           priceCents: atual.priceCents,
-          availability: atual.availability,
+          capacity: atual.capacity,
+          seatsTaken: atual.seatsTaken,
+          availabilityOverride: atual.availabilityOverride,
           meetingPoint: atual.meetingPoint,
         },
         ip: ctx.ip,
@@ -433,11 +630,15 @@ export async function criarSaida(
     startAt: Date
     priceCents: number
     compareAtPriceCents?: number | null
-    meetingPoint?: string | undefined
-    meetingTimeLocal?: string | undefined
+    // `| null` porque é o que o formulário manda com o campo em branco, e o
+    // que a coluna opcional guarda. O tipo estreito escondia a divergência com
+    // o schema da rota, que respondia 400 em toda criação sem ponto de
+    // encontro. Ver o cabeçalho do schema em `api/admin/departures/route.ts`.
+    meetingPoint?: string | null | undefined
+    meetingTimeLocal?: string | null | undefined
     meetingLat?: number | null
     meetingLng?: number | null
-    internalNotes?: string | undefined
+    internalNotes?: string | null | undefined
   },
   ctx: Contexto,
 ): Promise<{ id: number }> {
@@ -473,7 +674,6 @@ export async function criarSaida(
         meetingLat: dados.meetingLat ?? null,
         meetingLng: dados.meetingLng ?? null,
         internalNotes: dados.internalNotes ?? null,
-        availability: 'AVAILABLE',
         status: 'DRAFT',
       },
       select: { id: true },

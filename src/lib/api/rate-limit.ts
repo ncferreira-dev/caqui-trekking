@@ -70,6 +70,34 @@ export function consumirRateLimit(request: Request, opcoes: OpcoesRateLimit): vo
 }
 
 /**
+ * O teto das LEITURAS públicas.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * GENEROSO DE PROPÓSITO: ELE NÃO EXISTE PARA MODERAR USO
+ * ────────────────────────────────────────────────────────────────────────────
+ * As sete rotas públicas de leitura (`/api/trips`, `/api/departures`,
+ * `/api/products`, `/api/guides`, `/api/settings` e as de detalhe) não tinham
+ * teto nenhum. Nenhuma delas escreve, então o risco não é corrupção: é um
+ * script ingênuo em laço puxando o catálogo inteiro algumas vezes por segundo,
+ * o que na Vercel vira invocação cobrada e no Neon vira conexão ocupada.
+ *
+ * 240 por minuto é quatro por segundo, sustentado, por IP. Nenhuma pessoa
+ * navegando chega perto; nenhum leitor de feed razoável chega perto. Quem
+ * chega está em laço.
+ *
+ * As PÁGINAS do site não passam por aqui: elas chamam os serviços direto no
+ * servidor (ver `agenda/page.tsx`). Então este teto só alcança consumidor
+ * externo, que é exatamente quem ele deve alcançar.
+ *
+ * Em MEMÓRIA e não no banco, ao contrário do teto de escrita: uma linha
+ * gravada por leitura seria o próprio abuso que se quer evitar. A limitação
+ * disso está declarada no topo deste arquivo.
+ */
+export function limitarLeituraPublica(request: Request, balde: string): void {
+  consumirRateLimit(request, { balde: `leitura:${balde}`, limite: 240, janelaMs: 60_000 })
+}
+
+/**
  * Rate limit PERSISTENTE, para as rotas públicas de ESCRITA (contato, leads).
  *
  * ────────────────────────────────────────────────────────────────────────────

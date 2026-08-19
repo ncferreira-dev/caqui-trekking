@@ -37,7 +37,11 @@ export function Guias({ guias }: { guias: GuiaDTO[] }) {
           return (
             <li key={guia.id} className="border-caqui-ink-900 flex gap-4 border bg-white p-4">
               <div className="border-caqui-ink-900 size-20 shrink-0 overflow-hidden border">
-                {foto ? <Imagem midia={foto} sizes="5rem" /> : <MidiaVazia />}
+                {/* `semente` pelo nome: sem ela, uma equipe de quatro
+                    guias sem foto aparece como quatro chapas idênticas lado a
+                    lado, que lê como falha de carregamento e não como gravura.
+                    Ver `MidiaVazia` em `midia/imagem.tsx`. */}
+                {foto ? <Imagem midia={foto} sizes="5rem" /> : <MidiaVazia semente={guia.nome} />}
               </div>
 
               <div className="min-w-0 flex-1">

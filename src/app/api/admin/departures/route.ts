@@ -24,14 +24,26 @@ const criarSchema = z
     startAt: z.string().regex(PAREDE, 'Data e hora em formato inválido.'),
     priceCents: z.number().int().min(0).max(100_000_00),
     compareAtPriceCents: z.number().int().min(0).max(100_000_00).nullable().optional(),
-    meetingPoint: z.string().trim().max(300).optional(),
+    // ────────────────────────────────────────────────────────────────────
+    // `.nullable()` NÃO É ENFEITE AQUI
+    // ────────────────────────────────────────────────────────────────────
+    // O formulário manda `campo.trim() || null`: em branco vira `null`, que é
+    // o que a coluna opcional guarda. Com `.optional()` sozinho o schema
+    // aceita ausente OU string, e `.strict()` transforma o `null` em 400.
+    //
+    // Medido em 18/08/2026: "+ Nova saída" recusava toda criação que deixasse
+    // ponto de encontro e horário em branco, ou seja, a operação normal, e
+    // respondia "Dados inválidos." sem dizer qual campo. O PATCH da mesma
+    // entidade já estava certo, o que mostra que foi esquecimento.
+    meetingPoint: z.string().trim().max(300).nullable().optional(),
     meetingTimeLocal: z
       .string()
       .regex(/^\d{2}:\d{2}$/, 'Use o formato HH:MM.')
+      .nullable()
       .optional(),
     meetingLat: z.number().min(-90).max(90).nullable().optional(),
     meetingLng: z.number().min(-180).max(180).nullable().optional(),
-    internalNotes: z.string().trim().max(2000).optional(),
+    internalNotes: z.string().trim().max(2000).nullable().optional(),
   })
   .strict()
 
@@ -53,7 +65,10 @@ export const GET = rota(async (request: NextRequest) => {
         id: true,
         startAt: true,
         priceCents: true,
-        availability: true,
+        capacity: true,
+        seatsTaken: true,
+        lastSpotsAt: true,
+        availabilityOverride: true,
         status: true,
         internalNotes: true,
         trip: { select: { id: true, slug: true, title: true } },

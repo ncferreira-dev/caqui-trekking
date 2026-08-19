@@ -500,7 +500,7 @@ describe('internalNotes NUNCA vaza na API pública', () => {
 // =============================================================================
 describe('Rotas institucionais e de captura', () => {
   it('GET /api/settings devolve o template da mensagem', async () => {
-    const res = await getSettings()
+    const res = await getSettings(get('/api/settings') as never)
     const corpo = (await res.json()) as { data: { whatsappMessageTemplate: string } }
 
     expect(res.status).toBe(200)
@@ -508,7 +508,7 @@ describe('Rotas institucionais e de captura', () => {
   })
 
   it('GET /api/guides devolve guias ativos', async () => {
-    const res = await listarGuiasRota()
+    const res = await listarGuiasRota(get('/api/guides') as never)
     const corpo = (await res.json()) as { data: { nome: string }[] }
 
     expect(corpo.data).toHaveLength(1)

@@ -46,7 +46,7 @@ export function CardProduto({
   return (
     <Card interativo className="h-full">
       <CardMidia proporcao="quadrado" className="group">
-        <Capa midia={produto.capa} sizes={sizes} prioridade={prioridade} />
+        <Capa midia={produto.capa} sizes={sizes} prioridade={prioridade} semente={produto.slug} />
 
         {produto.capaAlternativa && (
           <span

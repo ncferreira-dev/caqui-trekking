@@ -1,22 +1,23 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 
-import { Capa } from '@/components/midia/imagem'
+import { LinhaDeRoteiro } from '@/components/catalogo/linha-de-roteiro'
 import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { LinkBotao } from '@/components/ui/button'
-import { BadgeDificuldade, Etiqueta } from '@/components/ui/badge'
-import { Card, CardCorpo, CardMidia, CardRodape, Ficha } from '@/components/ui/card'
-import { diaEMes } from '@/lib/datetime'
-import { formatarDuracao, rotuloDificuldade } from '@/lib/formato'
-import { formatarBRL } from '@/lib/money'
 import { listarTrips } from '@/server/services/trip-service'
-import type { Dificuldade } from '@/components/ui/badge'
 import { metadataDaPagina } from '@/lib/seo/metadata'
 
+/**
+ * O título era "Expedições" — bonito, e invisível para a busca.
+ *
+ * A palavra "trekking" só aparecia no sufixo da marca ("Expedições · Caqui
+ * Trekking"), então quem digita "trekking mogi das cruzes" não encontrava aqui
+ * o termo que digitou. A URL já é `/trekking`; o `<title>` agora concorda com
+ * ela, e o `<h1>` da página também.
+ */
 export const metadata: Metadata = metadataDaPagina({
-  titulo: 'Expedições',
+  titulo: 'Trekking e expedições guiadas',
   descricao:
-    'Roteiros guiados na Serra do Mar: distância, altimetria, dificuldade e duração de cada trilha.',
+    'Roteiros de trekking guiado na Serra do Mar, saindo de Mogi das Cruzes: distância, altimetria, dificuldade e duração de cada trilha.',
   caminho: '/trekking',
 })
 
@@ -58,89 +59,44 @@ export default async function PaginaTrekking() {
     <>
       <CabecalhoDePagina
         sobretitulo="Roteiros"
-        titulo="Expedições"
+        titulo="Trekking"
         descricao="Cada roteiro é escrito uma vez e repetido em datas diferentes. Escolha o roteiro aqui; a data, na agenda."
         cota={`${total} ${total === 1 ? 'roteiro' : 'roteiros'}`}
         acao={<LinkBotao href="/agenda">Ver por data</LinkBotao>}
       />
 
-      <section className="mx-auto w-full max-w-7xl px-5 py-16 sm:px-8">
+      {/* O índice editorial.
+          Grid de cards saiu pelo mesmo motivo da home: nenhum roteiro tem capa
+          no banco, então cada card renderizava o grafismo de vazio, e cinco
+          retângulos cinzas em três colunas leem como catálogo quebrado. Aqui a
+          ficha técnica ocupa o lugar visual que a foto ocuparia — e ela é, de
+          fato, o que decide entre um roteiro e outro. */}
+      <section aria-label="Roteiros" className="pb-20 sm:pb-24">
         {trips.length === 0 ? (
-          <p className="text-caqui-ink-700 text-corpo-lg">Nenhum roteiro publicado ainda.</p>
+          <p className="text-caqui-ink-700 text-corpo-lg mx-auto w-full max-w-7xl px-5 pt-16 sm:px-8">
+            Nenhum roteiro publicado ainda.
+          </p>
         ) : (
-          <ul className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="border-caqui-rule mt-12 border-t" data-cena-lista>
             {trips.map((trip, indice) => (
-              <li key={trip.slug}>
-                <Card interativo className="h-full">
-                  <CardMidia>
-                    <Capa
-                      midia={trip.capa}
-                      sizes="(min-width: 64rem) 22rem, (min-width: 40rem) 45vw, 92vw"
-                      prioridade={indice < 3}
-                    />
-                  </CardMidia>
-
-                  <CardCorpo>
-                    <div className="flex flex-wrap gap-2">
-                      <BadgeDificuldade nivel={trip.dificuldade as Dificuldade} />
-                      {trip.tags.slice(0, 2).map((tag) => (
-                        <Etiqueta key={tag.slug}>{tag.label}</Etiqueta>
-                      ))}
-                    </div>
-
-                    <h2 className="text-display-s uppercase">
-                      <Link
-                        href={`/trekking/${trip.slug}`}
-                        className="rounded-xs after:absolute after:inset-0 after:content-['']"
-                      >
-                        {trip.titulo}
-                      </Link>
-                    </h2>
-
-                    <p className="text-caqui-ink-700 text-corpo-sm">
-                      {trip.cidade} · {trip.estado}
-                      {trip.regiao ? ` · ${trip.regiao}` : ''}
-                    </p>
-
-                    <Ficha
-                      className="-mx-4 mt-auto sm:-mx-5"
-                      itens={[
-                        {
-                          rotulo: 'Duração',
-                          valor: trip.duracaoMinutos ? formatarDuracao(trip.duracaoMinutos) : '—',
-                        },
-                        { rotulo: 'Nível', valor: rotuloDificuldade(trip.dificuldade) },
-                        {
-                          rotulo: 'A partir de',
-                          valor: trip.proximaSaida
-                            ? formatarBRL(trip.proximaSaida.precoCentavos)
-                            : '—',
-                        },
-                      ]}
-                    />
-                  </CardCorpo>
-
-                  <CardRodape>
-                    {trip.proximaSaida ? (
-                      <>
-                        <span className="text-caqui-ink-500 text-micro font-mono uppercase">
-                          Próxima data
-                        </span>
-                        <span className="text-caqui-ink-900 text-dado font-mono font-medium">
-                          {diaEMes(new Date(trip.proximaSaida.inicioUtc))}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-caqui-ink-500 text-micro font-mono uppercase">
-                        Sem data marcada
-                      </span>
-                    )}
-                  </CardRodape>
-                </Card>
-              </li>
+              <LinhaDeRoteiro key={trip.slug} trip={trip} indice={indice} />
             ))}
-          </ul>
+          </div>
         )}
+
+        {/* Saída para quem chegou aqui e não achou o que queria. A página de
+            guia particular existe justamente para o caso "quero ir num lugar
+            que não está na lista". */}
+        <div className="mx-auto mt-14 w-full max-w-7xl px-5 sm:px-8">
+          <div className="border-caqui-rule flex flex-wrap items-center justify-between gap-6 border-t pt-8">
+            <p className="text-corpo-lg text-caqui-ink-700 max-w-md">
+              Quer ir a um lugar que não está na lista, ou fechar a trilha só para o seu grupo?
+            </p>
+            <LinkBotao href="/guia-particular" variante="secondary">
+              Pedir uma saída particular
+            </LinkBotao>
+          </div>
+        </div>
       </section>
     </>
   )

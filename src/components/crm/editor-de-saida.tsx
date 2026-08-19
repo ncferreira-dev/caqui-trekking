@@ -4,12 +4,12 @@ import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Input, Select } from '@/components/ui/campo'
+import { Input, Select, Textarea } from '@/components/ui/campo'
 import { Modal } from '@/components/ui/dialogo'
 import { useToast } from '@/components/ui/toast'
 import { api, ErroDaApi } from '@/lib/crm/api'
 import { ehLinkCurtoDeMaps, extrairCoordenadas } from '@/lib/maps/coordenadas'
-import { centavosParaDecimal } from '@/lib/money'
+import { centavosParaReais, reaisParaCentavos } from '@/lib/money'
 
 /**
  * O formulário de saída — criar e editar, no mesmo componente.
@@ -47,6 +47,8 @@ export type SaidaParaEditar = {
   meetingTimeLocal: string | null
   meetingLat: number | null
   meetingLng: number | null
+  /** O recado interno. Nunca sai do painel. */
+  internalNotes: string | null
   status: 'DRAFT' | 'PUBLISHED'
 }
 
@@ -57,20 +59,18 @@ type Props = {
   saida?: SaidaParaEditar
   /** Só usado na criação, para escolher o roteiro. */
   roteiros?: RoteiroOpcao[]
+  /**
+   * Data já escolhida, em parede local ("2026-08-15T06:00").
+   *
+   * É o que o calendário passa quando alguém toca num dia vazio: o dia já foi
+   * decidido no gesto, e reabrir o formulário com o campo em branco obrigaria
+   * a pessoa a digitar de novo a informação que ela acabou de dar. Só vale na
+   * criação; em edição a data vem da própria saída.
+   */
+  dataInicial?: string
 }
 
-// `centavosParaDecimal` emite "90.00" sem passar por ponto flutuante — o ESLint
-// do projeto proíbe `toFixed` em dinheiro justamente por isso. Aqui só troco o
-// ponto pela vírgula, que é como a Caqui digita.
-const centavosParaReais = (c: number) => centavosParaDecimal(c).replace('.', ',')
-
-function reaisParaCentavos(texto: string): number | null {
-  const limpo = texto.trim().replace(/\./g, '').replace(',', '.')
-  if (!/^\d+(\.\d{1,2})?$/.test(limpo)) return null
-  return Math.round(Number(limpo) * 100)
-}
-
-export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props) {
+export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [], dataInicial }: Props) {
   const router = useRouter()
   const { mostrar } = useToast()
   const idBase = useId()
@@ -78,8 +78,28 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
   const editando = saida !== undefined
 
   const [tripId, setTripId] = useState(String(saida?.tripId ?? roteiros[0]?.id ?? ''))
-  const [inicio, setInicio] = useState(saida?.inicioParede ?? '')
-  const [preco, setPreco] = useState(saida ? centavosParaReais(saida.precoCentavos) : '')
+  const [inicio, setInicio] = useState(saida?.inicioParede ?? dataInicial ?? '')
+  // ────────────────────────────────────────────────────────────────────────
+  // O PREÇO JÁ NASCE SUGERIDO, E NÃO SÓ AO TROCAR O ROTEIRO
+  // ────────────────────────────────────────────────────────────────────────
+  // `escolherRoteiro` sugere o preço da trilha quando alguém MUDA o seletor.
+  // Só que o seletor já abre com o primeiro roteiro escolhido, e ninguém muda
+  // para o valor que já está lá. O resultado, visto em 18/08/2026 criando uma
+  // saída pelo calendário: o campo abria vazio, "Criar saída" recusava com
+  // "Preço inválido", e a sugestão que o formulário sabia dar nunca aparecia.
+  //
+  // A mesma conta, no estado inicial. Continua sendo SUGESTÃO: quem quiser
+  // outro preço apaga e digita.
+  const [precoDe, setPrecoDe] = useState(
+    saida?.compareAtPriceCents != null ? centavosParaReais(saida.compareAtPriceCents) : '',
+  )
+  const [preco, setPreco] = useState(() => {
+    if (saida) return centavosParaReais(saida.precoCentavos)
+    const primeiro = roteiros[0]
+    return primeiro && primeiro.precoSugeridoCentavos > 0
+      ? centavosParaReais(primeiro.precoSugeridoCentavos)
+      : ''
+  })
   const [ponto, setPonto] = useState(saida?.meetingPoint ?? '')
   const [horario, setHorario] = useState(saida?.meetingTimeLocal ?? '')
   // O local vem de um LINK do Google Maps, não de dois números. Ao editar uma
@@ -90,6 +110,7 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
       ? `https://www.google.com/maps?q=${saida.meetingLat},${saida.meetingLng}`
       : '',
   )
+  const [observacoes, setObservacoes] = useState(saida?.internalNotes ?? '')
   const [publicar, setPublicar] = useState(saida?.status === 'PUBLISHED')
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -136,13 +157,30 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
     const latN = coord?.lat ?? null
     const lngN = coord?.lng ?? null
 
+    // "De" vazio significa SEM preço anterior, e é `null`, não zero: zero
+    // riscaria "R$ 0,00" ao lado do preço no card.
+    const centavosDe = precoDe.trim() === '' ? null : reaisParaCentavos(precoDe)
+    if (centavosDe === null && precoDe.trim() !== '') {
+      setErro('Preço “de” inválido. Use o formato 120,00.')
+      return
+    }
+    if (centavosDe !== null && centavosDe <= centavos) {
+      // O site só risca o "de" quando ele é MAIOR que o preço atual (ver
+      // `linha-de-saida.tsx`). Salvar um valor menor produz um campo que a
+      // pessoa preencheu e que simplesmente não aparece em lugar nenhum.
+      setErro('O preço “de” precisa ser maior que o preço atual, senão ele não aparece no site.')
+      return
+    }
+
     const corpo = {
       startAt: inicio,
       priceCents: centavos,
+      compareAtPriceCents: centavosDe,
       meetingPoint: ponto.trim() || null,
       meetingTimeLocal: horario.trim() || null,
       meetingLat: latN,
       meetingLng: lngN,
+      internalNotes: observacoes.trim() || null,
     }
 
     setEnviando(true)
@@ -229,6 +267,20 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
             dica="Só o número, em reais."
             obrigatorio
           />
+          {/* O "de" riscado. A coluna existe no banco e a rota sempre aceitou
+              o campo; faltava o input, então não havia como anunciar promoção
+              sem escrever no banco à mão. */}
+          <Input
+            rotulo="Preço “de” (riscado)"
+            inputMode="decimal"
+            placeholder="120,00"
+            value={precoDe}
+            onChange={(e) => setPrecoDe(e.target.value)}
+            dica="Opcional. Aparece riscado ao lado do preço, se for maior que ele."
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <Input
             rotulo="Horário de encontro"
             type="time"
@@ -261,7 +313,7 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
           />
           {coord && (
             <p className="text-caqui-ink-700 text-corpo-sm">
-              ✓ Local reconhecido — o botão “Como chegar” vai aparecer no site.
+              ✓ Local reconhecido. O botão “Como chegar” vai aparecer no site.
             </p>
           )}
           {coord === null && ehLinkCurtoDeMaps(mapsLink) && (
@@ -271,6 +323,23 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [] }: Props)
             </p>
           )}
         </fieldset>
+
+        {/* ── O recado interno ─────────────────────────────────────────────
+            Fica ABAIXO do mapa e ACIMA de publicar, de propósito: é a última
+            coisa que se escreve antes de decidir se a saída vai ao ar, e é
+            onde mora "levar corda extra" e "o grupo do João pediu 6 vagas".
+
+            Ele NUNCA sai em rota pública. `SELECT_DEPARTURE_PUBLICA` não o
+            inclui, e `api.test.ts` procura a string do fixture em toda
+            resposta pública para provar isso. */}
+        <Textarea
+          rotulo="Observações internas"
+          value={observacoes}
+          onChange={(e) => setObservacoes(e.target.value)}
+          rows={3}
+          placeholder="Levar corda extra. O grupo do João pediu 6 vagas."
+          dica="Só quem tem acesso ao painel vê. Nunca aparece no site nem na mensagem do WhatsApp."
+        />
 
         <label className="border-caqui-ink-900 flex cursor-pointer items-start gap-3 border bg-white p-3">
           <input

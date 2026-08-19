@@ -98,3 +98,59 @@ export function ordenarTamanhos(tamanhos: readonly string[]): string[] {
 export function rotuloDeTamanho(tamanho: string): string {
   return tamanho === 'UNICO' ? 'Único' : tamanho
 }
+
+/**
+ * Distância em quilômetros, com vírgula decimal.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * POR QUE ELE SUBIU PARA CÁ EM VEZ DE SER DUPLICADO
+ * ────────────────────────────────────────────────────────────────────────────
+ * A regra deste projeto é "só sobe para o comum no terceiro caso; no segundo,
+ * duplique" — e ela existe para evitar abstração prematura, decidida com dois
+ * exemplos.
+ *
+ * Isto não é abstração: é um FORMATADOR, e `lib/formato.ts` já é a casa
+ * declarada dos formatadores. Duplicar um `Intl.NumberFormat` é o caminho mais
+ * curto para o índice de roteiros mostrar "9.5 km" e a página do roteiro
+ * mostrar "9,5 km" — a mesma regra escrita de dois jeitos em dois arquivos, que
+ * é exatamente o defeito que a doutrina de lógica pura deste projeto existe
+ * para impedir.
+ *
+ * `Intl` e não `toFixed`: o ESLint recusa `toFixed` no projeto inteiro, e com
+ * razão — ele arredonda em ponto flutuante e usa ponto como separador.
+ */
+const FORMATO_DISTANCIA = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 })
+
+/** `8.5` → "8,5". Sem unidade: quem chama decide se escreve "km" e onde. */
+export function formatarDistancia(km: number): string {
+  return FORMATO_DISTANCIA.format(km)
+}
+
+/**
+ * Prende o separador à palavra que vem ANTES dele.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * O DEFEITO, VISTO EM 18/08/2026
+ * ────────────────────────────────────────────────────────────────────────────
+ * O título "Escalavrado · Teresópolis", em escala de cartaz, quebrava assim:
+ *
+ *     ESCALAVRADO
+ *     · TERESÓPOLIS
+ *
+ * Um separador abrindo linha lê como marcador de lista, não como separador, e
+ * em corpo 60 isso é a primeira coisa que se vê na página.
+ *
+ * A regra tipográfica é antiga e vale para travessão, hífen e ponto médio: o
+ * sinal fica com o que veio antes. Trocando o espaço da ESQUERDA por um espaço
+ * inquebrável, a linha passa a terminar em "ESCALAVRADO ·" e a quebra acontece
+ * onde deveria.
+ *
+ * É transformação de EXIBIÇÃO. O dado no banco continua com espaço comum, e
+ * quem edita no CRM digita normalmente, sem precisar saber que isto existe.
+ *
+ * Cobre `·`, `|` e `/`, que são os três separadores que o conteúdo da Caqui
+ * usa hoje entre nome de lugar e nome de lugar.
+ */
+export function costurarSeparador(texto: string): string {
+  return texto.replace(/ ([·|/]) /g, '\u00A0$1 ')
+}

@@ -90,7 +90,7 @@ function Cabecalho() {
         </p>
         <h1 className="text-display-xl mt-2 uppercase">Guia de estilo</h1>
         <p className="text-caqui-ink-700 text-corpo-lg mt-4 max-w-2xl">
-          Todos os componentes, em todos os estados. Esta página não existe em produção — a rota
+          Todos os componentes, em todos os estados. Esta página não existe em produção. A rota
           devolve 404 quando <code className="text-corpo-sm font-mono">NODE_ENV=production</code>.
         </p>
       </div>
@@ -143,8 +143,7 @@ function Cores() {
       nota={
         <>
           A paleta é fixa, vem do cliente. A decisão de design aqui não é <em>quais</em> cores, é{' '}
-          <strong>onde cada uma pode aparecer</strong> — e isso é resultado de medição, não de
-          gosto.
+          <strong>onde cada uma pode aparecer</strong>, e isso é resultado de medição, não de gosto.
         </>
       }
     >
@@ -193,7 +192,7 @@ function Cores() {
         <div>
           <h3 className="text-caqui-danger text-display-s uppercase">Proibidas</h3>
           <p className="text-caqui-ink-700 text-corpo-sm mt-2">
-            Estão aqui de propósito. Esconder o token não impede o erro — mostrar o número que o
+            Estão aqui de propósito. Esconder o token não impede o erro. Mostrar o número que o
             reprova, sim. O ESLint recusa <code className="font-mono">text-caqui-orange-*</code> em{' '}
             <code className="font-mono">className</code>.
           </p>
@@ -227,8 +226,8 @@ function Tipografia() {
       nota={
         <>
           Três famílias, três trabalhos. <strong>Archivo Black</strong> nos títulos,{' '}
-          <strong>DM Sans</strong> no corpo, <strong>DM Mono</strong> na camada de dados — o
-          registro de legenda de mapa e etiqueta de equipamento.
+          <strong>DM Sans</strong> no corpo, <strong>DM Mono</strong> na camada de dados. O registro
+          de legenda de mapa e etiqueta de equipamento.
         </>
       }
     >
@@ -248,7 +247,7 @@ function Tipografia() {
         <div className="grid gap-8 sm:grid-cols-2">
           <div className="flex flex-col gap-4">
             <span className="text-caqui-ink-500 text-micro font-mono uppercase">
-              Corpo — DM Sans
+              Corpo · DM Sans
             </span>
             <p className="text-corpo-lg">
               Travessia guiada pela Serra do Mar, com saída de Mogi das Cruzes. Guias cadastrados no
@@ -265,7 +264,7 @@ function Tipografia() {
 
           <div className="flex flex-col gap-4">
             <span className="text-caqui-ink-500 text-micro font-mono uppercase">
-              Dados — DM Mono, tabular
+              Dados · DM Mono, tabular
             </span>
             <div className="border-caqui-rule border">
               <Ficha
@@ -296,7 +295,7 @@ function Tipografia() {
         <div className="secao-areia -mx-5 flex flex-wrap items-baseline gap-6 px-5 py-6 sm:-mx-8 sm:px-8">
           <div>
             <span className="text-caqui-ink-500 text-micro block font-mono uppercase">
-              Preço — a única exceção
+              Preço · a única exceção
             </span>
             <span className="preco mt-1 block">R$ 90,00</span>
           </div>
@@ -321,7 +320,7 @@ function Botoes() {
       nota={
         <>
           O rótulo do botão laranja é <strong>preto</strong>. Branco sobre esse laranja dá 3,15:1 e
-          reprova no AA — seria o elemento mais importante da página ilegível para quem tem baixa
+          reprova no AA, e seria o elemento mais importante da página ilegível para quem tem baixa
           visão. Preto dá 6,16:1. E é como se serigrafa fita de equipamento.
         </>
       }
@@ -353,7 +352,7 @@ function Botoes() {
 
         <div className="flex flex-col gap-3">
           <span className="text-caqui-ink-500 text-micro font-mono uppercase">
-            Bloco — padrão em drawer e card
+            Bloco · padrão em drawer e card
           </span>
           <div className="max-w-sm">
             <Button bloco tamanho="lg">
@@ -364,7 +363,7 @@ function Botoes() {
 
         <p className="text-caqui-ink-700 border-caqui-rule text-corpo-sm border-l-2 pl-4">
           Passe o mouse: a peça sobe 1px e a camada de baixo cresce. No clique ela encosta no papel
-          — o deslocamento sólido some. É o feedback tátil que substitui a sombra difusa que cresce.
+          : o deslocamento sólido some. É o feedback tátil que substitui a sombra difusa que cresce.
         </p>
       </div>
     </Secao>
@@ -380,7 +379,7 @@ function Selos() {
       titulo="Selos"
       nota={
         <>
-          Dificuldade é <strong>hexágono</strong> — a forma do brasão — com medidor de 4 traços.
+          Dificuldade é <strong>hexágono</strong>, a forma do brasão, com medidor de 4 traços.
           Disponibilidade é <strong>flâmula</strong> com entalhe e glifo. Formas diferentes porque
           aparecem lado a lado no mesmo card.
         </>
@@ -412,9 +411,9 @@ function Selos() {
           </p>
           <p className="text-caqui-ink-700 text-corpo-sm mt-2 max-w-2xl">
             A rampa verde → vermelho <strong>não é monotônica</strong> em luminância: forest-600 dá
-            0,114 e danger dá 0,119 — 4% de diferença, indistinguíveis para quem tem protanopia. Por
-            isso cada nível carrega três sinais: contagem de traços, rótulo escrito e cor. Tire a
-            cor e o componente continua funcionando.
+            0,114 e danger dá 0,119, ou seja 4% de diferença, indistinguíveis para quem tem
+            protanopia. Por isso cada nível carrega três sinais: contagem de traços, rótulo escrito
+            e cor. Tire a cor e o componente continua funcionando.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-4 [filter:grayscale(1)]">
             <BadgeDificuldade nivel="FACIL" />
@@ -442,7 +441,7 @@ function Cartoes() {
         <>
           O canto cortado é a peça inteira: é a citação do hexágono do brasão, e é o que faz a
           silhueta dizer &ldquo;etiqueta&rdquo; em vez de &ldquo;caixa&rdquo;. A profundidade é um
-          elemento de verdade atrás, não um <code className="font-mono">box-shadow</code> — porque{' '}
+          elemento de verdade atrás, não um <code className="font-mono">box-shadow</code>, porque{' '}
           <code className="font-mono">clip-path</code> recortaria a sombra junto.
         </>
       }
@@ -609,7 +608,7 @@ function Formularios() {
               { valor: 'travessia', rotulo: 'Travessia do Salesópolis' },
               {
                 valor: 'cachoeira',
-                rotulo: 'Cachoeira do Sertãozinho — esgotada',
+                rotulo: 'Cachoeira do Sertãozinho, esgotada',
                 desabilitada: true,
               },
             ]}
@@ -657,7 +656,7 @@ function Sobreposicoes() {
           Modal e Drawer usam o <code className="font-mono">&lt;dialog&gt;</code> nativo: armadilha
           de foco, Escape e camada superior saem de graça, sem{' '}
           <code className="font-mono">z-index</code> disputando com o header. Erro em toast{' '}
-          <strong>não fecha sozinho</strong> — WCAG 2.2.1.
+          <strong>não fecha sozinho</strong>. WCAG 2.2.1.
         </>
       }
     >
@@ -721,7 +720,7 @@ function Sobreposicoes() {
       >
         <p className="text-corpo">
           A saída de <strong>16 de agosto</strong> some do site imediatamente. Quem já pediu vaga
-          precisa ser avisado no WhatsApp — o site não manda mensagem por você.
+          precisa ser avisado no WhatsApp, porque o site não manda mensagem por você.
         </p>
       </Modal>
 
@@ -773,9 +772,10 @@ function Divulgacao() {
       titulo="Abas e acordeão"
       nota={
         <>
-          O acordeão é <code className="font-mono">&lt;details&gt;</code> nativo — zero JavaScript,
-          e o Ctrl+F do navegador abre a seção fechada para mostrar o resultado. Numa página de
-          expedição, isso é a diferença entre o conteúdo existir e não existir para quem procura.
+          O acordeão é <code className="font-mono">&lt;details&gt;</code> nativo, com zero
+          JavaScript, e o Ctrl+F do navegador abre a seção fechada para mostrar o resultado. Numa
+          página de expedição, isso é a diferença entre o conteúdo existir e não existir para quem
+          procura.
         </>
       }
     >
@@ -868,7 +868,7 @@ function Carregamentos() {
           Hachura que pulsa, não brilho que varre. O shimmer diagonal anima{' '}
           <code className="font-mono">background-position</code>, que é repintura a cada frame; aqui
           pulsa <code className="font-mono">opacity</code>, que a GPU compõe. Sob{' '}
-          <code className="font-mono">prefers-reduced-motion</code> o pulso para — e um{' '}
+          <code className="font-mono">prefers-reduced-motion</code> o pulso para, e um{' '}
           <code className="font-mono">role=&quot;status&quot;</code> invisível avisa que está
           carregando.
         </>
@@ -907,7 +907,7 @@ function Grafismos() {
       <div className="flex flex-col gap-12">
         <div>
           <span className="text-caqui-ink-500 text-micro font-mono uppercase">
-            Divisor — curva de nível com cota
+            Divisor · curva de nível com cota
           </span>
           <div className="mt-3">
             <Divisor cota="1.170 m" />
@@ -921,14 +921,14 @@ function Grafismos() {
 
         <div>
           <span className="text-caqui-ink-500 text-micro font-mono uppercase">
-            Serra — gravura, não silhueta chapada
+            Serra · gravura, não silhueta chapada
           </span>
           <div className="secao-areia mt-3">
             <Montanhas className="h-44" />
           </div>
           <p className="text-caqui-ink-700 text-corpo-sm mt-3 max-w-2xl">
             As montanhas da logo real não são massa preta: são desenho de linha com hachura, no
-            registro de xilogravura. O briefing escrito diz &ldquo;preto sólido&rdquo; — a logo
+            registro de xilogravura. O briefing escrito diz &ldquo;preto sólido&rdquo;. A logo
             desmente.
           </p>
         </div>
@@ -936,7 +936,7 @@ function Grafismos() {
         <div className="flex flex-wrap items-end gap-10">
           <div>
             <span className="text-caqui-ink-500 text-micro block font-mono uppercase">
-              Brasão — reconstrução
+              Brasão · reconstrução
             </span>
             <Brasao className="mt-3 w-40" />
           </div>

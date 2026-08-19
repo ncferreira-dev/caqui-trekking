@@ -12,6 +12,7 @@ import {
   SELECT_GUIA,
   SELECT_MEDIA,
   SELECT_TAG,
+  WHERE_GUIA_PUBLICA,
 } from '@/server/services/selects'
 
 export type FiltrosTrip = {
@@ -27,18 +28,37 @@ export type FiltrosTrip = {
  * Roteiros publicados, cada um com a próxima saída disponível.
  *
  * O filtro de preço opera sobre as SAÍDAS, não sobre a Trip — é a Departure
- * que tem preço. Uma Trip entra no resultado se tiver ao menos uma saída
- * futura publicada dentro da faixa.
+ * que tem preço. Com faixa de preço pedida, uma Trip só entra se tiver ao menos
+ * uma saída futura publicada dentro dela.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * SEM FILTRO DE PREÇO, ROTEIRO SEM DATA TAMBÉM APARECE — MUDOU EM 18/08/2026
+ * ────────────────────────────────────────────────────────────────────────────
+ * Antes o `where` exigia `departures: { some: … }` sempre, e a regra escrita
+ * era "roteiro sem agenda não aparece na vitrine". Ela fazia sentido quando a
+ * única coisa que se podia fazer com um roteiro era comprar uma vaga numa data:
+ * mostrar o que não dá para comprar é frustrar.
+ *
+ * Deixou de fazer sentido quando `/guia-particular` passou a existir. Agora um
+ * roteiro sem data marcada continua sendo vendável — como saída fechada — e
+ * escondê-lo esconde metade do que a Caqui sabe fazer. Medido no banco de
+ * desenvolvimento: 5 roteiros cadastrados, 2 aparecendo.
+ *
+ * A vitrine passa a mostrar todos, e `LinhaDeRoteiro` marca os sem data com
+ * "Sem data marcada" e "Sob consulta". Com faixa de preço pedida a exigência
+ * volta, porque aí a pergunta é sobre preço, e preço só existe em saída.
  */
 export async function listarTrips(
   filtros: FiltrosTrip,
 ): Promise<{ trips: TripResumoDTO[]; total: number }> {
   const agora = new Date()
+  const temFiltroDePreco =
+    filtros.precoMinCentavos !== undefined || filtros.precoMaxCentavos !== undefined
 
   const filtroSaida = {
     status: 'PUBLISHED' as const,
     startAt: { gte: agora },
-    ...(filtros.precoMinCentavos !== undefined || filtros.precoMaxCentavos !== undefined
+    ...(temFiltroDePreco
       ? {
           priceCents: {
             ...(filtros.precoMinCentavos !== undefined ? { gte: filtros.precoMinCentavos } : {}),
@@ -53,9 +73,9 @@ export async function listarTrips(
     deletedAt: null,
     ...(filtros.dificuldade ? { difficulty: filtros.dificuldade as never } : {}),
     ...(filtros.tag ? { activityTags: { some: { activityTag: { slug: filtros.tag } } } } : {}),
-    // Só roteiros que têm saída futura publicada (dentro da faixa de preço,
-    // quando pedida). Roteiro sem agenda não aparece na vitrine.
-    departures: { some: filtroSaida },
+    // A exigência de ter saída só vale quando há faixa de preço — ver o bloco
+    // acima. Sem ela, roteiro sem data entra e é marcado como "sob consulta".
+    ...(temFiltroDePreco ? { departures: { some: filtroSaida } } : {}),
   }
 
   const [linhas, total] = await Promise.all([
@@ -70,6 +90,8 @@ export async function listarTrips(
         region: true,
         difficulty: true,
         durationMinutes: true,
+        distanceKm: true,
+        elevationGainM: true,
         activityTags: { select: { activityTag: { select: SELECT_TAG } } },
         images: { select: SELECT_MEDIA, orderBy: { sortOrder: 'asc' }, take: 1 },
         departures: {
@@ -88,7 +110,7 @@ export async function listarTrips(
     prisma.trip.count({ where }),
   ])
 
-  const trips = linhas.map((t): TripResumoDTO => {
+  const semOrdem = linhas.map((t): TripResumoDTO => {
     const proxima = t.departures[0]
     return {
       slug: t.slug,
@@ -99,10 +121,34 @@ export async function listarTrips(
       regiao: t.region,
       dificuldade: t.difficulty,
       duracaoMinutos: t.durationMinutes,
+      distanciaKm: t.distanceKm ? t.distanceKm.toNumber() : null,
+      ganhoElevacaoM: t.elevationGainM,
       tags: t.activityTags.map((r): TagDTO => paraTagDTO(r.activityTag)),
       capa: t.images[0] ? paraMediaDTO(t.images[0]) : null,
       proximaSaida: proxima ? paraSaidaDTO(proxima, agora) : null,
     }
+  })
+
+  /**
+   * Quem tem data vem primeiro.
+   *
+   * A ordenação é feita em JS e não no banco porque "tem saída futura" é uma
+   * condição sobre uma relação, e ordenar por isso no Prisma exigiria uma view
+   * ou um `orderBy` por agregação que o cliente não expõe de forma direta.
+   *
+   * ⚠️ A ordenação é POR PÁGINA, não global: com paginação, um roteiro sem data
+   * na página 1 continua vindo antes de um roteiro com data na página 2. Hoje
+   * isso é inofensivo — a página pede `limit: 30` e o catálogo tem 5 —, mas se
+   * o catálogo passar de uma página, o certo é resolver a ordem no banco, e não
+   * aumentar o limite.
+   *
+   * `sort` é estável no JS moderno, então a ordem de dentro de cada bloco
+   * continua sendo a do banco (destaque, ordem manual, título).
+   */
+  const trips = [...semOrdem].sort((a, b) => {
+    const pesoA = a.proximaSaida ? 0 : 1
+    const pesoB = b.proximaSaida ? 0 : 1
+    return pesoA - pesoB
   })
 
   return { trips, total }
@@ -140,7 +186,10 @@ export async function buscarTripPorSlug(slug: string): Promise<TripDetalheDTO> {
         where: { status: 'PUBLISHED', startAt: { gte: agora } },
         select: {
           ...SELECT_DEPARTURE_PUBLICA,
-          guides: { select: { guide: { select: SELECT_GUIA } } },
+          // `WHERE_GUIA_PUBLICA`: sem ele, guia desativado ou arquivado continua
+          // saindo aqui com nome, Cadastur e PESM. Ver o comentário do token em
+          // `selects.ts`.
+          guides: { where: WHERE_GUIA_PUBLICA, select: { guide: { select: SELECT_GUIA } } },
         },
         orderBy: { startAt: 'asc' },
       },

@@ -2,8 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { GaleriaDoProduto } from '@/components/wear/galeria-produto'
-import { SeletorDeVariante } from '@/components/wear/seletor-de-variante'
+import { PecaComCor } from '@/components/wear/peca-com-cor'
 import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { Acordeao, AcordeaoItem } from '@/components/ui/acordeao'
 import { Etiqueta } from '@/components/ui/badge'
@@ -83,11 +82,13 @@ export default async function PaginaDoProduto({ params }: PageProps<'/wear/[slug
         titulo={produto.nome}
       />
 
-      <div className="mx-auto grid w-full max-w-7xl gap-10 px-5 py-14 sm:px-8 lg:grid-cols-2 lg:gap-14">
-        <GaleriaDoProduto imagens={produto.imagens} nome={produto.nome} />
-
-        <div className="flex flex-col gap-8 lg:sticky lg:top-24 lg:h-fit">
-          {disponiveis.length === 0 && (
+      {/* A cor mora em `PecaComCor`: a galeria e o seletor são irmãos e
+          precisam concordar sobre ela. Tudo o que vem depois do seletor entra
+          por `children` e continua sendo renderizado no servidor. */}
+      <PecaComCor
+        produto={produto}
+        aviso={
+          disponiveis.length === 0 ? (
             <p
               role="status"
               className="border-caqui-danger text-corpo-sm border-l-4 bg-white px-4 py-3"
@@ -95,58 +96,54 @@ export default async function PaginaDoProduto({ params }: PageProps<'/wear/[slug
               Todas as combinações desta peça estão esgotadas no momento. Chame no WhatsApp. A Caqui
               avisa quando repõe.
             </p>
-          )}
-
-          <SeletorDeVariante produto={produto} />
-
-          {/* Logo abaixo do botão de comprar: é ali que a pessoa para quando
+          ) : null
+        }
+      >
+        {/* Logo abaixo do botão de comprar: é ali que a pessoa para quando
               gosta da peça mas quer perguntar o tamanho para alguém antes. */}
-          <Compartilhar
-            titulo={produto.nome}
-            texto={`${produto.nome}, da Caqui Wear.`}
-            className="self-start"
-          />
+        <Compartilhar
+          titulo={produto.nome}
+          texto={`${produto.nome}, da Caqui Wear.`}
+          className="self-start"
+        />
 
-          {produto.descricao && (
-            <p className="text-corpo whitespace-pre-line">{produto.descricao}</p>
-          )}
+        {produto.descricao && <p className="text-corpo whitespace-pre-line">{produto.descricao}</p>}
 
-          <Acordeao>
-            <AcordeaoItem grupo="peca" titulo="Composição e cuidados">
-              <Cuidados categoria={produto.categoria} />
-            </AcordeaoItem>
-            <AcordeaoItem grupo="peca" titulo="Como recebo">
-              <p>
-                Nada é cobrado no site. Você monta o pedido na mochila e finaliza pelo WhatsApp; a
-                entrega é combinada ali: retirada em Mogi das Cruzes, entrega numa saída da agenda,
-                ou envio, conforme o caso.
-              </p>
-            </AcordeaoItem>
-            <AcordeaoItem grupo="peca" titulo="Troca">
-              <p>
-                Deu errado no tamanho? Fale com a Caqui pelo mesmo WhatsApp do pedido. Peça sem uso
-                e com etiqueta é trocada sem discussão. Por isso a tabela de medidas existe, para a
-                troca ser rara.
-              </p>
-            </AcordeaoItem>
-          </Acordeao>
+        <Acordeao>
+          <AcordeaoItem grupo="peca" titulo="Composição e cuidados">
+            <Cuidados categoria={produto.categoria} />
+          </AcordeaoItem>
+          <AcordeaoItem grupo="peca" titulo="Como recebo">
+            <p>
+              Nada é cobrado no site. Você monta o pedido na mochila e finaliza pelo WhatsApp; a
+              entrega é combinada ali: retirada em Mogi das Cruzes, entrega numa saída da agenda, ou
+              envio, conforme o caso.
+            </p>
+          </AcordeaoItem>
+          <AcordeaoItem grupo="peca" titulo="Troca">
+            <p>
+              Deu errado no tamanho? Fale com a Caqui pelo mesmo WhatsApp do pedido. Peça sem uso e
+              com etiqueta é trocada sem discussão. Por isso a tabela de medidas existe, para a
+              troca ser rara.
+            </p>
+          </AcordeaoItem>
+        </Acordeao>
 
-          {produto.cores.length > 0 && (
-            <div>
-              <h2 className="text-caqui-forest-800 text-rotulo font-mono uppercase">
-                Cores disponíveis
-              </h2>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {produto.cores.map((cor) => (
-                  <Etiqueta key={cor.nome} tom="mata">
-                    {cor.nome}
-                  </Etiqueta>
-                ))}
-              </div>
+        {produto.cores.length > 0 && (
+          <div>
+            <h2 className="text-caqui-forest-800 text-rotulo font-mono uppercase">
+              Cores disponíveis
+            </h2>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {produto.cores.map((cor) => (
+                <Etiqueta key={cor.nome} tom="mata">
+                  {cor.nome}
+                </Etiqueta>
+              ))}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </PecaComCor>
     </div>
   )
 }

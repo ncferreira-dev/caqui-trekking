@@ -53,6 +53,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluto('/'), lastModified: agora, changeFrequency: 'weekly', priority: 1 },
     { url: absoluto('/agenda'), lastModified: agora, changeFrequency: 'weekly', priority: 0.9 },
     { url: absoluto('/trekking'), lastModified: agora, changeFrequency: 'weekly', priority: 0.8 },
+    // Prioridade alta: é página de conversão, e o termo "guia particular" é o
+    // que a Caqui quer disputar. Acima da Wear, abaixo da agenda.
+    {
+      url: absoluto('/guia-particular'),
+      lastModified: agora,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
     { url: absoluto('/wear'), lastModified: agora, changeFrequency: 'monthly', priority: 0.6 },
     { url: absoluto('/sobre'), lastModified: agora, changeFrequency: 'yearly', priority: 0.4 },
     { url: absoluto('/contato'), lastModified: agora, changeFrequency: 'yearly', priority: 0.4 },

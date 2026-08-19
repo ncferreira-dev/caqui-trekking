@@ -16,7 +16,7 @@ import { AppError } from '@/lib/api/errors'
 import { eventosDoRoteiro, migalhas } from '@/lib/seo/json-ld'
 import { metadataDaPagina } from '@/lib/seo/metadata'
 import { URL_BASE } from '@/lib/seo/site'
-import { formatarDuracao, rotuloDificuldade } from '@/lib/formato'
+import { formatarDistancia, formatarDuracao, rotuloDificuldade } from '@/lib/formato'
 import { buscarSettings } from '@/server/services/institucional-service'
 import { buscarTripPorSlug } from '@/server/services/trip-service'
 import type { Dificuldade } from '@/components/ui/badge'
@@ -117,7 +117,7 @@ export default async function PaginaDoRoteiro({ params }: PageProps<'/trekking/[
       />
 
       <div className="mx-auto w-full max-w-7xl px-5 pt-14 pb-16 sm:px-8">
-        <Galeria imagens={trip.imagens} titulo={trip.titulo} />
+        <Galeria imagens={trip.imagens} titulo={trip.titulo} semente={trip.slug} />
 
         <div className="mt-8 flex flex-wrap items-center gap-2">
           <BadgeDificuldade nivel={trip.dificuldade as Dificuldade} />
@@ -137,35 +137,30 @@ export default async function PaginaDoRoteiro({ params }: PageProps<'/trekking/[
           />
         </div>
 
+        {/* Item sem valor SOME da ficha, em vez de virar travessão. O `Ficha`
+            desenha o filete entre colunas a cada 3 itens, então uma lista mais
+            curta continua correta — e travessão numa ficha técnica lê como
+            valor estranho, não como ausência. */}
         <Ficha
           className="mt-6"
           itens={[
-            {
-              rotulo: 'Distância',
-              valor: trip.distanciaKm !== null ? distancia(trip.distanciaKm) : '—',
-              ...(trip.distanciaKm !== null ? { unidade: 'km' } : {}),
-            },
-            {
-              rotulo: 'Ganho',
-              valor: trip.ganhoElevacaoM !== null ? `+${trip.ganhoElevacaoM}` : '—',
-              ...(trip.ganhoElevacaoM !== null ? { unidade: 'm' } : {}),
-            },
-            {
-              rotulo: 'Duração',
-              valor: trip.duracaoMinutos !== null ? formatarDuracao(trip.duracaoMinutos) : '—',
-            },
-            {
-              rotulo: 'Altitude máx.',
-              valor: trip.altitudeMaximaM !== null ? String(trip.altitudeMaximaM) : '—',
-              ...(trip.altitudeMaximaM !== null ? { unidade: 'm' } : {}),
-            },
+            trip.distanciaKm !== null
+              ? { rotulo: 'Distância', valor: formatarDistancia(trip.distanciaKm), unidade: 'km' }
+              : null,
+            trip.ganhoElevacaoM !== null
+              ? { rotulo: 'Ganho', valor: `+${trip.ganhoElevacaoM}`, unidade: 'm' }
+              : null,
+            trip.duracaoMinutos !== null
+              ? { rotulo: 'Duração', valor: formatarDuracao(trip.duracaoMinutos) }
+              : null,
+            trip.altitudeMaximaM !== null
+              ? { rotulo: 'Altitude máx.', valor: String(trip.altitudeMaximaM), unidade: 'm' }
+              : null,
             { rotulo: 'Nível', valor: rotuloDificuldade(trip.dificuldade) },
-            {
-              rotulo: 'Idade mínima',
-              valor: trip.idadeMinima !== null ? String(trip.idadeMinima) : 'Livre',
-              ...(trip.idadeMinima !== null ? { unidade: 'anos' } : {}),
-            },
-          ]}
+            trip.idadeMinima !== null
+              ? { rotulo: 'Idade mínima', valor: String(trip.idadeMinima), unidade: 'anos' }
+              : { rotulo: 'Idade mínima', valor: 'Livre' },
+          ].filter((i) => i !== null)}
         />
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[1fr_24rem]">
@@ -336,13 +331,6 @@ function perguntas(trip: TripDetalheDTO): { pergunta: string; resposta: string }
   }
 
   return lista
-}
-
-/** `8.5` → "8,5". Decimal com vírgula sem passar por `toFixed`. */
-const FORMATO_DISTANCIA = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 })
-
-function distancia(km: number): string {
-  return FORMATO_DISTANCIA.format(km)
 }
 
 function ListaSimples({ itens, vazio }: { itens: string[]; vazio: string }) {

@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { classesDeBotao } from '@/components/ui/button'
 import { SelectNativo } from '@/components/ui/select-nativo'
+import { cn } from '@/lib/ui/cn'
 import { mesPorExtenso } from '@/lib/datetime'
 import { rotuloDificuldade } from '@/lib/formato'
 import type { OpcoesDeAgenda } from '@/server/services/departure-service'
@@ -50,7 +51,7 @@ import type { OpcoesDeAgenda } from '@/server/services/departure-service'
  * Números redondos são o que a pessoa tem na cabeça quando pensa em quanto
  * quer gastar.
  */
-export const FAIXAS_DE_PRECO = [
+const FAIXAS_DE_PRECO = [
   { valor: '0-15000', rotulo: 'Até R$ 150', min: 0, max: 15000 },
   { valor: '15000-30000', rotulo: 'R$ 150 a R$ 300', min: 15000, max: 30000 },
   { valor: '30000-60000', rotulo: 'R$ 300 a R$ 600', min: 30000, max: 60000 },
@@ -67,6 +68,34 @@ export type ValoresDeFiltro = {
   atividade?: string | undefined
   preco?: string | undefined
   passadas?: boolean | undefined
+  vista?: 'lista' | 'calendario' | undefined
+}
+
+/**
+ * Monta um link para a agenda preservando o que já está aplicado.
+ *
+ * Existe porque três controles precisam do MESMO link com uma peça trocada: o
+ * seletor de vista troca `vista`, as setas do calendário trocam `mes`, e o
+ * rodapé troca `passadas`. Escrito à mão em cada um, o primeiro esquecimento
+ * de um parâmetro descarta em silêncio um filtro que a pessoa está vendo
+ * aplicado na tela — o mesmo defeito que o `<select>` de mês já teve.
+ */
+export function linkDaAgenda(
+  valores: ValoresDeFiltro,
+  mudanca: Partial<ValoresDeFiltro> = {},
+): string {
+  const v = { ...valores, ...mudanca }
+  const busca = new URLSearchParams()
+
+  if (v.mes) busca.set('mes', v.mes)
+  if (v.dificuldade) busca.set('dificuldade', v.dificuldade)
+  if (v.atividade) busca.set('atividade', v.atividade)
+  if (v.preco) busca.set('preco', v.preco)
+  if (v.passadas) busca.set('passadas', '1')
+  if (v.vista === 'calendario') busca.set('vista', 'calendario')
+
+  const query = busca.toString()
+  return query ? `/agenda?${query}` : '/agenda'
 }
 
 export function FiltrosAgenda({
@@ -100,6 +129,24 @@ export function FiltrosAgenda({
       className="secao-areia px-5 py-6 sm:px-8"
     >
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+        {/* ── Lista ou calendário ────────────────────────────────────────
+            Dois LINKS, não dois botões com estado: a vista é parte do
+            endereço, então ela sobrevive ao compartilhamento e ao botão
+            voltar, exatamente como os filtros abaixo. */}
+        <div className="flex items-center gap-3">
+          <span id="rotulo-da-vista" className="text-caqui-ink-700 text-rotulo font-mono uppercase">
+            Ver como
+          </span>
+          <div
+            role="group"
+            aria-labelledby="rotulo-da-vista"
+            className="border-caqui-rule-forte inline-flex border"
+          >
+            <BotaoDeVista valores={valores} destino="lista" rotulo="Lista" />
+            <BotaoDeVista valores={valores} destino="calendario" rotulo="Calendário" />
+          </div>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SelectNativo
             id="filtro-mes"
@@ -152,9 +199,11 @@ export function FiltrosAgenda({
           />
         </div>
 
-        {/* Sobrevive ao envio. Sem isto, filtrar dentro da vista "com saídas
-            anteriores" jogaria a pessoa de volta ao mês atual sem explicação. */}
+        {/* Sobrevivem ao envio. Sem isto, filtrar dentro da vista "com saídas
+            anteriores" jogaria a pessoa de volta ao mês atual sem explicação,
+            e aplicar um filtro dentro do calendário devolveria a lista. */}
         {valores.passadas && <input type="hidden" name="passadas" value="1" />}
+        {valores.vista === 'calendario' && <input type="hidden" name="vista" value="calendario" />}
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="text-caqui-ink-700 text-rotulo font-mono uppercase">
@@ -166,7 +215,7 @@ export function FiltrosAgenda({
           <div className="flex flex-wrap items-center gap-4">
             {algumFiltro && (
               <Link
-                href={valores.passadas ? '/agenda?passadas=1' : '/agenda'}
+                href={linkDaAgenda({ passadas: valores.passadas, vista: valores.vista })}
                 className="text-caqui-ink-700 text-rotulo hover:text-caqui-ink-900 rounded-xs font-mono uppercase underline underline-offset-4"
               >
                 Limpar filtros
@@ -179,5 +228,33 @@ export function FiltrosAgenda({
         </div>
       </div>
     </form>
+  )
+}
+
+/** Uma das duas vistas. A ativa não é link para si mesma. */
+function BotaoDeVista({
+  valores,
+  destino,
+  rotulo,
+}: {
+  valores: ValoresDeFiltro
+  destino: 'lista' | 'calendario'
+  rotulo: string
+}) {
+  const ativo = (valores.vista ?? 'lista') === destino
+
+  return (
+    <Link
+      href={linkDaAgenda(valores, { vista: destino })}
+      aria-current={ativo ? 'true' : undefined}
+      className={cn(
+        'text-rotulo inline-flex min-h-11 items-center px-4 font-mono uppercase transition-colors',
+        ativo
+          ? 'bg-caqui-ink-900 text-white'
+          : 'text-caqui-ink-700 hover:bg-caqui-sand-200 bg-white',
+      )}
+    >
+      {rotulo}
+    </Link>
   )
 }

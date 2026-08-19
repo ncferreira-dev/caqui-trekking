@@ -1,4 +1,5 @@
 import { AppError, ErrorCode } from '@/lib/api/errors'
+import { limitarLeituraPublica } from '@/lib/api/rate-limit'
 import { ok } from '@/lib/api/respond'
 import { rota } from '@/lib/api/route-handler'
 import { buscarSettings } from '@/server/services/institucional-service'
@@ -11,7 +12,9 @@ export const dynamic = 'force-dynamic'
  * Configurações públicas, incluindo o template da mensagem do WhatsApp — que
  * é editável no CRM justamente para o texto do pedido não exigir deploy.
  */
-export const GET = rota(async () => {
+export const GET = rota(async (request: Request) => {
+  limitarLeituraPublica(request, 'settings')
+
   const settings = await buscarSettings()
 
   if (!settings) {

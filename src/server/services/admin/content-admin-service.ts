@@ -1,6 +1,7 @@
 import { AppError, ErrorCode } from '@/lib/api/errors'
 import { prisma } from '@/lib/prisma'
 import { registrarAuditoria } from '@/server/services/audit-service'
+import { slugUnico } from '@/lib/slug'
 
 /**
  * Mutações de conteúdo: Trip, Product, ProductVariant e SiteSetting.
@@ -38,11 +39,108 @@ export type CamposTrip = {
   sortOrder?: number
 }
 
+/**
+ * Cria um roteiro.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * O CRM PASSOU DOIS MESES SEM ISTO, E ERA O GARGALO
+ * ════════════════════════════════════════════════════════════════════════════
+ * Até 18/08/2026 `/api/admin/trips` tinha apenas GET. Dava para editar,
+ * publicar, destacar e arquivar roteiro, e não dava para criar nenhum: os cinco
+ * que existiam vieram do seed.
+ *
+ * `Trip` é a entidade central do sistema. Saída, mídia, tag e mensagem penduram
+ * nela. Sem criar roteiro, o CRM não atendia o primeiro roteiro novo que a
+ * Caqui abrisse, e a única saída seria escrever no banco à mão.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * O SLUG NASCE AQUI E NÃO MUDA NUNCA MAIS
+ * ════════════════════════════════════════════════════════════════════════════
+ * Ele é gerado UMA vez, na criação, e depois só muda se alguém editar de
+ * propósito. Nunca é derivado do título em tempo de render: renomear o roteiro
+ * mudaria a URL canônica em silêncio, quebrando o link já mandado no WhatsApp e
+ * zerando o ranking de busca.
+ *
+ * A unicidade é conferida contra TODOS os slugs, inclusive os arquivados:
+ * reaproveitar o slug de um roteiro descontinuado roubaria a URL que ele ainda
+ * pode ter em links antigos.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * NASCE EM RASCUNHO, SEMPRE
+ * ════════════════════════════════════════════════════════════════════════════
+ * Um roteiro recém-criado não tem foto, não tem saída marcada e provavelmente
+ * tem a descrição pela metade. Publicar por padrão colocaria isso na vitrine no
+ * instante em que alguém clica em "salvar". Publicar é um segundo gesto, e
+ * `atualizarTrip` já sabe fazê-lo.
+ */
+export async function criarTrip(
+  campos: CamposTrip & { title: string; description: string; city: string; state: string },
+  ctx: Contexto,
+): Promise<{ id: number; slug: string }> {
+  const usados = await prisma.trip.findMany({ select: { slug: true } })
+  const slug = slugUnico(
+    campos.title,
+    usados.map((t) => t.slug),
+  )
+
+  return prisma.$transaction(async (tx) => {
+    const trip = await tx.trip.create({
+      data: {
+        slug,
+        title: campos.title,
+        subtitle: campos.subtitle ?? null,
+        description: campos.description,
+        city: campos.city,
+        state: campos.state,
+        region: campos.region ?? null,
+        difficulty: campos.difficulty ?? 'MODERADO',
+        distanceKm: campos.distanceKm ?? null,
+        elevationGainM: campos.elevationGainM ?? null,
+        maxAltitudeM: campos.maxAltitudeM ?? null,
+        durationMinutes: campos.durationMinutes ?? null,
+        minAge: campos.minAge ?? null,
+        requiresExperience: campos.requiresExperience ?? false,
+        highlights: campos.highlights ?? [],
+        included: campos.included ?? [],
+        notIncluded: campos.notIncluded ?? [],
+        whatToBring: campos.whatToBring ?? [],
+        cancellationPolicy: campos.cancellationPolicy ?? null,
+        // Rascunho, sempre. Ver o bloco acima.
+        status: 'DRAFT',
+        featured: false,
+      },
+      select: { id: true, slug: true },
+    })
+
+    await registrarAuditoria(
+      {
+        userId: ctx.userId,
+        action: 'trip.create',
+        entityType: 'Trip',
+        entityId: trip.id,
+        after: { slug, titulo: campos.title, cidade: campos.city, estado: campos.state },
+        ip: ctx.ip,
+      },
+      tx,
+    )
+
+    return trip
+  })
+}
+
 export async function atualizarTrip(
   tripId: number,
-  campos: CamposTrip,
+  /**
+   * `activityTagIds` vem SEPARADO dos campos escalares de propósito: ele não é
+   * uma coluna de `Trip`, é a tabela de ligação `TripActivityTag`. Misturá-lo
+   * em `campos` faria o `tx.trip.update({ data: campos })` receber uma chave
+   * que o Prisma não conhece, e o erro só apareceria em runtime.
+   */
+  campos: CamposTrip & { activityTagIds?: number[] },
   ctx: Contexto,
 ): Promise<{ id: number }> {
+  const { activityTagIds, ...colunas } = campos
+
   const antes = await prisma.trip.findFirst({
     where: { id: tripId, deletedAt: null },
     select: {
@@ -52,6 +150,7 @@ export async function atualizarTrip(
       difficulty: true,
       featured: true,
       sortOrder: true,
+      activityTags: { select: { activityTagId: true } },
     },
   })
 
@@ -59,10 +158,27 @@ export async function atualizarTrip(
     throw new AppError(ErrorCode.TRIP_NOT_FOUND, 'Roteiro não encontrado.', { status: 404 })
   }
 
+  // ── As atividades pedidas precisam EXISTIR ────────────────────────────
+  // Conferido ANTES da primeira escrita, e não descoberto no meio: um id
+  // inválido no meio da lista deixaria o roteiro com metade das atividades
+  // trocadas e a outra metade não. Um `createMany` com chave estrangeira
+  // quebrada aborta a transação, mas a mensagem que chega na tela seria a do
+  // banco, e não "esta atividade não existe".
+  const desejadas = activityTagIds ? [...new Set(activityTagIds)] : null
+
+  if (desejadas && desejadas.length > 0) {
+    const encontradas = await prisma.activityTag.count({ where: { id: { in: desejadas } } })
+    if (encontradas !== desejadas.length) {
+      throw new AppError(ErrorCode.TAG_NOT_FOUND, 'Alguma atividade escolhida não existe.', {
+        status: 404,
+      })
+    }
+  }
+
   return prisma.$transaction(async (tx) => {
     const depois = await tx.trip.update({
       where: { id: tripId },
-      data: campos,
+      data: colunas,
       select: {
         id: true,
         title: true,
@@ -73,14 +189,27 @@ export async function atualizarTrip(
       },
     })
 
+    if (desejadas) {
+      // Substituição inteira: apaga e recria. Com no máximo 20 linhas por
+      // roteiro, calcular o delta custaria mais código do que economiza
+      // escrita, e o "apaga tudo" é o que garante que o estado final é
+      // exatamente o que o formulário mostrava.
+      await tx.tripActivityTag.deleteMany({ where: { tripId } })
+      if (desejadas.length > 0) {
+        await tx.tripActivityTag.createMany({
+          data: desejadas.map((activityTagId) => ({ tripId, activityTagId })),
+        })
+      }
+    }
+
     await registrarAuditoria(
       {
         userId: ctx.userId,
         action: 'trip.update',
         entityType: 'Trip',
         entityId: tripId,
-        before: antes,
-        after: depois,
+        before: { ...antes, activityTags: antes.activityTags.map((t) => t.activityTagId) },
+        after: desejadas ? { ...depois, activityTags: desejadas } : depois,
         ip: ctx.ip,
       },
       tx,
@@ -194,8 +323,25 @@ export type CamposSettings = {
   aboutText?: string | null
 }
 
-/** Placeholders que o template da mensagem do WhatsApp reconhece. */
-export const PLACEHOLDERS_VALIDOS = ['{{itens}}', '{{total}}', '{{cliente}}'] as const
+/**
+ * Placeholders que o template da mensagem do WhatsApp reconhece.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * `{{cliente}}` SAIU DAQUI EM 18/08/2026, E NÃO DEVE VOLTAR SEM O DADO
+ * ────────────────────────────────────────────────────────────────────────────
+ * Ele estava na lista, o editor do CRM o oferecia como opção clicável, e
+ * `montarMensagem` nunca o substituía. O motivo é estrutural, não
+ * esquecimento: o nome do cliente NÃO EXISTE em lugar nenhum deste fluxo. O
+ * site não pede nome, a mochila não tem cadastro, e o primeiro contato É a
+ * mensagem do WhatsApp — o nome chega depois dela, não antes.
+ *
+ * Ou seja: bastava a Caqui aceitar o convite do próprio painel para toda
+ * mensagem do site sair com "Olá {{cliente}}" escrito literalmente.
+ *
+ * Se um dia a mochila passar a pedir o nome antes do handoff, ele volta para
+ * cá NO MESMO commit em que `montarMensagem` aprender a substituí-lo.
+ */
+export const PLACEHOLDERS_VALIDOS = ['{{itens}}', '{{total}}'] as const
 
 /**
  * Valida os placeholders do template.

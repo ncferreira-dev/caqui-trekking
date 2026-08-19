@@ -103,10 +103,27 @@ export function montarMensagem(template: string, resultado: ResultadoValidacao):
   // Os valores continuam sendo os do servidor — o que muda é só o recorte.
   const total = formatarBRL(itens.reduce((soma, i) => soma + i.subtotalCentavos, 0))
 
-  return base
-    .split('{{itens}}')
-    .join(itens.map(linhaDoItem).join('\n\n'))
-    .split('{{total}}')
-    .join(total)
-    .trim()
+  return (
+    base
+      .split('{{itens}}')
+      .join(itens.map(linhaDoItem).join('\n\n'))
+      .split('{{total}}')
+      .join(total)
+      // ────────────────────────────────────────────────────────────────────
+      // A SEGUNDA REDE: NENHUM `{{...}}` CHEGA AO CLIENTE
+      // ────────────────────────────────────────────────────────────────────
+      // O CRM já recusa placeholder desconhecido ao salvar. Esta linha existe
+      // para o template que entrou ANTES da trava, por migração ou por seed
+      // antigo — e para o dia em que alguém acrescentar um marcador à lista de
+      // válidos e esquecer de ensiná-lo aqui.
+      //
+      // Foi exatamente o que aconteceu com `{{cliente}}`: declarado válido,
+      // nunca interpolado. O pior resultado possível deste arquivo é o cliente
+      // receber a chave escrita, então o desconhecido some em vez de sair
+      // literal. Ver PLACEHOLDERS_VALIDOS.
+      .replace(/\{\{[^}]*\}\}/g, '')
+      // Sobra de espaço deixada pelo que foi apagado.
+      .replace(/[^\S\n]{2,}/g, ' ')
+      .trim()
+  )
 }

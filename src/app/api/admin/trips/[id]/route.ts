@@ -42,6 +42,18 @@ const atualizarSchema = z
     status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
     featured: z.boolean().optional(),
     sortOrder: z.number().int().optional(),
+    // ────────────────────────────────────────────────────────────────────
+    // A LIGAÇÃO COM ATIVIDADE, QUE NÃO EXISTIA EM ROTA NENHUMA
+    // ────────────────────────────────────────────────────────────────────
+    // `ActivityTag` tinha CRUD completo e `TripActivityTag` não tinha nada:
+    // dava para criar a tag "Rapel" e não havia caminho para dizer que a
+    // trilha do Escalavrado tem rapel. A tag É o filtro "Atividade" da
+    // agenda, então sem isto o filtro só oferece o que o seed deixou.
+    //
+    // A lista é o ESTADO FINAL, não um acréscimo: é o que um grupo de caixas
+    // de seleção significa, e é o que faz desmarcar ter efeito. Ausente, as
+    // atividades ficam intactas, porque o PATCH é parcial.
+    activityTagIds: z.array(idSchema).max(20).optional(),
   })
   .strict()
 

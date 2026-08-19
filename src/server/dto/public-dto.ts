@@ -1,5 +1,6 @@
 import { isoComOffsetLocal, jaEncerrada } from '@/lib/datetime'
 import { centavosParaDecimal } from '@/lib/money'
+import { estadoDeVagas } from '@/lib/vagas'
 
 /**
  * DTOs públicos.
@@ -35,6 +36,14 @@ export type MediaDTO = {
   width: number
   height: number
   blurDataUrl: string | null
+  /**
+   * A cor que esta foto mostra. `null` = serve para qualquer cor.
+   *
+   * Só tem significado em foto de PRODUTO. A galeria da peça usa isto para
+   * trocar a foto junto com a cor escolhida, seguindo a regra de
+   * `lib/media/cor-da-foto.ts`: na dúvida, neutra, nunca a cor errada.
+   */
+  cor: string | null
   /** Primeira da galeria. Vem resolvido, para o front não derivar posição. */
   principal: boolean
 }
@@ -69,6 +78,14 @@ export type SaidaDTO = {
   precoDecimal: string
   precoDeCentavos: number | null
   disponibilidade: 'AVAILABLE' | 'LAST_SPOTS' | 'SOLD_OUT'
+  /**
+   * Quantas vagas sobraram. `null` quando a saída não declara capacidade.
+   *
+   * SAI na API pública de propósito: "faltam 2 vagas" é a informação que fecha
+   * a venda de uma trilha guiada, e é verdadeira ou ausente, nunca inventada.
+   * Nunca negativo — o excedente do overbooking é assunto do CRM, não do site.
+   */
+  vagasRestantes: number | null
   /** Derivado de inicio < agora. Não existe campo no banco. */
   encerrada: boolean
 }
@@ -82,6 +99,20 @@ export type TripResumoDTO = {
   regiao: string | null
   dificuldade: string
   duracaoMinutos: number | null
+  /**
+   * Distância e ganho de elevação entram no RESUMO, e não só no detalhe.
+   *
+   * São eles que separam dois roteiros. O índice de expedições existe para
+   * responder "para onde dá para ir", e a resposta útil não é o nome bonito da
+   * trilha — é "12 km com 840 m de subida" contra "5 km quase plano". Sem esses
+   * dois campos, o índice mostrava duração e nível, que três roteiros
+   * diferentes compartilham.
+   *
+   * Não é exposição nova: os dois já saem em `TripDetalheDTO`, na página de
+   * cada roteiro. O que muda é chegarem uma tela antes.
+   */
+  distanciaKm: number | null
+  ganhoElevacaoM: number | null
   tags: TagDTO[]
   capa: MediaDTO | null
   /** A próxima saída publicada e futura. `null` quando não há. */
@@ -90,8 +121,6 @@ export type TripResumoDTO = {
 
 export type TripDetalheDTO = TripResumoDTO & {
   descricao: string
-  distanciaKm: number | null
-  ganhoElevacaoM: number | null
   altitudeMaximaM: number | null
   idadeMinima: number | null
   exigeExperiencia: boolean
@@ -160,6 +189,7 @@ type MediaRow = {
   height: number
   blurDataUrl: string | null
   sortOrder: number
+  colorName?: string | null
 }
 
 export function paraMediaDTO(m: MediaRow): MediaDTO {
@@ -170,6 +200,10 @@ export function paraMediaDTO(m: MediaRow): MediaDTO {
     height: m.height,
     blurDataUrl: m.blurDataUrl,
     principal: m.sortOrder === 0,
+    // `cor` sai como `null` quando a foto serve para qualquer cor, que é o
+    // caso de toda foto de roteiro e de guia. A galeria da peça filtra por
+    // ela; as outras ignoram.
+    cor: m.colorName ?? null,
   }
 }
 
@@ -190,7 +224,10 @@ type SaidaRow = {
   meetingLng: DecimalLike
   priceCents: number
   compareAtPriceCents: number | null
-  availability: string
+  capacity: number | null
+  seatsTaken: number
+  lastSpotsAt: number
+  availabilityOverride: string | null
   // NOTA: `internalNotes` e `status` NÃO estão neste tipo, de propósito.
   // Se alguém acrescentar o campo ao `select` do serviço, o TypeScript não
   // reclama — mas o mapper abaixo continua não copiando. Ver o teste
@@ -201,6 +238,12 @@ export function paraSaidaDTO(s: SaidaRow, agora: Date = new Date()): SaidaDTO {
   const lat = numero(s.meetingLat)
   const lng = numero(s.meetingLng)
 
+  const vagas = estadoDeVagas({
+    capacity: s.capacity,
+    seatsTaken: s.seatsTaken,
+    lastSpotsAt: s.lastSpotsAt,
+    availabilityOverride: s.availabilityOverride as SaidaDTO['disponibilidade'] | null,
+  })
   return {
     id: s.id,
     inicioUtc: s.startAt.toISOString(),
@@ -212,7 +255,12 @@ export function paraSaidaDTO(s: SaidaRow, agora: Date = new Date()): SaidaDTO {
     precoCentavos: s.priceCents,
     precoDecimal: centavosParaDecimal(s.priceCents),
     precoDeCentavos: s.compareAtPriceCents,
-    disponibilidade: s.availability as SaidaDTO['disponibilidade'],
+    // O SELO É CONTA, NÃO CAMPO. Ver `src/lib/vagas.ts`: até 18/08/2026 esta
+    // linha copiava uma coluna que alguém digitava à mão, e o site anunciava
+    // vaga já vendida no WhatsApp durante o tempo que levasse até alguém
+    // lembrar de abrir o CRM.
+    disponibilidade: vagas.disponibilidade,
+    vagasRestantes: vagas.restantes,
     encerrada: jaEncerrada(s.startAt, agora),
   }
 }

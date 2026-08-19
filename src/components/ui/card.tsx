@@ -115,7 +115,19 @@ export function CardRodape({ children, className }: { children: ReactNode; class
   return (
     <div
       className={cn(
-        'border-caqui-rule mt-auto flex items-center justify-between gap-3 border-t p-4 sm:p-5',
+        // `flex-wrap` e `gap-x-3 gap-y-1`, medido em 18/08/2026 a 375px.
+        //
+        // O rodapé é rótulo à esquerda e preço à direita, e o preço é
+        // tipografia grande (`.preco`, 28px). Numa vitrine de duas colunas em
+        // 375px o card tem 154px úteis, e "3 CORES" mais "R$ 50,00" pedem 171.
+        // Sem quebra, os dois empurravam a linha para fora do card e o
+        // DOCUMENTO INTEIRO passava a rolar de lado: 398px de largura numa
+        // janela de 375.
+        //
+        // Rolagem horizontal é o defeito de layout mais escondido que existe,
+        // porque a página parece certa até alguém arrastar o dedo. Com a
+        // quebra, o preço desce uma linha quando não cabe e nada vaza.
+        'border-caqui-rule mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t p-4 sm:p-5',
         className,
       )}
     >

@@ -147,66 +147,6 @@ export function Montanhas({ className }: { className?: string }) {
 }
 
 /**
- * Uma nuvem, em gravura.
- *
- * Mesma regra da serra: contorno e hachura, nunca massa branca sólida. Nuvem
- * chapada sobre o gradiente de areia vira um borrão claro sobre fundo claro e
- * some; o contorno é o que a faz existir.
- *
- * A base é reta e a hachura fica embaixo, porque em gravura a luz vem de cima:
- * o volume aparece pelo lado escurecido, não por sombra difusa.
- */
-export function Nuvem({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 170 76" aria-hidden="true" className={cn('block', className)}>
-      <g
-        fill="none"
-        stroke="#0D0D0D"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      >
-        <path d="M14 62 C4 54 8 40 22 42 C24 24 50 18 62 31 C72 15 98 18 104 36 C118 28 136 38 134 52 C148 52 154 58 150 62 Z" />
-        <g strokeWidth="1" strokeOpacity="0.4">
-          <path d="M30 56 H118" />
-          <path d="M46 49 H104" />
-        </g>
-      </g>
-    </svg>
-  )
-}
-
-/**
- * O céu que anda.
- *
- * ────────────────────────────────────────────────────────────────────────────
- * A NUVEM É O QUE DÁ ESCALA À SERRA
- * ────────────────────────────────────────────────────────────────────────────
- * Uma silhueta de montanha parada num gradiente pode ser um desenho de 5 cm ou
- * uma serra de 900 m. A nuvem passando resolve isso sozinha: ela dá tamanho e
- * dá distância, e é por isso que ela anda devagar. Nuvem rápida faz o oposto,
- * encolhe a cena e vira banner.
- *
- * Três camadas, três velocidades, três alturas. O atraso é NEGATIVO de
- * propósito: a animação começa no meio do percurso, então na primeira pintura
- * já existe céu ocupado. Com atraso positivo a página abriria com o céu vazio
- * pelo primeiro minuto inteiro, que é justamente quando alguém está olhando.
- *
- * Tudo aqui é `transform` — composição pura, sem layout e sem paint. Sob
- * `prefers-reduced-motion` as nuvens ficam paradas, e continuam fazendo o
- * trabalho de dar escala.
- */
-export function Nuvens({ className }: { className?: string }) {
-  return (
-    <div aria-hidden="true" className={cn('pointer-events-none absolute inset-0', className)}>
-      <Nuvem className="nuvem-derivando top-[14%] w-40 opacity-25 [--atraso:-18s] [--duracao:104s] [--parada:14vw] sm:w-56" />
-      <Nuvem className="nuvem-derivando top-[30%] w-28 opacity-[0.18] [--atraso:-96s] [--duracao:152s] [--parada:62vw] sm:w-40" />
-      <Nuvem className="nuvem-derivando top-[6%] w-20 opacity-[0.14] [--atraso:-140s] [--duracao:196s] [--parada:88vw] sm:w-28" />
-    </div>
-  )
-}
-
-/**
  * O brasão.
  *
  * ⚠️  RECONSTRUÇÃO, NÃO O ARQUIVO ORIGINAL.

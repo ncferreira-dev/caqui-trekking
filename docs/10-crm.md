@@ -238,3 +238,77 @@ restaurado.
 - **Calendário como vista alternativa**, se a operação crescer.
 - Continua valendo: **nenhuma foto de expedição** foi entregue, e a galeria é
   do produto e não da variante (ver `docs/09-wear-carrinho.md`).
+
+---
+
+## Varredura de layout: a coluna que some
+
+Em 19/08/2026 duas telas do CRM tinham a coluna de identificação com
+**largura zero** em telas de notebook. O texto era pintado por baixo dos
+botões.
+
+| Tela            | O que sumia                        | Medido                       |
+| --------------- | ---------------------------------- | ---------------------------- |
+| `/crm/saidas`   | data, hora, preço, nome do roteiro | 0px em 1100 · 85px em 1280   |
+| `/crm/roteiros` | nome do roteiro, cidade, duração   | 0px em 1024, nos cinco itens |
+
+A causa é flexbox e vale para qualquer linha do sistema: `flex-1` é
+`flex: 1 1 0%`, base **zero**. A coluna só existe se sobrar espaço. Quando o
+irmão ao lado não declara encolhimento e tem conteúdo largo, não sobra nada, e
+`min-w-0` é a permissão explícita de ir até zero.
+
+Na tela de saídas a linha dizia "de 12, faltam 6" sem dizer de qual saída.
+
+O conserto foi um piso, `lg:min-w-56`, nas duas colunas.
+
+### O que é mecânico
+
+`src/test/coluna-que-some.test.ts` varre os `.tsx` do projeto: onde existe uma
+linha que vira horizontal num breakpoint (`lg:flex-row`) com uma coluna
+`min-w-0 flex-1` logo abaixo, o piso de largura passa a ser obrigatório.
+Aponta arquivo e linha. Tirar o piso de qualquer uma das duas telas derruba o
+teste — conferido nas duas.
+
+Hoje ela examina 2 linhas e acusa 0. Os outros quatro usos de `min-w-0 flex-1`
+no projeto ficam de fora com razão: o `main` do CRM tem irmão de largura fixa,
+a lista de guias e o item do carrinho têm irmão `shrink-0`, e o styleguide é a
+mesma forma do carrinho.
+
+### O que continua manual, e por quê
+
+**Largura calculada não tem varredura mecânica aqui.** Colapso só existe
+depois que o navegador faz o layout, e o projeto não tem navegador na bateria
+de testes. Uma linha escrita de outro jeito pode colapsar sem a trava piscar.
+
+Abra cada tela em **1024, 1152 e 1280** — as larguras onde a linha já deitou e
+o espaço ainda é curto — e rode no console:
+
+```js
+;[...document.querySelectorAll('body *')]
+  .filter((el) => {
+    if (el.ownerSVGElement || el.tagName === 'svg') return false
+    const cs = getComputedStyle(el)
+    if (cs.display === 'none' || cs.visibility === 'hidden') return false
+    if ((el.className || '').toString().includes('sr-only')) return false
+    const copia = el.cloneNode(true)
+    copia.querySelectorAll('.sr-only').forEach((n) => n.remove())
+    const texto = (copia.textContent || '').replace(/\s+/g, ' ').trim()
+    if (texto.length < 9) return false
+    const r = el.getBoundingClientRect()
+    return r.width < 40 && r.height > 0
+  })
+  .map((el) => ({ cls: el.className, w: el.getBoundingClientRect().width, txt: el.innerText }))
+```
+
+Precisa voltar **vazio**. Elemento com texto e largura perto de zero é texto
+que existe no DOM, é lido por leitor de tela, e não está na tela para quem
+enxerga.
+
+As três exclusões existem porque cada uma gerou falso positivo na primeira
+passada: `sr-only` é texto invisível de propósito; texto dentro de `<svg>` tem
+caixa que não corresponde ao desenho; e um elemento cujo texto vem só de um
+filho `sr-only` (a bolinha de cor de 16px na loja) não é defeito nenhum.
+
+**Rodado em 19/08/2026**, em 1024, 1152 e 1280: seis telas do CRM e as dez
+telas públicas, mais o carrinho com itens em 375. Só as duas linhas da tabela
+acima acusaram, e as duas estão consertadas.

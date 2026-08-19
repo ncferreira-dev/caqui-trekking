@@ -32,6 +32,7 @@ function saidaFake(over: Partial<SaidaDTO> = {}): SaidaDTO {
     precoDecimal: '90.00',
     precoDeCentavos: null,
     disponibilidade: 'AVAILABLE',
+    vagasRestantes: null,
     encerrada: false,
     ...over,
   }

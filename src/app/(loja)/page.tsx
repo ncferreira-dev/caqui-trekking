@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-import { CardSaida } from '@/components/catalogo/card-saida'
-import { Carrossel, ItemDoCarrossel } from '@/components/catalogo/carrossel'
 import { FaixaDeCredibilidade } from '@/components/catalogo/faixa-credibilidade'
-import { Montanhas, Nuvens } from '@/components/marca/grafismos'
+import { LinhaDeSaida } from '@/components/catalogo/linha-de-saida'
+import { HeroiDaHome } from '@/components/home/heroi'
+import { Manifesto } from '@/components/home/manifesto'
+import { Montanhas } from '@/components/marca/grafismos'
 import { Capa } from '@/components/midia/imagem'
-import { CamadaHero, Hero } from '@/components/movimento/hero'
 import { Revelar } from '@/components/movimento/revelar'
 import { JsonLdScript } from '@/components/seo/json-ld'
 import { LinkBotao } from '@/components/ui/button'
@@ -66,7 +66,7 @@ export default async function PaginaInicial() {
     listarProdutos({ limit: 3, offset: 0 }),
   ])
 
-  const titulo = settings?.heroTitulo ?? 'Venha viver novas experiências'
+  const titulo = settings?.heroTitulo ?? 'A serra começa aqui'
   const subtitulo =
     settings?.heroSubtitulo ??
     'Trilhas guiadas na Serra do Mar, saindo de Mogi das Cruzes. Guias com Cadastur e monitores credenciados pelo PESM.'
@@ -84,74 +84,17 @@ export default async function PaginaInicial() {
     <>
       <JsonLdScript dados={dadosEstruturados} />
 
-      <Hero
-        className="flex min-h-[88svh] items-end"
-        fundo={
-          <>
-            {/* Areia de base: a serra precisa de um céu, e branco puro deixaria
-                o desenho boiando. */}
-            <div className="from-caqui-sand-100 absolute inset-0 bg-gradient-to-b to-white" />
+      <HeroiDaHome titulo={titulo} subtitulo={subtitulo} proximaSaida={agenda.saidas[0] ?? null} />
 
-            {/* O sol. Camada mais distante, quase parada — é o que está no
-                horizonte. */}
-            {/* À direita e alto, longe da headline: na logo o sol nasce ATRÁS
-                da serra, nunca no meio do texto. */}
-            <CamadaHero profundidade={0.06} className="top-[10%] flex justify-end pr-[8%]">
-              <div className="from-caqui-orange-400 to-caqui-orange-600 size-56 rounded-full bg-gradient-to-b opacity-90 sm:size-72" />
-            </CamadaHero>
-
-            {/* O céu. Fica ENTRE o sol e a serra: nuvem passando na frente da
-                montanha é o que a coloca no espaço certo, e nuvem por cima do
-                sol tira dele o papel de ponto mais distante da cena. */}
-            <Nuvens />
-
-            {/* Serra distante. Respira mais devagar e desloca menos: o que está
-                longe se move menos, a mesma regra que governa o parallax. */}
-            <CamadaHero profundidade={0.12} className="bottom-0 opacity-45">
-              <div className="serra-respirando [--duracao:64s]">
-                <Montanhas className="h-56 sm:h-72" />
-              </div>
-            </CamadaHero>
-
-            {/* Serra próxima: o teto de 0,18 do projeto. O atraso desencontra as
-                duas cristas — em fase elas andariam como um bloco só, que é
-                exatamente o que mata a sensação de profundidade. */}
-            <CamadaHero profundidade={0.18} className="-bottom-6">
-              <div className="serra-respirando [--atraso:-11s] [--duracao:44s]">
-                <Montanhas className="h-64 sm:h-80" />
-              </div>
-            </CamadaHero>
-          </>
-        }
-      >
-        <div className="mx-auto w-full max-w-7xl px-5 pt-32 pb-16 sm:px-8 sm:pb-24">
-          <p className="text-caqui-ink-700 text-rotulo font-mono uppercase">
-            Ecoturismo aventura · Mogi das Cruzes · SP
-          </p>
-
-          <h1 className="text-display-xl mt-4 max-w-4xl uppercase">{titulo}</h1>
-
-          <p className="text-caqui-ink-700 text-corpo-lg mt-6 max-w-xl">{subtitulo}</p>
-
-          <div className="mt-8 flex flex-wrap gap-4">
-            <LinkBotao href="/agenda" tamanho="lg">
-              Ver a agenda
-            </LinkBotao>
-            <LinkBotao href="/trekking" tamanho="lg" variante="secondary">
-              Conhecer os roteiros
-            </LinkBotao>
-          </div>
-        </div>
-      </Hero>
-
-      <FaixaDeCredibilidade settings={settings} />
+      <Manifesto />
 
       {/* ── Próximas saídas ─────────────────────────────────────────────────
-          O carrossel sangra até a borda da tela de propósito: um card cortado
-          na direita é o que avisa que a lista continua, sem precisar de
-          bolinha de paginação nem de seta piscando no celular. */}
-      <section aria-labelledby="proximas" className="py-16 sm:py-20">
-        <div className="mx-auto mb-8 flex w-full max-w-7xl flex-wrap items-end justify-between gap-4 px-5 sm:px-8">
+          Lista, não carrossel de cards. O motivo está inteiro no cabeçalho de
+          `LinhaDeSaida`: sem uma única fotografia no banco, cada card renderiza
+          o grafismo de vazio, e seis retângulos cinzas leem como defeito. A
+          lista lidera pela data — que é o que a home existe para responder. */}
+      <section aria-labelledby="proximas" className="pt-16 pb-20 sm:pt-20 sm:pb-24">
+        <div className="mx-auto mb-10 flex w-full max-w-7xl flex-wrap items-end justify-between gap-4 px-5 sm:px-8">
           <div>
             <p className="text-caqui-ink-700 text-rotulo font-mono uppercase">Com data marcada</p>
             <h2 id="proximas" className="text-display-l mt-2 uppercase">
@@ -173,24 +116,34 @@ export default async function PaginaInicial() {
             .
           </p>
         ) : (
-          <Carrossel rotulo="Próximas saídas com data marcada">
+          /* `data-cena-lista` escalona a entrada das linhas pela rolagem, em
+             CSS puro: cada uma cruza a borda da tela num momento diferente, e o
+             stagger sai de graça — inclusive na ordem certa quando o layout
+             reflui no celular. Ver o bloco CENA em globals.css. */
+          <div className="border-caqui-rule border-t" data-cena-lista>
             {agenda.saidas.map((saida, indice) => (
-              <ItemDoCarrossel key={saida.id}>
-                <CardSaida saida={saida} prioridade={indice === 0} />
-              </ItemDoCarrossel>
+              <LinhaDeSaida key={saida.id} saida={saida} indice={indice} />
             ))}
-          </Carrossel>
+          </div>
         )}
       </section>
 
+      {/* A faixa de credenciais desce para DEPOIS da oferta. No topo ela pedia
+          confiança antes de existir desejo; aqui ela responde à objeção que
+          nasce ao ver um preço — "e eu vou com quem?". */}
+      <FaixaDeCredibilidade settings={settings} />
+
       {/* ── Caqui Wear ──────────────────────────────────────────────────────
-          Fundo escuro: é a única seção da home que muda de superfície, e a
-          troca é o que separa "a operação" de "a marca". Aqui o laranja pode
-          ser texto — sobre `ink-900` ele dá 8,31:1 — e por isso existe o token
-          `realce-escuro`, com outro nome porque tem outra regra de uso. */}
+          Fundo escuro: a troca de superfície é o que separa "a operação" de
+          "a marca". Usa `palco-noite` (o mesmo do herói) e não mais
+          `bg-caqui-ink-900` solto — duas seções escuras com pretos diferentes
+          na mesma página leem como erro de impressão.
+          Aqui o laranja pode ser texto: sobre `noite-900` ele dá 8,13:1, e é
+          por isso que existe o token `realce-escuro`, com outro nome porque tem
+          outra regra de uso. */}
       <section
         aria-labelledby="wear"
-        className="bg-caqui-ink-900 relative overflow-hidden py-16 text-white sm:py-20"
+        className="palco-noite relative overflow-hidden py-16 sm:py-20"
       >
         <div className="pointer-events-none absolute inset-x-0 bottom-0 opacity-15" aria-hidden>
           <Montanhas className="h-40 w-full" />
@@ -220,9 +173,17 @@ export default async function PaginaInicial() {
                 <li key={produto.slug}>
                   <Link
                     href={`/wear/${produto.slug}`}
-                    className="border-caqui-rule-invertido block aspect-square overflow-hidden rounded-xs border"
+                    className="border-caqui-rule-noite block aspect-square overflow-hidden rounded-xs border"
                   >
-                    <Capa midia={produto.capa} sizes="(min-width: 64rem) 12rem, 30vw" />
+                    {/* `semente` para as três miniaturas não saírem com a
+                        MESMA gravura: nenhum produto tem foto no banco, e três
+                        retângulos idênticos lado a lado leem como falha de
+                        carregamento. Ver `MidiaVazia` em `midia/imagem.tsx`. */}
+                    <Capa
+                      midia={produto.capa}
+                      semente={produto.slug}
+                      sizes="(min-width: 64rem) 12rem, 30vw"
+                    />
                     <span className="sr-only">{produto.nome}</span>
                   </Link>
                 </li>
@@ -238,7 +199,7 @@ export default async function PaginaInicial() {
           antes do carrossel, ela competiria com a única coisa que a home
           precisa entregar — uma data. */}
       <section className="mx-auto w-full max-w-7xl px-5 pb-20 sm:px-8">
-        <div className="border-caqui-rule grid gap-8 border-t pt-12 md:grid-cols-3">
+        <div className="border-caqui-rule grid gap-8 border-t pt-12 sm:grid-cols-2 lg:grid-cols-4">
           {CAMINHOS.map((caminho, indice) => (
             <Revelar key={caminho.href} atraso={indice * 70}>
               <Link
@@ -270,9 +231,15 @@ const CAMINHOS = [
   },
   {
     href: '/trekking',
-    titulo: 'Expedições',
+    titulo: 'Trekking',
     texto: 'Os roteiros: distância, altimetria, dificuldade e o que esperar de cada um.',
     acao: 'Ver os roteiros',
+  },
+  {
+    href: '/guia-particular',
+    titulo: 'Guia particular',
+    texto: 'Saída fechada só para o seu grupo, no destino e na data que você escolher.',
+    acao: 'Pedir um orçamento',
   },
   {
     href: '/sobre',

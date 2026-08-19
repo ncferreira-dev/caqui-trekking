@@ -36,7 +36,20 @@ import type { MediaDTO } from '@/server/dto/public-dto'
  * de CSS grid, sem biblioteca de masonry e sem medir nada em JavaScript.
  */
 
-export function Galeria({ imagens, titulo }: { imagens: MediaDTO[]; titulo: string }) {
+export function Galeria({
+  imagens,
+  titulo,
+  /**
+   * Slug do roteiro. Só é usado quando NÃO há foto: escolhe qual gravura
+   * aparece no lugar, para dois roteiros sem foto não abrirem com a mesma
+   * imagem. Ver `MidiaVazia`.
+   */
+  semente,
+}: {
+  imagens: MediaDTO[]
+  titulo: string
+  semente?: string
+}) {
   const [aberta, setAberta] = useState<number | null>(null)
 
   const principal = imagens[0]
@@ -46,7 +59,7 @@ export function Galeria({ imagens, titulo }: { imagens: MediaDTO[]; titulo: stri
   if (!principal) {
     return (
       <div className="border-caqui-ink-900 chanfro-md aspect-[3/2] overflow-hidden border">
-        <MidiaVazia />
+        <MidiaVazia {...(semente ? { semente } : {})} />
       </div>
     )
   }

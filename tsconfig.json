@@ -45,5 +45,25 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "src/generated"]
+  // -------------------------------------------------------------------
+  // A COPIA DO ICLOUD.
+  //
+  // A pasta do projeto esta dentro do iCloud Drive, e o sincronizador cria
+  // copias com o nome terminado em " 2" quando ve o mesmo arquivo escrito de
+  // dois lugares. Dentro de `.next/types/` isso derruba o typecheck com
+  // "Duplicate identifier 'LayoutProps'", e o erro nao tem nada a ver com o
+  // codigo que a pessoa acabou de escrever.
+  //
+  // Aconteceu duas vezes em 18/08/2026. Apagar os arquivos resolve por uma
+  // hora; este padrao resolve enquanto a pasta continuar no iCloud.
+  //
+  // O curinga e `?` e nao `[0-9]`: o glob do tsconfig entende `*`, `?` e `**`,
+  // e NAO entende classe de caractere. Escrito com `[0-9]` o padrao nao casa
+  // com nada e a excecao nao funciona, silenciosamente. Testado criando a
+  // copia a mao e rodando o typecheck.
+  //
+  // A CORRECAO DE VERDADE e tirar o projeto do iCloud Drive, e ela e do dono
+  // da maquina. Isto aqui e o curativo declarado, nao a cura.
+  // -------------------------------------------------------------------
+  "exclude": ["node_modules", "src/generated", "**/* ?.ts", "**/* ?.tsx", "**/* ?.d.ts"]
 }

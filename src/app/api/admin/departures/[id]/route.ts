@@ -36,6 +36,10 @@ const atualizarSchema = z
       .optional(),
     meetingLat: z.number().min(-90).max(90).nullable().optional(),
     meetingLng: z.number().min(-180).max(180).nullable().optional(),
+    // Estava só no POST: dava para escrever a observação interna na criação e
+    // nunca mais mexer nela, nem lê-la em tela nenhuma. O campo não sai em
+    // rota pública, e continua não saindo.
+    internalNotes: z.string().trim().max(2000).nullable().optional(),
     status: z.enum(['DRAFT', 'PUBLISHED']).optional(),
   })
   .strict()

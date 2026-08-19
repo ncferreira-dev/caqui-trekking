@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 
+import { limitarLeituraPublica } from '@/lib/api/rate-limit'
 import { ok } from '@/lib/api/respond'
 import { intervaloDoMes } from '@/lib/datetime'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
@@ -18,6 +19,8 @@ export const dynamic = 'force-dynamic'
  * servem de prova social e histórico.
  */
 export const GET = rota(async (request: NextRequest) => {
+  limitarLeituraPublica(request, 'departures')
+
   const url = new URL(request.url)
   const filtros = validarOuFalhar(filtrosDepartureSchema.safeParse(queryParaObjeto(url)))
 

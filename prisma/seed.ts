@@ -2,12 +2,7 @@ import bcrypt from 'bcryptjs'
 
 import { PrismaClient } from '../src/generated/prisma/client'
 import { createPgAdapter } from '../src/lib/db-adapter'
-import {
-  Availability,
-  ContentStatus,
-  DepartureStatus,
-  Difficulty,
-} from '../src/generated/prisma/enums'
+import { ContentStatus, DepartureStatus, Difficulty } from '../src/generated/prisma/enums'
 
 /**
  * Seed idempotente.
@@ -91,9 +86,10 @@ const EXPEDICOES = [
     departure: {
       startAtLocal: '2026-08-08T07:00:00',
       meetingPoint: 'Portaria da Fazenda Santa Rita, Mogi das Cruzes/SP',
+      capacity: 15,
+      seatsTaken: 4,
       meetingTimeLocal: '07:00',
       priceCents: 19_990,
-      availability: Availability.AVAILABLE,
     },
   },
   {
@@ -121,9 +117,10 @@ const EXPEDICOES = [
     departure: {
       startAtLocal: '2026-08-15T06:00:00',
       meetingPoint: 'Praça de Quatinga, Mogi das Cruzes/SP',
+      capacity: 20,
+      seatsTaken: 6,
       meetingTimeLocal: '06:00',
       priceCents: 9_000,
-      availability: Availability.AVAILABLE,
     },
   },
   {
@@ -149,9 +146,10 @@ const EXPEDICOES = [
     departure: {
       startAtLocal: '2026-08-16T08:00:00',
       meetingPoint: 'Base da tirolesa, estrada de Taiaçupeba, Mogi das Cruzes/SP',
+      capacity: 10,
+      seatsTaken: 10,
       meetingTimeLocal: '08:00',
       priceCents: 29_900,
-      availability: Availability.SOLD_OUT,
     },
   },
   {
@@ -186,9 +184,10 @@ const EXPEDICOES = [
     departure: {
       startAtLocal: '2026-08-23T03:00:00',
       meetingPoint: 'Portal de Extrema/MG, na Fernão Dias',
+      capacity: 12,
+      seatsTaken: 5,
       meetingTimeLocal: '03:00',
       priceCents: 27_900,
-      availability: Availability.AVAILABLE,
     },
   },
   {
@@ -223,9 +222,10 @@ const EXPEDICOES = [
     departure: {
       startAtLocal: '2026-08-29T05:00:00',
       meetingPoint: 'Sede Teresópolis do PARNASO, Teresópolis/RJ',
+      capacity: 8,
+      seatsTaken: 6,
       meetingTimeLocal: '05:00',
       priceCents: 42_500,
-      availability: Availability.LAST_SPOTS,
     },
   },
 ] as const
@@ -408,17 +408,33 @@ const PRODUTOS = [
 // Dados de exemplo — os reais entram pelo CRM. Servem para a página de
 // expedição ter o bloco "guias responsáveis" testável desde já.
 
+/**
+ * ⚠️ OS EXEMPLOS NÃO CARREGAM NÚMERO DE CREDENCIAL. NUNCA.
+ *
+ * Até 18/08/2026 estes dois registros traziam `cadasturNumber:
+ * '00.000000.00-0'` e `pesmCredential: 'PESM-0000'` — e o site EM PRODUÇÃO
+ * publicava os dois em `/sobre`, dentro de uma etiqueta escrita "Cadastur".
+ *
+ * Cadastur é registro do Ministério do Turismo e PESM é credenciamento do
+ * Parque Estadual da Serra do Mar. Publicar um número inventado ao lado desses
+ * nomes é alegar credencial de atividade regulada. O "(exemplo)" no nome
+ * atenua para quem lê com atenção e não atenua nada para quem bate o olho na
+ * etiqueta — nem para um print em conversa de WhatsApp.
+ *
+ * A regra que fica: dado de credencial é `null` até a Caqui informar o real.
+ * Ausência é honesta; número de mentira não é. É a mesma doutrina que já vale
+ * para `cadasturNumber` e `pesmCredentials` em `site_settings`, retirados do
+ * seed pelo mesmo motivo.
+ */
 const GUIAS = [
   {
     name: 'Guia responsável (exemplo)',
     bio: 'Guia de turismo cadastrado no Cadastur, com atuação em trilhas e rapel no Alto Tietê.',
-    cadasturNumber: '00.000000.00-0',
     sortOrder: 1,
   },
   {
     name: 'Monitor credenciado PESM (exemplo)',
     bio: 'Monitor ambiental credenciado pelo Parque Estadual da Serra do Mar.',
-    pesmCredential: 'PESM-0000',
     sortOrder: 2,
   },
 ] as const
@@ -452,7 +468,7 @@ async function main() {
       // texto-placeholder ("a preencher", "monitores credenciados") fazia o
       // site exibir isso como se fosse a credencial. O dono coloca a real no
       // CRM (Config); até lá, não aparece nada — melhor que aparecer um rótulo.
-      heroTitle: 'Venha viver novas experiências',
+      heroTitle: 'A serra começa aqui',
       heroSubtitle: 'Ecoturismo e aventura em Mogi das Cruzes e região',
     },
   })
@@ -520,7 +536,16 @@ async function main() {
         meetingPoint: departure.meetingPoint,
         meetingTimeLocal: departure.meetingTimeLocal,
         priceCents: departure.priceCents,
-        availability: departure.availability,
+        // A DISPONIBILIDADE NÃO É SEMEADA. Ela sai da conta.
+        //
+        // Até 18/08/2026 cada saída trazia um `availability` fixo aqui, e o
+        // seed era mais um lugar capaz de escrever aquele campo sem passar
+        // pelo histórico. Agora o seed semeia os dois números do livro do
+        // operador, e o selo do site é derivado deles em
+        // `src/lib/vagas.ts` — inclusive o "esgotado" da tirolesa (10 de 10) e
+        // o "últimas vagas" do Escalavrado (2 restantes, limiar 3).
+        capacity: departure.capacity,
+        seatsTaken: departure.seatsTaken,
         status: DepartureStatus.PUBLISHED,
       },
     })

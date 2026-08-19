@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 
+import { limitarLeituraPublica } from '@/lib/api/rate-limit'
 import { ok } from '@/lib/api/respond'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
 import { filtrosTripSchema, queryParaObjeto } from '@/lib/api/schemas'
@@ -14,6 +15,8 @@ export const dynamic = 'force-dynamic'
  * próxima saída. Filtros: dificuldade, tag, faixa de preço (em centavos).
  */
 export const GET = rota(async (request: NextRequest) => {
+  limitarLeituraPublica(request, 'trips')
+
   const url = new URL(request.url)
   const filtros = validarOuFalhar(filtrosTripSchema.safeParse(queryParaObjeto(url)))
 

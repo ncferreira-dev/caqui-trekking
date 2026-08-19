@@ -23,6 +23,10 @@ export const SELECT_MEDIA = {
   // Sai para o DTO derivar `principal`, e nunca cru: o front recebe o booleano
   // pronto, não a posição para interpretar por conta própria.
   sortOrder: true,
+  // A cor que a foto mostra. Só significa alguma coisa em foto de PRODUTO;
+  // em roteiro e guia é sempre nulo, e nulo já quer dizer "serve para todas".
+  // Ver `lib/media/cor-da-foto.ts`.
+  colorName: true,
 } as const
 
 /**
@@ -42,7 +46,12 @@ export const SELECT_DEPARTURE_PUBLICA = {
   meetingLng: true,
   priceCents: true,
   compareAtPriceCents: true,
-  availability: true,
+  // A CONTA DE VAGAS. Os quatro juntos, sempre: `estadoDeVagas` precisa dos
+  // quatro para responder, e trazer três produz um selo errado em silêncio.
+  capacity: true,
+  seatsTaken: true,
+  lastSpotsAt: true,
+  availabilityOverride: true,
 } as const
 
 export const SELECT_TAG = {
@@ -50,6 +59,32 @@ export const SELECT_TAG = {
   label: true,
   icon: true,
 } as const
+
+/**
+ * O FILTRO DO GUIA NA API PÚBLICA.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * O DEFEITO QUE ORIGINOU ISTO, ENCONTRADO EM 18/08/2026
+ * ════════════════════════════════════════════════════════════════════════════
+ * `/api/guides` sempre filtrou `active` e `deletedAt`. Os JOINS de saída e de
+ * roteiro NÃO filtravam nada, e é aí que mora a diferença que ninguém percebe:
+ * desativar ou arquivar um guia o tirava da página institucional, dando a
+ * impressão de que ele havia saído do ar, enquanto ele continuava sendo servido
+ * com NOME COMPLETO, BIO, CADASTUR e CREDENCIAL PESM em
+ * `GET /api/trips/:slug` e `GET /api/departures/:id` — e portanto na página
+ * pública de todo roteiro em que já guiou.
+ *
+ * Cadastur e PESM são registro profissional nominal. De uma pessoa que saiu da
+ * equipe, publicados em rota anônima e cacheada na CDN.
+ *
+ * É o buraco conhecido da regra 3 do schema: o filtro automático de soft delete
+ * vale para o nível de cima da consulta, e RELAÇÃO ANINHADA precisa do filtro
+ * escrito à mão.
+ *
+ * Um `where` só, num lugar só, usado pelos dois joins. Ver
+ * `src/test/guia-arquivado.test.ts`.
+ */
+export const WHERE_GUIA_PUBLICA = { guide: { active: true, deletedAt: null } } as const
 
 export const SELECT_GUIA = {
   id: true,

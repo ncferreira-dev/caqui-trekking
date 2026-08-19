@@ -49,44 +49,60 @@ export async function autenticar(email: string, senha: string): Promise<Resultad
     })
   }
 
-  if (usuario.lockedUntil && usuario.lockedUntil > new Date()) {
-    const minutos = Math.ceil((usuario.lockedUntil.getTime() - Date.now()) / 60_000)
-    throw new AppError(
-      ErrorCode.ACCOUNT_LOCKED,
-      `Conta bloqueada por tentativas de acesso. Tente em ${minutos} min.`,
-      { status: 423 },
-    )
-  }
-
+  // ══════════════════════════════════════════════════════════════════════════
+  // A SENHA É CONFERIDA ANTES DO BLOQUEIO, E ISSO É A CORREÇÃO DE 18/08/2026
+  // ══════════════════════════════════════════════════════════════════════════
+  // Antes, o bloqueio era conferido primeiro e respondia 423 ACCOUNT_LOCKED.
+  // Duas consequências saíam daí, e as duas são sérias:
+  //
+  //  1. VIRAVA UM ORÁCULO. E-mail sem conta responde 401 sempre; e-mail com
+  //     conta responde 423 na quinta tentativa. Ou seja, o status dizia quais
+  //     e-mails têm acesso ao CRM. O comentário logo abaixo afirmava o
+  //     contrário ("a mensagem é a MESMA de usuário inexistente"), e a
+  //     mensagem era mesmo; o STATUS não.
+  //
+  //  2. QUALQUER PESSOA TRANCAVA A CAQUI PARA FORA DO PRÓPRIO CRM. Cinco
+  //     requisições a cada quinze minutos, de um IP só, sem sessão. O e-mail
+  //     necessário não é segredo: é o comercial, publicado no rodapé do site e
+  //     em `GET /api/settings`. E não existe recuperação de senha no sistema,
+  //     então não havia saída pelo produto: só esperar, ou mexer no banco. No
+  //     sábado de manhã, com o grupo no ponto de encontro, o painel não abriria.
+  //
+  // Agora o bloqueio barra apenas quem NÃO sabe a senha, que é exatamente o
+  // ataque que ele existe para conter. A taxa de adivinhação não mudou: cinco
+  // tentativas por janela continuam sendo cinco tentativas por janela, porque
+  // durante o bloqueio a tentativa errada nem é contada, e portanto também não
+  // renova a janela.
   const senhaConfere = await verificarSenha(senha, usuario.passwordHash)
+  const bloqueado = usuario.lockedUntil !== null && usuario.lockedUntil > new Date()
 
   if (!senhaConfere) {
-    const tentativas = usuario.failedLoginAttempts + 1
-    const bloquear = tentativas >= MAX_TENTATIVAS
+    // Durante o bloqueio a tentativa não conta. Sem isso, quem ataca renova a
+    // janela para sempre e o bloqueio vira a própria negação de serviço.
+    if (!bloqueado) {
+      const tentativas = usuario.failedLoginAttempts + 1
+      const bloquear = tentativas >= MAX_TENTATIVAS
 
-    await prisma.user.update({
-      where: { id: usuario.id },
-      data: {
-        failedLoginAttempts: bloquear ? 0 : tentativas,
-        lockedUntil: bloquear ? new Date(Date.now() + BLOQUEIO_MINUTOS * 60_000) : null,
-      },
-    })
-
-    if (bloquear) {
-      throw new AppError(
-        ErrorCode.ACCOUNT_LOCKED,
-        `Conta bloqueada por ${BLOQUEIO_MINUTOS} minutos após ${MAX_TENTATIVAS} tentativas.`,
-        { status: 423 },
-      )
+      await prisma.user.update({
+        where: { id: usuario.id },
+        data: {
+          failedLoginAttempts: bloquear ? 0 : tentativas,
+          lockedUntil: bloquear ? new Date(Date.now() + BLOQUEIO_MINUTOS * 60_000) : null,
+        },
+      })
     }
 
-    // A mensagem é a MESMA de usuário inexistente, de propósito: não revela se
-    // o e-mail existe.
+    // UMA resposta só para todo fracasso: e-mail que não existe, conta
+    // desativada, senha errada, conta bloqueada. Mesmo status, mesmo código,
+    // mesma mensagem, mesmo tempo. É o que fecha o oráculo de verdade.
     throw new AppError(ErrorCode.INVALID_CREDENTIALS, 'E-mail ou senha incorretos.', {
       status: 401,
     })
   }
 
+  // Senha certa: entra, o contador zera e o bloqueio some, mesmo que estivesse
+  // ativo. Quem sabe a senha é a dona do CRM; mantê-la de fora só serviria a
+  // quem trancou a porta de propósito.
   await prisma.user.update({
     where: { id: usuario.id },
     data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },

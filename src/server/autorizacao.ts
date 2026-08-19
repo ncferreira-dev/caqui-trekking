@@ -66,22 +66,56 @@ export const AUTORIZACAO: Record<ChaveDeRota, RegraDeRota> = {
   // DELETE aqui é EXCLUIR de vez (hard delete), e só de saída passada ou
   // cancelada — a regra fica no serviço. Destrutivo, então SO_OWNER.
   'departures/[id]': { PATCH: TODOS, DELETE: SO_OWNER },
-  // O campo mais mexido do sistema. ADMIN precisa, senão o CRM não serve.
+  // O LIVRO DE VAGAS. Passou a ser o toque de todo dia desde 18/08/2026:
+  // quem fecha a venda no WhatsApp lança aqui, e o selo do site sai da conta.
+  // ADMIN precisa, senão o CRM não serve para quem opera.
+  'departures/[id]/vagas': { PATCH: TODOS },
+  // A EXCEÇÃO: forçar o selo contra a conta (chuva, parque interditado) ou
+  // desfazer a exceção. Rara, e por isso pede motivo. Continua sendo ADMIN:
+  // quem decide não subir é quem está no ponto de encontro às cinco da manhã.
   'departures/[id]/availability': { PATCH: TODOS },
+  // O FECHAMENTO: quantos foram, quanto entrou, quanto custou. ADMIN, porque
+  // quem guiou é quem sabe quantos foram.
+  'departures/[id]/fechar': { POST: TODOS },
   'departures/[id]/duplicate': { POST: TODOS },
   // Cancelar avisa gente que já comprou. Continua sendo rotina, mas a
   // interface exige confirmação escrita — ver components/crm/confirmar.tsx.
   'departures/[id]/cancel': { POST: TODOS },
 
   // ── Conteúdo ──────────────────────────────────────────────────────────────
-  trips: { GET: TODOS },
+  // POST entrou em 18/08/2026. Até então o CRM não tinha como criar roteiro:
+  // os cinco existentes vieram do seed, e `Trip` é a entidade que todo o resto
+  // do sistema pendura. ADMIN pode, porque escrever roteiro é trabalho de quem
+  // opera; PUBLICAR também é ADMIN (`PATCH`), e destruir continua só do OWNER.
+  trips: { GET: TODOS, POST: TODOS },
+  // A ordem da vitrine. Entrou em 18/08/2026: o site sempre ordenou por
+  // `featured` e `sortOrder`, e nenhuma tela escrevia nenhum dos dois.
+  // Reordenar é rotina de conteúdo, como publicar.
+  'trips/reorder': { PATCH: TODOS },
   // DELETE aqui é ARQUIVAR (soft delete). Só OWNER: tirar um roteiro do ar
   // apaga a vitrine de um produto inteiro.
   'trips/[id]': { PATCH: TODOS, DELETE: SO_OWNER },
   products: { GET: TODOS, POST: TODOS },
+  'products/reorder': { PATCH: TODOS },
   // Editar peça e reconciliar variantes. Cadastro de conteúdo é rotina de ADMIN.
-  'products/[id]': { PATCH: TODOS },
+  // DELETE é ARQUIVAR (soft delete) e é só do OWNER, pela mesma régua de
+  // `trips/[id]`: tirar da loja o que o site publica é decisão de quem responde
+  // pela empresa. Entrou em 18/08/2026 — até então `Product.deletedAt` existia,
+  // era respeitado em toda leitura, e nenhum caminho do sistema o escrevia.
+  'products/[id]': { PATCH: TODOS, DELETE: SO_OWNER },
   'variants/[id]': { PATCH: TODOS },
+  // ── Guias ─────────────────────────────────────────────────────────────────
+  // Entrou em 18/08/2026. `Guide` só tinha rota pública de leitura: nome,
+  // Cadastur e credencial do PESM eram imutáveis pelo painel, e são justamente
+  // os dados que o site publica como prova de que a operação é regular.
+  //
+  // Cadastrar e editar é rotina de ADMIN. ARQUIVAR é do OWNER, pela mesma
+  // régua de `trips/[id]`: tirar do ar quem o site apresenta como equipe é
+  // decisão de quem responde pela empresa.
+  guides: { GET: TODOS, POST: TODOS },
+  'guides/reorder': { PATCH: TODOS },
+  'guides/[id]': { PATCH: TODOS, DELETE: SO_OWNER },
+
   tags: { GET: TODOS, POST: TODOS },
   // DELETE de tag é TODOS, e não SO_OWNER como esta linha chegou a dizer.
   // A tabela nasceu com o palpite errado e o teste pegou: a política escrita
@@ -92,6 +126,9 @@ export const AUTORIZACAO: Record<ChaveDeRota, RegraDeRota> = {
 
   // ── Mídia ─────────────────────────────────────────────────────────────────
   media: { GET: TODOS, POST: TODOS },
+  // PATCH cobre DOIS gestos com auditorias distintas: corrigir o texto
+  // alternativo (`media.alt`) e ligar a foto a uma cor (`media.cor`). Os dois
+  // são cadastro de conteúdo, rotina de ADMIN.
   'media/[id]': { PATCH: TODOS, DELETE: TODOS },
   'media/reorder': { PATCH: TODOS },
 
@@ -105,4 +142,8 @@ export const AUTORIZACAO: Record<ChaveDeRota, RegraDeRota> = {
   settings: { GET: TODOS, PUT: TODOS },
   // Criar usuário é criar acesso. Só OWNER, sem exceção.
   users: { GET: SO_OWNER, POST: SO_OWNER },
+  // Desativar, rebaixar e resetar senha. Entrou em 18/08/2026: até então o CRM
+  // sabia criar acesso e não sabia tirar, e `User.active` era um estado que
+  // nenhum caminho do sistema alcançava. Mesma porta estreita do POST.
+  'users/[id]': { PATCH: SO_OWNER },
 }

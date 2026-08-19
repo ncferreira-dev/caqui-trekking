@@ -7,6 +7,7 @@ import {
   SELECT_GUIA,
   SELECT_MEDIA,
   SELECT_TAG,
+  WHERE_GUIA_PUBLICA,
 } from '@/server/services/selects'
 
 export type FiltrosDeparture = {
@@ -36,6 +37,16 @@ export type ItemAgendaDTO = SaidaDTO & {
   trip: {
     slug: string
     titulo: string
+    /**
+     * O que a saída É, em uma linha.
+     *
+     * Entrou em 18/08/2026: a agenda listava só nomes próprios em caixa-alta
+     * ("ESCALAVRADO · TERESÓPOLIS"), que não dizem nada para quem não conhece a
+     * região. O campo já existia no banco e em toda linha publicada — "Trilha
+     * noturna e rapel na descida", "Rapel na cachoeira, café da manhã e
+     * feijoada" — e só não estava sendo trazido para cá.
+     */
+    subtitulo: string | null
     cidade: string
     estado: string
     dificuldade: string
@@ -53,7 +64,23 @@ export async function listarDepartures(
 ): Promise<{ saidas: ItemAgendaDTO[]; total: number }> {
   const agora = new Date()
 
-  const limiteInferior = filtros.incluirEncerradas ? filtros.de : (filtros.de ?? agora)
+  // ──────────────────────────────────────────────────────────────────────────
+  // `incluirEncerradas: false` MANDA MAIS QUE `de`, SEMPRE
+  // ──────────────────────────────────────────────────────────────────────────
+  // A versão anterior era `filtros.de ?? agora`: mandando `de`, o `agora` era
+  // descartado e a flag parava de significar coisa alguma. E `?mes=` na rota é
+  // açúcar que SEMPRE produz um `de` — então `/api/departures?mes=<corrente>`
+  // devolvia as saídas que já aconteceram, contra o que a própria rota
+  // documenta. Quem consome confiando no padrão publica data vencida.
+  //
+  // O certo é o MAIS TARDE dos dois. Um `de` no futuro continua valendo por
+  // inteiro; um `de` no passado é elevado até agora. Com `incluirEncerradas`,
+  // nada disso se aplica e o `de` vale como veio.
+  const limiteInferior = filtros.incluirEncerradas
+    ? filtros.de
+    : filtros.de && filtros.de > agora
+      ? filtros.de
+      : agora
 
   const where = {
     status: 'PUBLISHED' as const,
@@ -90,6 +117,7 @@ export async function listarDepartures(
           select: {
             slug: true,
             title: true,
+            subtitle: true,
             city: true,
             state: true,
             difficulty: true,
@@ -114,6 +142,7 @@ export async function listarDepartures(
       trip: {
         slug: d.trip.slug,
         titulo: d.trip.title,
+        subtitulo: d.trip.subtitle,
         cidade: d.trip.city,
         estado: d.trip.state,
         dificuldade: d.trip.difficulty,
@@ -229,6 +258,7 @@ export async function buscarDeparturePorId(id: number): Promise<
         select: {
           slug: true,
           title: true,
+          subtitle: true,
           city: true,
           state: true,
           difficulty: true,
@@ -237,7 +267,10 @@ export async function buscarDeparturePorId(id: number): Promise<
           images: { select: SELECT_MEDIA, orderBy: { sortOrder: 'asc' }, take: 1 },
         },
       },
-      guides: { select: { guide: { select: SELECT_GUIA } } },
+      // `WHERE_GUIA_PUBLICA`: sem ele, guia desativado ou arquivado continua
+      // saindo aqui com nome, Cadastur e PESM. Ver o comentário do token em
+      // `selects.ts`.
+      guides: { where: WHERE_GUIA_PUBLICA, select: { guide: { select: SELECT_GUIA } } },
     },
   })
 
@@ -251,6 +284,7 @@ export async function buscarDeparturePorId(id: number): Promise<
     trip: {
       slug: d.trip.slug,
       titulo: d.trip.title,
+      subtitulo: d.trip.subtitle,
       cidade: d.trip.city,
       estado: d.trip.state,
       dificuldade: d.trip.difficulty,

@@ -4,6 +4,8 @@ import { CaixaDeMensagens, type MensagemDoPainel } from '@/components/crm/caixa-
 import { CabecalhoDeSecao, Painel, Rotulo, Vazio } from '@/components/crm/pecas'
 import { dataCurta, horaLocal } from '@/lib/datetime'
 import { telefoneBR } from '@/lib/formato'
+import { Paginacao } from '@/components/crm/paginacao'
+import { fatiar } from '@/lib/crm/paginacao'
 import { prisma } from '@/lib/prisma'
 import { exigirSessaoDaPagina } from '@/server/crm/sessao-da-pagina'
 
@@ -25,8 +27,23 @@ export const dynamic = 'force-dynamic'
  * pessoa pediu para ser avisada de uma vaga específica, e esse pedido continua
  * valendo mesmo sem autorização para campanha.
  */
-export default async function PaginaMensagens() {
+/**
+ * 50 por caixa. As duas listas paginam SEPARADO (`?mensagens=` e `?leads=`):
+ * elas crescem em ritmos muito diferentes, e uma página só faria a segunda
+ * pular junto com a primeira sem ninguém pedir.
+ */
+const POR_PAGINA = 50
+
+export default async function PaginaMensagens({ searchParams }: PageProps<'/crm/mensagens'>) {
   await exigirSessaoDaPagina()
+
+  const params = await searchParams
+  const [totalMensagens, totalLeads] = await Promise.all([
+    prisma.contactMessage.count(),
+    prisma.lead.count(),
+  ])
+  const fatiaMensagens = fatiar(params['mensagens'], totalMensagens, POR_PAGINA)
+  const fatiaLeads = fatiar(params['leads'], totalLeads, POR_PAGINA)
 
   const [mensagens, leads] = await Promise.all([
     prisma.contactMessage.findMany({
@@ -41,7 +58,8 @@ export default async function PaginaMensagens() {
         trip: { select: { title: true } },
       },
       orderBy: [{ read: 'asc' }, { createdAt: 'desc' }],
-      take: 100,
+      take: fatiaMensagens.tamanho,
+      skip: fatiaMensagens.offset,
     }),
     prisma.lead.findMany({
       select: {
@@ -54,7 +72,8 @@ export default async function PaginaMensagens() {
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      take: fatiaLeads.tamanho,
+      skip: fatiaLeads.offset,
     }),
   ])
 
@@ -82,6 +101,12 @@ export default async function PaginaMensagens() {
       <div className="flex flex-col gap-4">
         <Painel titulo="Mensagens de contato" acao={<Rotulo>{dados.length}</Rotulo>}>
           <CaixaDeMensagens mensagens={dados} />
+
+          <Paginacao
+            fatia={fatiaMensagens}
+            itens="mensagens"
+            href={(p) => (p <= 1 ? '/crm/mensagens' : `/crm/mensagens?mensagens=${p}`)}
+          />
         </Painel>
 
         <Painel titulo="Leads: avise-me e newsletter" acao={<Rotulo>{leads.length}</Rotulo>}>
@@ -101,7 +126,7 @@ export default async function PaginaMensagens() {
                 >
                   <span className="text-corpo-sm">{l.name ?? 'Sem nome'}</span>
                   <span className="text-caqui-ink-700 text-micro font-mono">
-                    {l.email ?? (l.phone ? telefoneBR(l.phone) : '—')}
+                    {l.email ?? (l.phone ? telefoneBR(l.phone) : 'Sem contato')}
                   </span>
                   <Rotulo>{l.source}</Rotulo>
                   <span className="ml-auto">
@@ -120,6 +145,11 @@ export default async function PaginaMensagens() {
               ))}
             </ul>
           )}
+          <Paginacao
+            fatia={fatiaLeads}
+            itens="leads"
+            href={(p) => (p <= 1 ? '/crm/mensagens' : `/crm/mensagens?leads=${p}`)}
+          />
         </Painel>
 
         <p className="text-caqui-ink-500 text-micro font-mono uppercase">

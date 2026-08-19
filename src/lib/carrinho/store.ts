@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useSyncExternalStore } from 'react'
+import { MAX_UNIDADES } from '@/lib/carrinho/limites'
 
 /**
  * O carrinho vive no `localStorage`. E guarda o MÍNIMO.
@@ -73,9 +74,26 @@ function ehItemValido(valor: unknown): valor is ItemCarrinho {
   if (typeof item['quantidade'] !== 'number' || !Number.isInteger(item['quantidade'])) return false
   if (item['quantidade'] < 1) return false
 
-  if (item['tipo'] === 'DEPARTURE') return Number.isInteger(item['departureId'])
-  if (item['tipo'] === 'WEAR') return Number.isInteger(item['variantId'])
-  return false
+  // ⚠️ O TETO TAMBÉM VALE NA LEITURA, e não só na soma.
+  //
+  // `localStorage` é entrada NÃO CONFIÁVEL: qualquer pessoa edita pelo console,
+  // e uma versão antiga do site pode ter gravado um número que hoje é inválido
+  // (foi o que aconteceu até 18/08/2026, quando a soma não tinha teto).
+  //
+  // Sem esta linha, a linha envenenada sobrevive ao recarregamento e derruba a
+  // validação do carrinho INTEIRO, incluindo os itens certos. A pessoa fica
+  // presa sem entender por quê, e a saída seria limpar o `localStorage`, que
+  // ela não sabe fazer.
+  //
+  // Descartar em vez de limitar é deliberado: o item some e a pessoa adiciona
+  // de novo, com o número que ela quer. Limitar em silêncio mudaria a
+  // quantidade dela sem avisar.
+  const tipo = item['tipo']
+  if (tipo !== 'DEPARTURE' && tipo !== 'WEAR') return false
+  if (item['quantidade'] > MAX_UNIDADES[tipo]) return false
+
+  if (tipo === 'DEPARTURE') return Number.isInteger(item['departureId'])
+  return Number.isInteger(item['variantId'])
 }
 
 function gravar(itens: ItemCarrinho[]): void {
@@ -178,9 +196,21 @@ export function useCarrinho(): Carrinho {
     // Adicionar o mesmo item soma quantidade em vez de criar uma segunda
     // linha. Duas linhas do mesmo tamanho da mesma camiseta viram uma
     // mensagem confusa no WhatsApp.
+    //
+    // ⚠️ A SOMA PRECISA DO TETO, e a falta dele travava a mochila inteira.
+    //
+    // Cada adição isolada já era limitada pela tela (20 numa saída, 50 numa
+    // peça), mas nada limitava a SOMA de duas adições: 15 + 15 numa saída
+    // gravava 30. O `itemCarrinhoSchema` de `POST /api/cart/validate` recusa
+    // acima de 20, e a validação é do carrinho INTEIRO, então a linha inflada
+    // derrubava a mochila toda, inclusive os itens certos. E `ehItemValido`
+    // só exige inteiro >= 1, então a linha sobrevivia ao recarregar: a pessoa
+    // ficava presa até limpar o `localStorage`, que ela não sabe fazer.
     const proximos = existente
       ? atuais.map((i) =>
-          i.lineId === novo.lineId ? { ...i, quantidade: i.quantidade + novo.quantidade } : i,
+          i.lineId === novo.lineId
+            ? { ...i, quantidade: Math.min(MAX_UNIDADES[i.tipo], i.quantidade + novo.quantidade) }
+            : i,
         )
       : [...atuais, novo]
 

@@ -2,9 +2,14 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { BotaoCadastrarProduto, BotaoEditarProduto } from '@/components/crm/acoes-de-produto'
+import { ArquivarItem } from '@/components/crm/arquivar-item'
+import { FotosDaPeca, type FotoDaPeca } from '@/components/crm/fotos-da-peca'
+import { BotaoDestaque, BotoesDeOrdem } from '@/components/crm/ordem-e-destaque'
+import { Paginacao } from '@/components/crm/paginacao'
 import { CabecalhoDeSecao, Painel, Rotulo, Vazio } from '@/components/crm/pecas'
 import { TabelaDeVariantes, type VarianteDoPainel } from '@/components/crm/tabela-de-variantes'
 import { formatarBRL } from '@/lib/money'
+import { fatiar } from '@/lib/crm/paginacao'
 import { prisma } from '@/lib/prisma'
 import { ROTULO_CATEGORIA } from '@/server/services/product-service'
 import { exigirSessaoDaPagina } from '@/server/crm/sessao-da-pagina'
@@ -30,8 +35,16 @@ export const dynamic = 'force-dynamic'
  * upload funcionando, e o Cloudinary ainda não tem credencial neste projeto.
  * Ver o mesmo argumento em `roteiros/page.tsx` e em docs/10-crm.md.
  */
-export default async function PaginaProdutos() {
-  await exigirSessaoDaPagina()
+/** Mesma régua da tela de roteiros. Ver `lib/crm/paginacao.ts`. */
+const POR_PAGINA = 50
+
+export default async function PaginaProdutos({ searchParams }: PageProps<'/crm/produtos'>) {
+  const sessao = await exigirSessaoDaPagina()
+  const ehOwner = sessao.role === 'OWNER'
+
+  const params = await searchParams
+  const total = await prisma.product.count({ where: { deletedAt: null } })
+  const fatia = fatiar(params['pagina'], total, POR_PAGINA)
 
   const produtos = await prisma.product.findMany({
     where: { deletedAt: null },
@@ -43,6 +56,12 @@ export default async function PaginaProdutos() {
       category: true,
       priceCents: true,
       status: true,
+      featured: true,
+      // As fotos e a cor de cada uma. Ver `fotos-da-peca.tsx`.
+      images: {
+        select: { id: true, url: true, alt: true, colorName: true },
+        orderBy: { sortOrder: 'asc' },
+      },
       variants: {
         select: {
           id: true,
@@ -55,9 +74,14 @@ export default async function PaginaProdutos() {
         orderBy: { sortOrder: 'asc' },
       },
     },
-    orderBy: [{ status: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
-    take: 100,
+    // A mesma ordem da vitrine, pelo mesmo motivo da tela de roteiros: as
+    // setas de subir/descer não podem mostrar uma posição e gravar outra.
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    take: fatia.tamanho,
+    skip: fatia.offset,
   })
+
+  const ordemAtual = produtos.map((p) => p.id)
 
   const totalVariantes = produtos.reduce((n, p) => n + p.variants.length, 0)
   const esgotadas = produtos.reduce((n, p) => n + p.variants.filter((v) => !v.available).length, 0)
@@ -74,8 +98,13 @@ export default async function PaginaProdutos() {
         }
       />
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <BotaoCadastrarProduto />
+        {/* Mesma honestidade da tela de roteiros: as setas mandam na ordem
+            manual, e o destaque passa na frente dela na loja. */}
+        <p className="text-caqui-ink-700 text-corpo-sm">
+          As setas definem a ordem da loja. Peça em destaque aparece antes de todas.
+        </p>
       </div>
 
       {produtos.length === 0 ? (
@@ -101,7 +130,16 @@ export default async function PaginaProdutos() {
                 key={p.id}
                 titulo={p.name}
                 acao={
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <BotoesDeOrdem colecao="products" ids={ordemAtual} id={p.id} rotulo={p.name} />
+
+                    <BotaoDestaque
+                      colecao="products"
+                      id={p.id}
+                      destacado={p.featured}
+                      rotulo={p.name}
+                    />
+
                     <Rotulo>
                       {ROTULO_CATEGORIA[p.category] ?? p.category} · {formatarBRL(p.priceCents)}
                     </Rotulo>
@@ -126,6 +164,24 @@ export default async function PaginaProdutos() {
                         })),
                       }}
                     />
+                    {ehOwner && (
+                      <ArquivarItem
+                        colecao="products"
+                        id={p.id}
+                        nome={p.name}
+                        consequencia="Ela sai da loja e desta lista."
+                      >
+                        <p>
+                          As {p.variants.length} variante(s) somem junto. A mochila de quem já tinha
+                          adicionado avisa que a peça saiu de linha, em vez de quebrar.
+                        </p>
+                        <p className="mt-2">
+                          Se for falta de estoque, marque as variantes como esgotadas em vez de
+                          arquivar. Aquilo volta em um toque.
+                        </p>
+                      </ArquivarItem>
+                    )}
+
                     <Link
                       href={`/wear/${p.slug}`}
                       target="_blank"
@@ -137,11 +193,41 @@ export default async function PaginaProdutos() {
                 }
               >
                 <TabelaDeVariantes variantes={variantes} precoBaseCentavos={p.priceCents} />
+
+                {/* ── Qual foto é de qual cor ──────────────────────────────
+                    Pedido do cliente em 18/08/2026. Fica junto das variantes
+                    de propósito: a cor que o seletor oferece É a da tabela
+                    acima, e ver as duas na mesma tela é o que impede alguém de
+                    procurar uma cor que ainda não cadastrou. */}
+                <div className="border-caqui-rule border-t">
+                  <FotosDaPeca
+                    fotos={fotosDaPeca(p.images)}
+                    cores={[...new Set(p.variants.map((v) => v.colorName))]}
+                    nomeDaPeca={p.name}
+                  />
+                </div>
               </Painel>
             )
           })}
         </div>
       )}
+
+      {/* Fora do ramo vazio/cheio de propósito: a contagem precisa aparecer
+          nos dois casos. "Nenhuma peça" é informação, não ausência dela. */}
+      <Painel className="mt-3">
+        <Paginacao
+          fatia={fatia}
+          itens="peças"
+          href={(p) => (p <= 1 ? '/crm/produtos' : `/crm/produtos?pagina=${p}`)}
+        />
+      </Painel>
     </>
   )
+}
+
+/** Do banco para o que o seletor de cor precisa. */
+function fotosDaPeca(
+  imagens: { id: number; url: string; alt: string; colorName: string | null }[],
+): FotoDaPeca[] {
+  return imagens.map((m) => ({ id: m.id, url: m.url, alt: m.alt, cor: m.colorName }))
 }

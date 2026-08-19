@@ -1,5 +1,7 @@
 import { Footer } from '@/components/shell/footer'
 import { Header } from '@/components/shell/header'
+import { MioloDaLoja } from '@/components/shell/miolo-da-loja'
+import { RolagemSuave } from '@/components/shell/rolagem-suave'
 import { DrawerDaMochila } from '@/components/carrinho/drawer'
 import { ProvedorDaMochila } from '@/components/carrinho/contexto'
 import { WhatsAppFlutuante } from '@/components/shell/whatsapp-flutuante'
@@ -53,10 +55,13 @@ export default async function LayoutLoja({ children }: LayoutProps<'/'>) {
       >
         <Header />
 
-        {/* O alvo do link "pular para o conteúdo" do header. */}
-        <main id="conteudo" className="flex flex-1 flex-col">
-          {children}
-        </main>
+        {/* Devolve a suavidade às âncoras sem devolver o defeito de navegação
+            que `scroll-behavior: smooth` no `html` causava. Ver o arquivo. */}
+        <RolagemSuave />
+
+        {/* O alvo do link "pular para o conteúdo" do header, e o gesto de
+            trocar de página. Ver `miolo-da-loja.tsx`. */}
+        <MioloDaLoja>{children}</MioloDaLoja>
 
         <Footer settings={settings} />
 

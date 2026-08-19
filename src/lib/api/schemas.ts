@@ -223,6 +223,25 @@ export const atualizarTagSchema = z.object({
   icone: z.string().trim().max(60).nullable().optional(),
 })
 
+/**
+ * A cor de uma foto de peça.
+ *
+ * `null` é valor, não ausência: significa "serve para qualquer cor", que é o
+ * padrão e é o jeito de LIMPAR a associação. Por isso `.nullable()` e não
+ * `.optional()`, e por isso a rota decide pelo campo estar PRESENTE.
+ */
+export const corDaFotoSchema = z
+  .object({ cor: z.string().trim().min(1).max(60).nullable() })
+  .strict()
+
+/**
+ * O manifesto de ordem de um catálogo.
+ *
+ * Teto de 500: a Caqui tem unidades de cada coisa, e o limite existe para uma
+ * lista absurda não virar 500 `UPDATE` numa transação só.
+ */
+export const reordenarSchema = z.object({ ids: z.array(idSchema).min(1).max(500) }).strict()
+
 /** Converte `URLSearchParams` em objeto simples para o Zod. */
 export function queryParaObjeto(url: URL): Record<string, string> {
   return Object.fromEntries(url.searchParams.entries())

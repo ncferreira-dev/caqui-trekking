@@ -39,6 +39,7 @@ export type JsonLd = Record<string, unknown>
 export const ANCORA = {
   negocio: '#negocio',
   site: '#site',
+  guiaParticular: '/guia-particular#servico',
 } as const
 
 // ─── Serialização ────────────────────────────────────────────────────────────
@@ -396,5 +397,49 @@ export function listaDaAgenda(
       name: `${item.trip.titulo}, ${dataCurta(new Date(item.inicioUtc))}`,
       url: url(base, `/trekking/${item.trip.slug}`),
     })),
+  }
+}
+
+/**
+ * O guia particular como SERVIÇO.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * `Service` E NÃO `Product`, E A DIFERENÇA IMPORTA PARA O RESULTADO
+ * ────────────────────────────────────────────────────────────────────────────
+ * A tentação é declarar como `Product` porque tem preço em outras páginas do
+ * site. Mas isto não tem preço fixo: é saída fechada, orçada caso a caso. Um
+ * `Product` sem `offers` é um nó incompleto, e o Google trata nó de produto sem
+ * preço como erro no Search Console — a página perde o enriquecimento inteiro.
+ *
+ * `Service` com `areaServed` e `provider` é o tipo certo para "alguém que
+ * executa um trabalho numa região". Ele não pede preço, e é o que conecta a
+ * busca por "guia particular trekking mogi das cruzes" a esta página.
+ *
+ * `serviceType` carrega os termos que a pessoa realmente digita. Não é
+ * palavra-chave enfiada em texto invisível: é o campo que o vocabulário do
+ * schema.org reserva para nomear o serviço, e o nome dele É esse.
+ */
+export function servicoDeGuia(base: string, settings: SettingsDTO | null): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    '@id': url(base, ANCORA.guiaParticular),
+    name: 'Guia particular de trekking',
+    serviceType: ['Guia particular', 'Trekking guiado', 'Saída fechada', 'Ecoturismo'],
+    description:
+      'Saída fechada com guia particular para o seu grupo: destino, data e ritmo definidos com você. Guias cadastrados no Cadastur e monitores credenciados pelo PESM.',
+    provider: { '@id': url(base, ANCORA.negocio) },
+    areaServed: [
+      { '@type': 'City', name: 'Mogi das Cruzes' },
+      { '@type': 'AdministrativeArea', name: 'Alto Tietê' },
+      { '@type': 'State', name: 'São Paulo' },
+    ],
+    // Sem `offers`: o preço é orçado por grupo. Declarar um valor aqui seria
+    // publicar preço que a Caqui teria que honrar.
+    availableChannel: {
+      '@type': 'ServiceChannel',
+      serviceUrl: url(base, '/guia-particular'),
+      ...(settings?.whatsappNumber ? { servicePhone: `+${settings.whatsappNumber}` } : {}),
+    },
   }
 }

@@ -30,7 +30,16 @@ import type { MediaDTO } from '@/server/dto/public-dto'
  * A regra é `motion-safe` e `[@media(hover:hover)]`: só onde há ponteiro de
  * verdade e movimento é bem-vindo.
  */
-export function GaleriaDoProduto({ imagens, nome }: { imagens: MediaDTO[]; nome: string }) {
+export function GaleriaDoProduto({
+  imagens,
+  nome,
+  /** Slug da peça. Só usado quando não há foto. Ver `MidiaVazia`. */
+  semente,
+}: {
+  imagens: MediaDTO[]
+  nome: string
+  semente?: string
+}) {
   const [ativa, setAtiva] = useState(0)
   const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null)
 
@@ -39,7 +48,7 @@ export function GaleriaDoProduto({ imagens, nome }: { imagens: MediaDTO[]; nome:
   if (!principal) {
     return (
       <div className="border-caqui-ink-900 chanfro-md aspect-square overflow-hidden border">
-        <MidiaVazia />
+        <MidiaVazia {...(semente ? { semente } : {})} />
       </div>
     )
   }

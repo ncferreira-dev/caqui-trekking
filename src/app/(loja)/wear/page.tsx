@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 
 import { CardProduto } from '@/components/wear/card-produto'
 import { FiltroDeCategoria } from '@/components/wear/filtro-categoria'
+import { Vitrine } from '@/components/wear/vitrine'
 import { CabecalhoDePagina } from '@/components/shell/cabecalho-de-pagina'
 import { LinkBotao } from '@/components/ui/button'
 import { categoriaProdutoSchema } from '@/lib/api/schemas'
@@ -13,9 +14,9 @@ import {
 } from '@/server/services/product-service'
 
 export const metadata: Metadata = metadataDaPagina({
-  titulo: 'Caqui Wear',
+  titulo: 'Caqui Wear · Loja oficial',
   descricao:
-    'Camiseta, baby look, regata, caneca e óculos da Caqui Trekking. A marca fora da trilha.',
+    'Caqui Wear: camiseta e baby look dry fit, regata, caneca e óculos da Caqui Trekking. A loja oficial da marca, para usar na trilha e fora dela.',
   caminho: '/wear',
 })
 
@@ -73,13 +74,38 @@ export default async function PaginaWear({ searchParams }: PageProps<'/wear'>) {
         {produtos.length === 0 ? (
           <Vazia categoria={categoria} />
         ) : (
-          <ul className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <Vitrine>
             {produtos.map((produto, indice) => (
-              <li key={produto.slug}>
+              <li
+                key={produto.slug}
+                // O NOME DA PEÇA NA TRANSIÇÃO.
+                //
+                // É o que permite ao navegador reconhecer que aquele card na
+                // caixa antiga e este na caixa nova são a MESMA peça, e por
+                // isso ele a move em vez de trocá-la. Sem isto, a troca de
+                // densidade seria um `crossfade` da página inteira.
+                //
+                // Precisa ser único na página: dois elementos com o mesmo nome
+                // cancelam a transição inteira, em silêncio. O slug é único por
+                // definição no banco, e o prefixo garante que o nome nunca
+                // comece com dígito, o que seria um identificador inválido.
+                //
+                // O escalonamento da entrada. `motion-safe:` e não uma regra de
+                // reduced-motion depois: sem animação nenhuma, o item nasce
+                // visível, sem depender de `animation-fill-mode`.
+                //
+                // O teto de 8 impede a última peça de um catálogo grande de
+                // esperar meio segundo para aparecer.
+                style={{
+                  viewTransitionName: `peca-${produto.slug}`,
+                  animationDelay: `${Math.min(indice, 8) * 45}ms`,
+                }}
+                className="motion-safe:animate-[caqui-entrada_420ms_var(--ease-saida)_both]"
+              >
                 <CardProduto produto={produto} prioridade={indice < 4} />
               </li>
             ))}
-          </ul>
+          </Vitrine>
         )}
 
         <p className="border-caqui-rule-wear text-caqui-ink-700 text-corpo-sm mt-14 border-t pt-6">

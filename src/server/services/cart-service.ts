@@ -1,6 +1,7 @@
 import { dataPorExtenso, horaLocal, jaEncerrada } from '@/lib/datetime'
 import { centavosParaDecimal, formatarBRL, precoEfetivo, somarCentavos } from '@/lib/money'
 import { prisma } from '@/lib/prisma'
+import { estadoDeVagas } from '@/lib/vagas'
 
 /**
  * Revalidação do carrinho.
@@ -100,7 +101,12 @@ export async function validarCarrinho(
             id: true,
             startAt: true,
             priceCents: true,
-            availability: true,
+            // A conta de vagas: o carrinho recusa saída esgotada, e "esgotada"
+            // deixou de ser uma coluna em 18/08/2026. Ver `src/lib/vagas.ts`.
+            capacity: true,
+            seatsTaken: true,
+            lastSpotsAt: true,
+            availabilityOverride: true,
             status: true,
             trip: { select: { title: true, status: true, deletedAt: true } },
           },
@@ -140,7 +146,7 @@ export async function validarCarrinho(
       if (jaEncerrada(s.startAt, agora)) {
         return itemInvalido(item, 'DEPARTURE_PAST', `${s.trip.title}: esta data já passou.`)
       }
-      if (s.availability === 'SOLD_OUT') {
+      if (estadoDeVagas(s).disponibilidade === 'SOLD_OUT') {
         return itemInvalido(item, 'DEPARTURE_NOT_AVAILABLE', `${s.trip.title}: esgotado.`)
       }
 

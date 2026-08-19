@@ -140,12 +140,12 @@ model SiteSetting {
 model Guide {
   id Int @id @default(autoincrement())
 
-  name            String  @db.VarChar(150)
-  bio             String? @db.Text
-  cadasturNumber  String? @db.VarChar(50)
-  pesmCredential  String? @db.VarChar(100)
-  active          Boolean @default(true)
-  sortOrder       Int     @default(0)
+  name           String  @db.VarChar(150)
+  bio            String? @db.Text
+  cadasturNumber String? @db.VarChar(50)
+  pesmCredential String? @db.VarChar(100)
+  active         Boolean @default(true)
+  sortOrder      Int     @default(0)
 
   photos     MediaAsset[]
   departures DepartureGuide[]
@@ -197,10 +197,10 @@ model Trip {
 
   /// Arrays nativos do Postgres. Conteúdo editorial que muda toda temporada
   /// vive no banco, editável no CRM — não em módulo JS exigindo deploy.
-  highlights   String[]
-  included     String[]
-  notIncluded  String[]
-  whatToBring  String[]
+  highlights  String[]
+  included    String[]
+  notIncluded String[]
+  whatToBring String[]
 
   cancellationPolicy String? @db.Text
 
@@ -224,9 +224,9 @@ model Trip {
 }
 
 model ActivityTag {
-  id    Int    @id @default(autoincrement())
-  slug  String @unique @db.VarChar(60)
-  label String @db.VarChar(80)
+  id    Int     @id @default(autoincrement())
+  slug  String  @unique @db.VarChar(60)
+  label String  @db.VarChar(80)
   /// Nome do ícone no design system, não um caminho de arquivo.
   icon  String? @db.VarChar(60)
 
@@ -253,33 +253,90 @@ model TripActivityTag {
 /// A saída concreta: "Pedra Grande, 15/08/2026, R$ 90,00".
 /// Data, preço e disponibilidade próprios.
 model Departure {
-  id     Int  @id @default(autoincrement())
+  id     Int @id @default(autoincrement())
   tripId Int
 
   /// UTC. A exibição converte para America/Sao_Paulo.
   startAt DateTime  @db.Timestamptz(3)
   endAt   DateTime? @db.Timestamptz(3)
 
-  meetingPoint String?  @db.VarChar(300)
-  meetingLat   Decimal? @db.Decimal(10, 7)
-  meetingLng   Decimal? @db.Decimal(10, 7)
+  meetingPoint     String?  @db.VarChar(300)
+  meetingLat       Decimal? @db.Decimal(10, 7)
+  meetingLng       Decimal? @db.Decimal(10, 7)
   /// Horário de encontro como rótulo de parede ("06:00") em
   /// America/Sao_Paulo. Deliberadamente NÃO é timestamp: é o que vai escrito
   /// no card e na mensagem do WhatsApp, e não deve sofrer conversão de fuso.
-  meetingTimeLocal String? @db.VarChar(5)
+  meetingTimeLocal String?  @db.VarChar(5)
 
   /// Int de centavos. R$ 199,90 = 19990.
   priceCents          Int
   /// Preço "de", riscado. Opcional.
   compareAtPriceCents Int?
 
-  /// MANUAL. Alterado por endpoint dedicado, com histórico em
-  /// DepartureAvailabilityChange. É o campo mais mexido do sistema.
-  availability Availability    @default(AVAILABLE)
-  status       DepartureStatus @default(DRAFT)
+  /// Quantas pessoas cabem nesta saída.
+  ///
+  /// Nulo = sem limite declarado, e aí `availability` continua sendo digitada à
+  /// mão como sempre foi. NÃO é `0`: zero significaria "não cabe ninguém", que
+  /// é uma afirmação diferente de "ninguém contou".
+  capacity Int?
+
+  /// Quantas vagas já fecharam. É o LIVRO DO OPERADOR, não um contador de
+  /// reservas: a Caqui não vende no site, o pedido termina numa conversa de
+  /// WhatsApp, e quem fecha a venda lança aqui.
+  ///
+  /// Pode passar de `capacity`. Overbooking acontece na vida real (dois guias
+  /// vendendo ao mesmo tempo), e um sistema que recusa o lançamento faz a
+  /// pessoa mentir o número para conseguir salvar. Vira alerta no painel, não
+  /// erro na tela.
+  seatsTaken Int @default(0)
+
+  /// A partir de quantas vagas restantes o selo vira "últimas vagas".
+  lastSpotsAt Int @default(3)
+
+  /// A DISPONIBILIDADE DEIXOU DE SER DIGITADA.
+  ///
+  /// Até 18/08/2026 este campo era manual, e o comentário aqui dizia, sem
+  /// ironia, que ele era "o campo mais mexido do sistema". Campo mais mexido do
+  /// sistema é a descrição de uma conta que alguém está fazendo de cabeça.
+  ///
+  /// Agora, quando `capacity` existe, o selo é DERIVADO de
+  /// `capacity - seatsTaken` por uma função pura, e este campo guarda apenas a
+  /// EXCEÇÃO: fechar por chuva, por interdição do parque, por decisão do guia.
+  /// Nulo significa "vale a conta"; preenchido significa "alguém decidiu o
+  /// contrário, e o histórico diz por quê".
+  ///
+  /// Sem `capacity`, ele volta a ser a fonte da verdade, como sempre foi. É o
+  /// que permite a migração não quebrar nenhuma saída já cadastrada.
+  availabilityOverride Availability?
+
+  status DepartureStatus @default(DRAFT)
 
   /// NUNCA sai na API pública. Sem exceção, sem "só neste caso".
   internalNotes String? @db.Text
+
+  // ── O FECHAMENTO ────────────────────────────────────────────────────────
+  // Preenchido DEPOIS de a saída acontecer. Enquanto `closedAt` for nulo, a
+  // saída com data no passado aparece na fila "por fechar" do painel — uma
+  // busca que precisa voltar vazia, não um botão que alguém lembra de apertar.
+
+  closedAt DateTime? @db.Timestamptz(3)
+
+  /// Quantas pessoas FORAM. Diferente de `seatsTaken`: gente falta.
+  attendeeCount Int?
+
+  /// Receita realizada, em centavos. LANÇADA, nunca calculada.
+  ///
+  /// `priceCents × attendeeCount` está errado em quase toda saída real: tem
+  /// desconto, cortesia, criança, guia convidado, pagamento parcial. Calculado,
+  /// o relatório de lucro fica bonito e falso — e alguém decide preço com base
+  /// nele.
+  revenueCents Int?
+
+  /// Custo realizado, em centavos: transporte, alimentação, ingresso do parque,
+  /// cachê de guia externo.
+  costCents Int?
+
+  closingNotes String? @db.Text
 
   trip                Trip                          @relation(fields: [tripId], references: [id], onDelete: Cascade)
   guides              DepartureGuide[]
@@ -294,7 +351,9 @@ model Departure {
   /// A consulta central do site: agenda cronológica das saídas publicadas.
   @@index([status, startAt])
   @@index([tripId, startAt])
-  @@index([availability])
+  /// A fila do fechamento: saída publicada, com data no passado e sem
+  /// `closedAt`. É a consulta que o painel faz toda vez que abre.
+  @@index([status, closedAt, startAt])
   @@map("departures")
 }
 
@@ -448,6 +507,21 @@ model MediaAsset {
   blurDataUrl String? @db.Text
 
   sortOrder Int @default(0)
+
+  /// A COR que esta foto mostra. Nulo = serve para qualquer cor.
+  ///
+  /// Pedido do cliente em 18/08/2026: "a cor amarela pode ser imagem dois, a
+  /// cor azul pode ser imagem um". Sem isto, escolher "Fúcsia" na loja trocava
+  /// preço e disponibilidade e a galeria continuava exatamente igual.
+  ///
+  /// Casa com `ProductVariant.colorName` por TEXTO, e não por id, porque cor
+  /// não é uma linha própria no banco: ela vive repetida em cada variante
+  /// (P/M/G da mesma cor são três linhas com o mesmo `colorName`).
+  ///
+  /// A regra que decide o resto: na dúvida, foto NEUTRA, nunca a cor errada.
+  /// Foto genérica é informação faltando; foto da cor errada é informação
+  /// falsa. Ver docs/14-cadastro-de-produto.md.
+  colorName String? @db.VarChar(60)
 
   /// Exatamente UMA das três é preenchida (garantido por CHECK na migration).
   tripId    Int?

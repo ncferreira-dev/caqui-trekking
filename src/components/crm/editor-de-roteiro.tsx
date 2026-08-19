@@ -9,6 +9,7 @@ import { Input, Select, Textarea } from '@/components/ui/campo'
 import { Modal } from '@/components/ui/dialogo'
 import { useToast } from '@/components/ui/toast'
 import { api, ErroDaApi } from '@/lib/crm/api'
+import { cn } from '@/lib/ui/cn'
 
 /**
  * O editor de roteiro.
@@ -67,7 +68,11 @@ export type RoteiroParaEditar = {
   whatToBring: string[]
   cancellationPolicy: string | null
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  /** As atividades já ligadas a este roteiro. */
+  activityTagIds: number[]
 }
+
+export type TagOpcao = { id: number; label: string }
 
 /** Número livre → inteiro ou null. Campo vazio vira null, não 0. */
 function inteiroOuNulo(texto: string): number | null {
@@ -87,10 +92,13 @@ export function EditorDeRoteiro({
   aberto,
   aoFechar,
   roteiro,
+  tags = [],
 }: {
   aberto: boolean
   aoFechar: () => void
   roteiro: RoteiroParaEditar
+  /** Todas as atividades cadastradas. Vazio = ainda não há nenhuma. */
+  tags?: TagOpcao[]
 }) {
   const router = useRouter()
   const { mostrar } = useToast()
@@ -119,6 +127,9 @@ export function EditorDeRoteiro({
   // roteiro arquivado sem tocar no select o rebaixava para rascunho em silêncio.
   // Agora ele mantém ARCHIVED até uma troca EXPLÍCITA para rascunho/publicado.
   const [status, setStatus] = useState<string>(roteiro.status)
+  // `Set` e não array: marcar e desmarcar é a operação, e `has`/`delete` dizem
+  // isso direto. O array só é montado no envio.
+  const [atividades, setAtividades] = useState<Set<number>>(new Set(roteiro.activityTagIds))
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -160,6 +171,9 @@ export function EditorDeRoteiro({
       whatToBring: linhas(oQueLevar),
       cancellationPolicy: cancelamento.trim() || null,
       status,
+      // Estado FINAL, não acréscimo: é o que um grupo de caixas significa, e é
+      // o que faz desmarcar ter efeito. Ver o comentário no schema da rota.
+      activityTagIds: [...atividades],
     }
 
     setEnviando(true)
@@ -221,6 +235,56 @@ export function EditorDeRoteiro({
 
         {/* ── Fotos: a zona de upload com moldura de enquadramento ─────────── */}
         <ZonaDeUpload max={8} />
+
+        {/* ── Atividades ───────────────────────────────────────────────────
+            Caixas, e não um select múltiplo: `<select multiple>` exige Ctrl
+            para marcar mais de um, esconde o que não coube na altura, e no
+            celular vira uma lista modal que não mostra o que já está marcado.
+            São menos de dez atividades no total; todas cabem à vista.
+
+            É esta ligação que alimenta o filtro "Atividade" da agenda. */}
+        {tags.length > 0 && (
+          <fieldset className="border-caqui-rule flex flex-col gap-2 border-t pt-4">
+            <legend className="text-caqui-ink-700 text-rotulo font-mono uppercase">
+              Atividades
+            </legend>
+            <p className="text-caqui-ink-500 text-corpo-sm">
+              O que dá para fazer neste roteiro. Vira filtro na agenda do site.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => {
+                const marcada = atividades.has(tag.id)
+                return (
+                  <label
+                    key={tag.id}
+                    className={cn(
+                      'flex min-h-11 cursor-pointer items-center gap-2 border px-3',
+                      'text-corpo-sm transition-colors',
+                      marcada
+                        ? 'border-caqui-ink-900 bg-caqui-ink-900 text-white'
+                        : 'border-caqui-rule-forte hover:bg-caqui-sand-100 bg-white',
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={marcada}
+                      onChange={(e) => {
+                        setAtividades((atual) => {
+                          const novo = new Set(atual)
+                          if (e.target.checked) novo.add(tag.id)
+                          else novo.delete(tag.id)
+                          return novo
+                        })
+                      }}
+                      className="accent-caqui-orange-500 size-4"
+                    />
+                    {tag.label}
+                  </label>
+                )
+              })}
+            </div>
+          </fieldset>
+        )}
 
         {/* ── Onde e quão difícil ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

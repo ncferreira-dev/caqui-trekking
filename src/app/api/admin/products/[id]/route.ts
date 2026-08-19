@@ -2,8 +2,8 @@ import { ok } from '@/lib/api/respond'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
 import { atualizarProdutoSchema } from '@/lib/api/schema-produto'
 import { idSchema } from '@/lib/api/schemas'
-import { exigirPapel } from '@/lib/auth/guard'
-import { atualizarProduto } from '@/server/services/admin/product-admin-service'
+import { exigirOwner, exigirPapel } from '@/lib/auth/guard'
+import { arquivarProduto, atualizarProduto } from '@/server/services/admin/product-admin-service'
 import { ipDaRequest } from '@/server/services/audit-service'
 
 export const dynamic = 'force-dynamic'
@@ -32,4 +32,20 @@ export const PATCH = rota(async (request: Request, contexto: Contexto) => {
   })
 
   return ok(resultado)
+})
+
+/**
+ * DELETE /api/admin/products/:id — ARQUIVAR, e só do OWNER.
+ *
+ * Mesma régua de `trips/[id]`: tirar da loja uma peça que o site publica é
+ * decisão de quem responde pela empresa. E "tirar" é soft delete: as variantes
+ * penduram nela e o carrinho de quem já adicionou aponta para o id.
+ */
+export const DELETE = rota(async (request: Request, contexto: Contexto) => {
+  const owner = await exigirOwner(request)
+
+  const { id } = await contexto.params
+  const productId = validarOuFalhar(idSchema.safeParse(id))
+
+  return ok(await arquivarProduto(productId, { userId: owner.userId, ip: ipDaRequest(request) }))
 })

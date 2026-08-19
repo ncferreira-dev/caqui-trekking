@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 
 import { AppError, ErrorCode } from '@/lib/api/errors'
+import { normalizarCor } from '@/lib/media/cor-da-foto'
 import { prisma } from '@/lib/prisma'
 import { type ImagemProcessada, processarImagem } from '@/server/media/processar'
 import { obterStorage, PASTA_RAIZ } from '@/server/media/storage'
@@ -328,6 +329,92 @@ export async function atualizarAlt(
     )
 
     return depois
+  })
+}
+
+/**
+ * A cor que esta foto mostra.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * A COR PRECISA EXISTIR NO PRODUTO, E QUEM CONFERE É O SERVIDOR
+ * ────────────────────────────────────────────────────────────────────────────
+ * A tela oferece um `<select>` com as cores que a peça já tem, e é o desenho
+ * certo: campo de texto livre produziria "Azul", "azul" e "Azul Marinho " com
+ * espaço no fim, e a associação falharia sem avisar.
+ *
+ * Mas `<select>` é cortesia, não barreira — o `fetch` continua chamável do
+ * console, e um `colorName` que não bate com variante nenhuma é uma foto que
+ * some da galeria para SEMPRE, em silêncio: ela não é da cor de ninguém e
+ * também não é neutra. É o pior estado possível deste campo, e por isso a
+ * conferência é aqui.
+ *
+ * A comparação passa por `normalizarCor`, a mesma que a loja usa para filtrar.
+ * Se as duas divergissem, a foto gravaria "ok" e sumiria da vitrine.
+ *
+ * `null` é sempre aceito: significa "serve para qualquer cor", e é o padrão.
+ */
+export async function definirCorDaFoto(
+  midiaId: number,
+  cor: string | null,
+  ctx: Contexto,
+): Promise<{ id: number; cor: string | null }> {
+  const antes = await prisma.mediaAsset.findUnique({
+    where: { id: midiaId },
+    select: {
+      id: true,
+      colorName: true,
+      productId: true,
+      product: { select: { variants: { select: { colorName: true } } } },
+    },
+  })
+
+  if (!antes) throw new AppError(ErrorCode.MEDIA_NOT_FOUND, 'Imagem não encontrada.')
+
+  if (cor !== null) {
+    if (antes.productId === null) {
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        'Só foto de peça tem cor. Foto de roteiro e de guia serve para qualquer contexto.',
+        { status: 400 },
+      )
+    }
+
+    const doProduto = new Set(
+      (antes.product?.variants ?? [])
+        .map((v) => normalizarCor(v.colorName))
+        .filter((c): c is string => c !== null),
+    )
+
+    if (!doProduto.has(normalizarCor(cor) as string)) {
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        `Esta peça não tem a cor "${cor}". Cadastre a variante primeiro, ou deixe a foto sem cor.`,
+        { status: 400 },
+      )
+    }
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const depois = await tx.mediaAsset.update({
+      where: { id: midiaId },
+      data: { colorName: cor },
+      select: { id: true, colorName: true },
+    })
+
+    await registrarAuditoria(
+      {
+        userId: ctx.userId,
+        action: 'media.cor',
+        entityType: 'MediaAsset',
+        entityId: midiaId,
+        before: { cor: antes.colorName },
+        after: { cor: depois.colorName },
+        ip: ctx.ip,
+      },
+      tx,
+    )
+
+    return { id: depois.id, cor: depois.colorName }
   })
 }
 

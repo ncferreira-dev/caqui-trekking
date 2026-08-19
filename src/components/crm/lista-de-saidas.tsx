@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { Confirmar } from '@/components/crm/confirmar'
+import { ControleDeVagas } from '@/components/crm/controle-de-vagas'
+import { FecharSaida } from '@/components/crm/fechar-saida'
 import { EditorDeSaida } from '@/components/crm/editor-de-saida'
 import { Rotulo, Vazio } from '@/components/crm/pecas'
 import { Button } from '@/components/ui/button'
@@ -48,13 +50,42 @@ export type SaidaDoPainel = {
   inicioParede: string
   precoCentavos: number
   compareAtPriceCents: number | null
+  /** O selo que o SITE mostra. Derivado da conta de vagas, não digitado. */
   disponibilidade: 'AVAILABLE' | 'LAST_SPOTS' | 'SOLD_OUT'
+  /** Quantas cabem. `null` = sem limite declarado, e aí o selo é manual. */
+  capacidade: number | null
+  /** Quantas já fecharam, lançadas por quem vendeu no WhatsApp. */
+  vagasFechadas: number
+  /** Quantas sobraram. `null` sem capacidade. Nunca negativo. */
+  vagasRestantes: number | null
+  /** Quantas passaram da capacidade. Zero quando não há overbooking. */
+  excedenteDeVagas: number
+  /** `true` quando o selo veio de uma decisão humana, e não da conta. */
+  disponibilidadePorExcecao: boolean
   status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
   encerrada: boolean
+  /** `null` = ainda não fechada. É o que a fila do painel procura. */
+  fechadaEm: string | null
+  /** Quantas pessoas FORAM. Diferente de `vagasFechadas`: gente falta. */
+  pessoas: number | null
+  receitaCentavos: number | null
+  custoCentavos: number | null
+  observacoesDoFechamento: string | null
   meetingPoint: string | null
   meetingTimeLocal: string | null
   meetingLat: number | null
   meetingLng: number | null
+  /** O recado interno da saída. Só existe dentro do painel. */
+  internalNotes: string | null
+  /** As últimas mudanças de selo, da mais recente para a mais antiga. */
+  historicoDoSelo: {
+    id: number
+    de: 'AVAILABLE' | 'LAST_SPOTS' | 'SOLD_OUT'
+    para: 'AVAILABLE' | 'LAST_SPOTS' | 'SOLD_OUT'
+    motivo: string | null
+    quandoIso: string
+    quem: string | null
+  }[]
   trip: { id: number; slug: string; titulo: string }
 }
 
@@ -82,15 +113,19 @@ export function ListaDeSaidas({
   const [cancelando, setCancelando] = useState<SaidaDoPainel | null>(null)
   const [editando, setEditando] = useState<SaidaDoPainel | null>(null)
   const [excluindo, setExcluindo] = useState<SaidaDoPainel | null>(null)
+  const [fechando, setFechando] = useState<SaidaDoPainel | null>(null)
 
   async function mudarDisponibilidade(
     saida: SaidaDoPainel,
-    valor: SaidaDoPainel['disponibilidade'],
+    /** `null` devolve o selo para a contagem de vagas. */
+    valor: SaidaDoPainel['disponibilidade'] | null,
   ) {
     const anterior = otimista[saida.id] ?? saida.disponibilidade
     if (anterior === valor || ocupadas[saida.id]) return
 
-    setOtimista((atual) => ({ ...atual, [saida.id]: valor }))
+    // Com `null`, o selo passa a sair da conta e a tela só sabe qual é depois
+    // do refresh. Mantém o valor atual até lá, em vez de piscar.
+    if (valor !== null) setOtimista((atual) => ({ ...atual, [saida.id]: valor }))
     setOcupadas((atual) => ({ ...atual, [saida.id]: true }))
 
     try {
@@ -99,7 +134,7 @@ export function ListaDeSaidas({
     } catch (causa) {
       // Volta atrás. A tela NÃO pode ficar dizendo "esgotado" com o site
       // vendendo — é o cenário exato que este botão existe para evitar.
-      setOtimista((atual) => ({ ...atual, [saida.id]: anterior }))
+      if (valor !== null) setOtimista((atual) => ({ ...atual, [saida.id]: anterior }))
       mostrar({
         tom: 'erro',
         titulo: 'Não mudou',
@@ -160,7 +195,17 @@ export function ListaDeSaidas({
               )}
 
               <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0 flex-1">
+                {/* O PISO DE LARGURA NAO E ENFEITE.
+                    Ate 19/08/2026 esta coluna era so `min-w-0 flex-1`, ou
+                    seja, base zero. O bloco de acoes ao lado nao declara
+                    encolhimento, entao o conteudo dele reivindicava a linha
+                    inteira e esta coluna ficava com LARGURA ZERO entre 1024px
+                    e ~1400px: data, hora, preco e nome do roteiro eram
+                    pintados por baixo dos botoes. A tela dizia "de 12, faltam
+                    6" sem dizer de qual saida.
+                    `min-w-0` continua valendo abaixo de lg, onde a linha
+                    empilha e o `truncate` do titulo precisa dele. */}
+                <div className="min-w-0 flex-1 lg:min-w-56">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-display text-corpo-sm uppercase">{diaEMes(inicio)}</span>
                     <Rotulo>{horaLocal(inicio)}</Rotulo>
@@ -189,13 +234,48 @@ export function ListaDeSaidas({
                     site, e cancelar o que já aconteceu não faz sentido. */}
                 {!inativa && (
                   <div className="flex flex-wrap items-center gap-2">
+                    {/* O LIVRO DE VAGAS vem PRIMEIRO, porque virou a operação
+                        do dia a dia. Ver `controle-de-vagas.tsx`. */}
+                    <ControleDeVagas
+                      saidaId={saida.id}
+                      titulo={saida.trip.titulo}
+                      capacidade={saida.capacidade}
+                      vagasFechadas={saida.vagasFechadas}
+                      aoMudar={() => router.refresh()}
+                    />
+
+                    {/* A EXCEÇÃO, e ela agora se declara como tal.
+                        Desde 18/08/2026 o selo do site é derivado da conta de
+                        vagas. Estes botões forçam um valor CONTRA a conta:
+                        fechar por chuva, por interdição do parque, por decisão
+                        do guia. O quarto botão desfaz. */}
                     <div
                       role="group"
                       aria-label={`Disponibilidade de ${saida.trip.titulo} em ${diaEMes(inicio)}`}
                       className="border-caqui-ink-900 flex overflow-hidden rounded-xs border"
                     >
+                      <button
+                        type="button"
+                        onClick={() => mudarDisponibilidade(saida, null)}
+                        disabled={ocupada}
+                        aria-pressed={!saida.disponibilidadePorExcecao}
+                        title="O selo do site sai da contagem de vagas"
+                        className={cn(
+                          'text-micro min-h-11 px-3 font-mono uppercase transition-colors',
+                          'disabled:cursor-not-allowed disabled:opacity-60',
+                          !saida.disponibilidadePorExcecao
+                            ? 'bg-caqui-ink-900 text-white'
+                            : 'hover:bg-caqui-sand-100 bg-white',
+                        )}
+                      >
+                        Auto
+                      </button>
                       {ESTADOS.map((opcao) => {
-                        const ativo = estado === opcao.valor
+                        // Só fica aceso quando o selo veio de uma EXCEÇÃO.
+                        // Sem esta condição, a saída que a conta declarou
+                        // esgotada acenderia "Esgotado" ao lado de "Auto"
+                        // aceso, e a tela diria que existem duas verdades.
+                        const ativo = saida.disponibilidadePorExcecao && estado === opcao.valor
                         return (
                           <button
                             key={opcao.valor}
@@ -237,6 +317,34 @@ export function ListaDeSaidas({
                 {/* Saída inativa (já foi ou cancelada) não tem ação de rotina,
                     mas o dono pode LIMPAR a lista. A lixeira só aparece para o
                     OWNER; o servidor recusa o resto. */}
+                {/* SAÍDA QUE JÁ ACONTECEU PEDE FECHAMENTO.
+                    A fila do painel procura exatamente isto: publicada, no
+                    passado, sem `fechadaEm`. O botão aparece na própria linha
+                    para o caminho ser um toque, e não uma navegação.
+                    Cancelada não entra: não houve viagem para contabilizar. */}
+                {saida.encerrada && saida.status !== 'CANCELLED' && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variante={saida.fechadaEm ? 'secondary' : 'primary'}
+                      tamanho="sm"
+                      onClick={() => setFechando(saida)}
+                    >
+                      {saida.fechadaEm ? 'Rever fechamento' : 'Fechar'}
+                    </Button>
+
+                    {saida.fechadaEm && saida.pessoas !== null && (
+                      <span className="text-caqui-ink-500 text-micro font-mono uppercase">
+                        {saida.pessoas} {saida.pessoas === 1 ? 'pessoa' : 'pessoas'}
+                        {saida.receitaCentavos !== null && saida.custoCentavos !== null && (
+                          <> · {formatarBRL(saida.receitaCentavos - saida.custoCentavos)}</>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {saida.historicoDoSelo.length > 0 && <HistoricoDoSelo saida={saida} />}
+
                 {inativa && podeExcluir && (
                   <div className="flex items-center lg:justify-end">
                     <button
@@ -285,6 +393,25 @@ export function ListaDeSaidas({
         />
       )}
 
+      {fechando && (
+        <FecharSaida
+          aberto
+          aoFechar={() => setFechando(null)}
+          saida={{
+            id: fechando.id,
+            inicioIso: fechando.inicioIso,
+            precoCentavos: fechando.precoCentavos,
+            vagasFechadas: fechando.vagasFechadas,
+            attendeeCount: fechando.pessoas,
+            revenueCents: fechando.receitaCentavos,
+            costCents: fechando.custoCentavos,
+            closingNotes: fechando.observacoesDoFechamento,
+            jaFechada: fechando.fechadaEm !== null,
+            trip: { titulo: fechando.trip.titulo },
+          }}
+        />
+      )}
+
       {excluindo && (
         <Confirmar
           aberto
@@ -297,8 +424,8 @@ export function ListaDeSaidas({
                 {excluindo.trip.titulo} · {diaEMes(new Date(excluindo.inicioIso))}
               </strong>
               <p className="mt-1">
-                Ela é apagada de vez e some da lista. Não muda nada no site — uma saída que já foi
-                ou foi cancelada não aparece lá. Fica só um registro na auditoria de que você
+                Ela é apagada de vez e some da lista. Não muda nada no site, porque uma saída que já
+                foi ou foi cancelada não aparece lá. Fica só um registro na auditoria de que você
                 excluiu, com a data.
               </p>
             </>
@@ -326,6 +453,7 @@ export function ListaDeSaidas({
             meetingTimeLocal: editando.meetingTimeLocal,
             meetingLat: editando.meetingLat,
             meetingLng: editando.meetingLng,
+            internalNotes: editando.internalNotes,
             status: editando.status,
           }}
         />
@@ -348,5 +476,52 @@ function IconeLixeira() {
     >
       <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.6 9a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9L12 4M6.5 7v4M9.5 7v4" />
     </svg>
+  )
+}
+
+/**
+ * O histórico do selo, que era gravado desde o dia 1 e não aparecia em lugar
+ * nenhum.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * `<details>` E NÃO UM ESTADO DE ABERTO/FECHADO
+ * ────────────────────────────────────────────────────────────────────────────
+ * A pergunta "por que essa saída ficou esgotada no dia 3?" aparece uma vez a
+ * cada muitos meses, e a resposta ocupa quatro linhas. Aberto por padrão, o
+ * histórico empurraria para baixo as ações que se usam todo dia.
+ *
+ * `<details>` resolve isso sem um `useState`, sem hidratação e sem risco: o
+ * navegador já sabe abrir e fechar, o teclado já funciona, e o conteúdo está
+ * no HTML para quem busca com Ctrl+F.
+ *
+ * A linha diz de → para, quem e quando. `from`/`to` guardam o que o SITE
+ * mostrava, e não o valor cru da coluna: é a pergunta que alguém realmente faz.
+ */
+function HistoricoDoSelo({ saida }: { saida: SaidaDoPainel }) {
+  const nome: Record<string, string> = {
+    AVAILABLE: 'Vagas abertas',
+    LAST_SPOTS: 'Últimas vagas',
+    SOLD_OUT: 'Esgotado',
+  }
+
+  return (
+    <details className="text-micro font-mono">
+      <summary className="text-caqui-ink-500 hover:text-caqui-ink-900 inline-flex min-h-11 cursor-pointer items-center uppercase">
+        Histórico do selo ({saida.historicoDoSelo.length})
+      </summary>
+
+      <ul className="border-caqui-rule mt-1 flex flex-col gap-1 border-l-2 pl-3">
+        {saida.historicoDoSelo.map((h) => (
+          <li key={h.id} className="text-caqui-ink-700">
+            <span className="text-caqui-ink-900">
+              {nome[h.de] ?? h.de} → {nome[h.para] ?? h.para}
+            </span>{' '}
+            · {dataCurta(new Date(h.quandoIso))} {horaLocal(new Date(h.quandoIso))}
+            {h.quem && <> · {h.quem}</>}
+            {h.motivo && <span className="text-caqui-ink-500"> · {h.motivo}</span>}
+          </li>
+        ))}
+      </ul>
+    </details>
   )
 }

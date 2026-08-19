@@ -31,7 +31,10 @@ export const GET = rota(async (request: Request) => {
           id: true,
           startAt: true,
           priceCents: true,
-          availability: true,
+          capacity: true,
+          seatsTaken: true,
+          lastSpotsAt: true,
+          availabilityOverride: true,
           trip: { select: { slug: true, title: true } },
         },
         orderBy: { startAt: 'asc' },
@@ -41,11 +44,10 @@ export const GET = rota(async (request: Request) => {
       // Alerta 1: saída publicada, faltando menos de 7 dias, ainda como
       // "vagas abertas". Pode ser verdade, pode ser esquecimento.
       prisma.departure.findMany({
-        where: {
-          status: 'PUBLISHED',
-          availability: 'AVAILABLE',
-          startAt: { gte: agora, lte: emSeteDias },
-        },
+        // O selo virou CONTA em 18/08/2026, e conta não vira `where`. A janela
+        // de sete dias continua no banco, que é onde o índice ajuda; o filtro
+        // do selo roda depois, sobre poucas dezenas de linhas.
+        where: { status: 'PUBLISHED', startAt: { gte: agora, lte: emSeteDias } },
         select: {
           id: true,
           startAt: true,

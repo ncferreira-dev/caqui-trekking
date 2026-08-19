@@ -1,3 +1,4 @@
+import { limitarLeituraPublica } from '@/lib/api/rate-limit'
 import { ok } from '@/lib/api/respond'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
 import { slugSchema } from '@/lib/api/schemas'
@@ -14,7 +15,9 @@ type Contexto = { params: Promise<{ slug: string }> }
  * `disponivel`. Combinação esgotada não some da resposta: a UI precisa
  * mostrá-la desabilitada, porque a pessoa precisa saber que ela existe.
  */
-export const GET = rota(async (_request: Request, contexto: Contexto) => {
+export const GET = rota(async (request: Request, contexto: Contexto) => {
+  limitarLeituraPublica(request, 'product')
+
   const { slug } = await contexto.params
   const slugValido = validarOuFalhar(slugSchema.safeParse(slug))
 

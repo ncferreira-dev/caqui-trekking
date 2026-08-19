@@ -1,9 +1,11 @@
 import { AppError, ErrorCode } from '@/lib/api/errors'
 import { ordenarTamanhos } from '@/lib/formato'
+import { capaEAlternativa } from '@/lib/media/cor-da-foto'
 import { centavosParaDecimal, precoEfetivo } from '@/lib/money'
 import { prisma } from '@/lib/prisma'
 import {
   paraMediaDTO,
+  type MediaDTO,
   type ProdutoDetalheDTO,
   type ProdutoResumoDTO,
   type VarianteDTO,
@@ -70,8 +72,11 @@ export async function listarProdutos(
       categoria: p.category,
       precoCentavos: p.priceCents,
       precoDecimal: centavosParaDecimal(p.priceCents),
-      capa: p.images[0] ? paraMediaDTO(p.images[0]) : null,
-      capaAlternativa: p.images[1] ? paraMediaDTO(p.images[1]) : null,
+      // A alternativa do hover é a próxima foto do MESMO grupo de cor, e não
+      // simplesmente `images[1]`: numa peça com três cores fotografadas, a
+      // segunda imagem é a de outra cor, e o card prometia ângulo entregando
+      // troca de cor. Ver `capaEAlternativa`.
+      ...capasDe(p.images),
       cores,
       tamanhos,
     }
@@ -171,13 +176,46 @@ export async function buscarProdutoPorSlug(slug: string): Promise<ProdutoDetalhe
     categoria: p.category,
     precoCentavos: p.priceCents,
     precoDecimal: centavosParaDecimal(p.priceCents),
-    capa: p.images[0] ? paraMediaDTO(p.images[0]) : null,
-    capaAlternativa: p.images[1] ? paraMediaDTO(p.images[1]) : null,
+    ...capasDe(p.images),
     imagens: p.images.map(paraMediaDTO),
     cores,
     tamanhos: ordenarTamanhos([...new Set(variantes.map((v) => v.tamanho))]).filter(
       (t) => t !== 'UNICO',
     ),
     variantes,
+  }
+}
+
+/**
+ * Capa e alternativa do card, já como DTO.
+ *
+ * Duas telas montavam o mesmo par de campos, e as duas do mesmo jeito errado.
+ * A regra de cor vive em `lib/media/cor-da-foto.ts`; aqui é só a tradução para
+ * o formato que o card espera.
+ */
+type ImagemDoBanco = {
+  url: string
+  alt: string
+  width: number
+  height: number
+  blurDataUrl: string | null
+  sortOrder: number
+  colorName: string | null
+}
+
+function capasDe(imagens: ImagemDoBanco[]): {
+  capa: MediaDTO | null
+  capaAlternativa: MediaDTO | null
+} {
+  // O acréscimo de `cor` é só para a regra pura, que fala o vocabulário do
+  // DTO. O objeto continua carregando tudo que `paraMediaDTO` precisa, e por
+  // isso não há cast nenhum aqui: se o `select` da consulta encolher, o tipo
+  // acusa em vez de o `as` calar.
+  const comCor = imagens.map((m) => ({ ...m, cor: m.colorName }))
+  const { capa, alternativa } = capaEAlternativa(comCor)
+
+  return {
+    capa: capa ? paraMediaDTO(capa) : null,
+    capaAlternativa: alternativa ? paraMediaDTO(alternativa) : null,
   }
 }

@@ -27,15 +27,32 @@ export async function verificarSenha(senha: string, hash: string): Promise<boole
 }
 
 /**
+ * O hash de mentira, derivado UMA vez no carregamento do módulo.
+ *
+ * ⚠️ NÃO volte a escrever este valor à mão.
+ *
+ * Até 18/08/2026 ele era um literal de zeros, e o literal tinha 59 caracteres.
+ * Um hash bcrypt tem exatamente 60. O `bcryptjs` confere o comprimento antes de
+ * derivar qualquer coisa e devolve `false` na hora.
+ *
+ * Medido nesta máquina: a comparação contra aquele literal levava 0,00 ms; a
+ * comparação contra um hash real de custo 12 leva ~270 ms. A função existia
+ * para eliminar essa diferença e produzia uma diferença de cinco ordens de
+ * grandeza — ou seja, ela era o oráculo, não a defesa.
+ *
+ * Derivado, o valor não pode estar com o comprimento errado. É a diferença
+ * entre uma constante que alguém precisa acertar e uma que o computador acerta.
+ */
+const HASH_FALSO = bcrypt.hashSync('nao-importa-o-que-tem-aqui', CUSTO)
+
+/**
  * Gasta o tempo de um hash sem ter um usuário para comparar.
  *
  * Sem isto, o login responde visivelmente mais rápido para e-mail inexistente
- * do que para e-mail válido com senha errada — e isso é um oráculo: dá para
- * enumerar quais e-mails têm conta só cronometrando a resposta.
+ * do que para e-mail válido com senha errada, e isso é um oráculo: dá para
+ * enumerar quais e-mails têm conta só cronometrando a resposta. O e-mail
+ * comercial da Caqui é público, no rodapé do site.
  */
 export async function queimarTempoDeHash(): Promise<void> {
-  await bcrypt.compare(
-    'senha-que-nao-importa',
-    '$2b$12$0000000000000000000000000000000000000000000000000000',
-  )
+  await bcrypt.compare('senha-que-nao-importa', HASH_FALSO)
 }

@@ -13,23 +13,31 @@ import { cn } from '@/lib/ui/cn'
  * Header do site.
  *
  * ────────────────────────────────────────────────────────────────────────────
- * POR QUE A LISTA DE ROTAS COM HERÓI É EXPLÍCITA
+ * A LOJA INTEIRA ABRE ESCURO. ISSO É INVARIANTE, NÃO COINCIDÊNCIA.
  * ────────────────────────────────────────────────────────────────────────────
- * O header é transparente sobre o herói e ganha fundo ao rolar. Descobrir se a
- * página TEM herói só depois da hidratação — procurando um elemento no DOM —
- * produziria um quadro de header sólido sobre o herói antes de o efeito rodar.
- * Em conexão lenta, esse "quadro" dura o tempo do bundle.
+ * O header é transparente no topo e ganha fundo branco ao rolar. Para a tinta
+ * dele estar certa, ele precisa saber a cor da PRIMEIRA seção da página, que é
+ * propriedade da página e não dele.
  *
- * `usePathname()` é conhecido no servidor, então o HTML já sai com o modo
- * certo. O preço é esta constante precisar de uma linha quando uma página nova
- * ganhar herói — um acoplamento pequeno, explícito e revisável, em troca de
- * zero salto visual.
+ * Até 18/08/2026 isso era uma lista de rotas (`ROTAS_COM_HEROI`), porque só a
+ * home abria escuro. Quando `CabecalhoDePagina` virou palco noturno, a lista
+ * cresceu para sete e depois para dez, ou seja, para TODAS as rotas da loja —
+ * uma condição que é sempre verdadeira, escrita com passos extras.
+ *
+ * Então ela saiu. As dez rotas de `(loja)` abrem com `CabecalhoDePagina` ou com
+ * uma seção `palco-noite` própria, e `not-found`/`error` moram no layout raiz,
+ * que não renderiza este componente.
+ *
+ * ⚠️ A invariante é o que sustenta este arquivo, e ela NÃO se sustenta sozinha:
+ * uma página nova que abrisse com fundo claro deixaria os links brancos
+ * invisíveis. Por isso ela é provada por máquina, em
+ * `src/test/abertura-da-loja.test.ts`, que varre `(loja)` e falha se alguma
+ * página não abrir escuro. Não confie neste comentário; confie no teste.
  */
-const ROTAS_COM_HEROI = new Set(['/'])
-
 const LINKS = [
   { href: '/trekking', rotulo: 'Trekking' },
   { href: '/agenda', rotulo: 'Agenda' },
+  { href: '/guia-particular', rotulo: 'Guia particular' },
   { href: '/wear', rotulo: 'Caqui Wear' },
   { href: '/sobre', rotulo: 'Sobre' },
   { href: '/contato', rotulo: 'Contato' },
@@ -39,22 +47,22 @@ const ALTURA = 'h-20'
 
 export function Header() {
   const caminho = usePathname()
-  const sobreHeroi = ROTAS_COM_HEROI.has(caminho)
 
   /**
-   * `passouDoTopo` só tem sentido em página com herói. O fundo sólido é
-   * DERIVADO, não um segundo estado a sincronizar — assim, navegar de `/` para
-   * `/agenda` não depende de um efeito corrigir um valor obsoleto.
+   * O fundo sólido é DERIVADO de ter rolado, e não um segundo estado a
+   * sincronizar. Navegar entre páginas não depende de um efeito corrigir um
+   * valor obsoleto: a sentinela remonta e o observer recalcula.
    */
   const [passouDoTopo, setPassouDoTopo] = useState(false)
-  const solido = !sobreHeroi || passouDoTopo
+  const solido = passouDoTopo
+
+  // Sem fundo próprio, a tinta é clara — ver o bloco no topo do arquivo.
+  const claro = !solido
 
   const [menuAberto, setMenuAberto] = useState(false)
   const sentinela = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!sobreHeroi) return
-
     const alvo = sentinela.current
     if (!alvo) return
 
@@ -67,7 +75,9 @@ export function Header() {
 
     observador.observe(alvo)
     return () => observador.disconnect()
-  }, [sobreHeroi])
+    // Sem dependência de rota: a sentinela é remontada a cada navegação e o
+    // observer volta a medir do zero.
+  }, [])
 
   const fecharMenu = useCallback(() => setMenuAberto(false), [])
 
@@ -91,7 +101,7 @@ export function Header() {
   return (
     <>
       {/* Sentinela: 1px no topo do documento. Quando sai da tela, rolou. */}
-      {sobreHeroi && <div ref={sentinela} aria-hidden="true" className="h-px w-full" />}
+      <div ref={sentinela} aria-hidden="true" className="h-px w-full" />
 
       <a
         href="#conteudo"
@@ -106,6 +116,11 @@ export function Header() {
 
       <header
         className={cn(
+          // `fixed` já é bloco de contenção para o fio de progresso lá
+          // embaixo. Um `relative` junto NÃO seria redundante, seria um bug:
+          // as duas utilitárias escrevem `position`, a ordem de quem vence é a
+          // da folha gerada e não a da string, e `relative` vem depois de
+          // `fixed` no Tailwind. O header descolaria do topo.
           'fixed inset-x-0 top-0 z-50',
           ALTURA,
           'transition-[background-color,border-color,box-shadow] duration-200',
@@ -129,9 +144,15 @@ export function Header() {
                     'font-display text-corpo-sm relative px-3 py-2 uppercase',
                     'after:absolute after:inset-x-3 after:bottom-1 after:h-[3px] after:content-[""]',
                     'transition-colors',
-                    ativo
-                      ? 'text-caqui-ink-900 after:bg-caqui-orange-500'
-                      : 'text-caqui-ink-700 hover:text-caqui-ink-900 hover:after:bg-caqui-ink-900 after:bg-transparent',
+                    // A barra do item ativo continua sendo laranja nos dois
+                    // modos: ela é elemento de interface, e `orange-500` passa
+                    // os 3:1 exigidos tanto sobre branco quanto sobre a noite.
+                    ativo && 'after:bg-caqui-orange-500',
+                    ativo && (claro ? 'text-white' : 'text-caqui-ink-900'),
+                    !ativo &&
+                      (claro
+                        ? 'text-caqui-sand-200 after:bg-transparent hover:text-white hover:after:bg-white'
+                        : 'text-caqui-ink-700 hover:text-caqui-ink-900 hover:after:bg-caqui-ink-900 after:bg-transparent'),
                   )}
                 >
                   {link.rotulo}
@@ -141,7 +162,7 @@ export function Header() {
           </nav>
 
           <div className="ml-auto flex items-center gap-1 lg:ml-4">
-            <BotaoCarrinho />
+            <BotaoCarrinho claro={claro} />
 
             <button
               type="button"
@@ -149,8 +170,10 @@ export function Header() {
               aria-label="Abrir menu"
               aria-expanded={menuAberto}
               className={cn(
-                'text-caqui-ink-900 inline-flex size-11 items-center justify-center lg:hidden',
-                'hover:bg-caqui-sand-100 rounded-xs transition-colors',
+                'inline-flex size-11 items-center justify-center rounded-xs transition-colors lg:hidden',
+                claro
+                  ? 'hover:bg-caqui-noite-700/60 text-white'
+                  : 'text-caqui-ink-900 hover:bg-caqui-sand-100',
               )}
             >
               <svg viewBox="0 0 20 20" className="size-5" aria-hidden="true">
@@ -164,18 +187,62 @@ export function Header() {
             </button>
           </div>
         </div>
-      </header>
 
-      {/* Empurra o conteúdo nas páginas SEM herói. Com herói, o conteúdo passa
-          por baixo do header transparente de propósito. */}
-      {!sobreHeroi && <div aria-hidden="true" className={ALTURA} />}
+        <FioDeProgresso />
+      </header>
 
       <MenuMobile aberto={menuAberto} aoFechar={fecharMenu} caminhoAtual={caminho} />
     </>
   )
 }
 
-function BotaoCarrinho() {
+/**
+ * O fio de progresso de leitura.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ZERO JAVASCRIPT, E ISSO É O PONTO
+ * ────────────────────────────────────────────────────────────────────────────
+ * A implementação de reflexo seria um listener de rolagem calculando
+ * `scrollY / (scrollHeight - innerHeight)` a cada evento. Isso lê `scrollHeight`
+ * dentro do handler de scroll, que força cálculo de layout no momento mais caro
+ * que existe, e é uma das receitas mais conhecidas de rolagem engasgada em
+ * celular.
+ *
+ * `animation-timeline: scroll(root block)` faz a mesma conta no compositor, sem
+ * passar pelo main thread. Ver o bloco `.fio-progresso` em globals.css.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ELE NASCE VAZIO, NÃO CHEIO
+ * ────────────────────────────────────────────────────────────────────────────
+ * `scale-x-0` está aqui, na classe do elemento, e NÃO só dentro do `@supports`
+ * do CSS. Sem suporte à linha do tempo de rolagem, o `transform` do keyframe
+ * nunca é aplicado: sem esta classe o fio ficaria 100% preenchido e parado no
+ * topo da página, dizendo a coisa errada. Com ela, ele fica invisível, que é a
+ * degradação correta para um enfeite.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * POR QUE ELE NÃO É DESLIGADO EM `prefers-reduced-motion`
+ * ────────────────────────────────────────────────────────────────────────────
+ * O resto do site respeita `motion-safe:` à risca, e a diferença aqui é real:
+ * as outras animações do projeto acontecem SOZINHAS, e é o movimento autônomo
+ * que causa desconforto vestibular. Este fio não se move por conta própria em
+ * momento nenhum. Ele acompanha a rolagem que a própria pessoa está fazendo,
+ * na mesma direção e na mesma hora, como a barra de rolagem do navegador.
+ * Desligá-lo tiraria uma informação de quem talvez mais se beneficie dela.
+ *
+ * `aria-hidden` porque ele não informa nada que o leitor de tela já não saiba:
+ * a posição no documento é navegação, não conteúdo.
+ */
+function FioDeProgresso() {
+  return (
+    <div
+      aria-hidden="true"
+      className="fio-progresso bg-caqui-orange-500 pointer-events-none absolute inset-x-0 bottom-0 h-0.5 origin-left scale-x-0"
+    />
+  )
+}
+
+function BotaoCarrinho({ claro }: { claro: boolean }) {
   const { quantidadeTotal, pronto } = useCarrinho()
   const { abrir } = useMochila()
 
@@ -193,8 +260,10 @@ function BotaoCarrinho() {
         abrir()
       }}
       className={cn(
-        'text-caqui-ink-900 relative inline-flex size-11 items-center justify-center',
-        'hover:bg-caqui-sand-100 rounded-xs transition-colors',
+        'relative inline-flex size-11 items-center justify-center rounded-xs transition-colors',
+        claro
+          ? 'hover:bg-caqui-noite-700/60 text-white'
+          : 'text-caqui-ink-900 hover:bg-caqui-sand-100',
       )}
       // O rótulo acessível carrega a quantidade: um leitor de tela que só
       // ouvisse "carrinho" perderia a única informação do ícone.

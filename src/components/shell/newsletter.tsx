@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox, Input } from '@/components/ui/campo'
+import { cn } from '@/lib/ui/cn'
 
 /**
  * Captura de lead do rodapé.
@@ -19,7 +20,7 @@ import { Checkbox, Input } from '@/components/ui/campo'
  * "Assinou porque não desmarcou" não é consentimento sob a LGPD, e uma lista
  * construída assim é um passivo que só aparece quando alguém reclama.
  */
-export function Newsletter() {
+export function Newsletter({ className }: { className?: string }) {
   const [email, setEmail] = useState('')
   const [consentimento, setConsentimento] = useState(false)
   const [estado, setEstado] = useState<'parado' | 'enviando' | 'ok' | 'erro'>('parado')
@@ -61,7 +62,7 @@ export function Newsletter() {
   }
 
   return (
-    <form onSubmit={enviar} className="flex flex-col gap-3" noValidate>
+    <form onSubmit={enviar} className={cn('flex flex-col gap-3', className)} noValidate>
       <Input
         rotulo="Receba a agenda do mês"
         type="email"

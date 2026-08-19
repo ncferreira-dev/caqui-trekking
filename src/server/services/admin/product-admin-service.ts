@@ -239,3 +239,52 @@ export async function atualizarProduto(
     return { id: productId }
   })
 }
+
+/**
+ * Arquivar peça. Soft delete, nunca `delete`.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * NÃO EXISTIA NEM NA API
+ * ────────────────────────────────────────────────────────────────────────────
+ * `products/[id]` tinha só `PATCH`. `Product.deletedAt` existia no schema e
+ * era respeitado em toda leitura pública, e nada no sistema conseguia
+ * escrevê-lo: a peça descontinuada só podia virar rascunho, o que a esconde da
+ * loja e a mantém para sempre no meio da tela de quem opera.
+ *
+ * Hard delete não entra pelo mesmo motivo do roteiro: as variantes penduram
+ * nela, e o carrinho de quem já adicionou aponta para o id. Uma peça apagada
+ * de verdade viraria "item não encontrado" na mochila de um cliente.
+ */
+export async function arquivarProduto(productId: number, ctx: Contexto): Promise<{ id: number }> {
+  const antes = await prisma.product.findFirst({
+    where: { id: productId, deletedAt: null },
+    select: { id: true, name: true, status: true },
+  })
+
+  if (!antes) {
+    throw new AppError(ErrorCode.PRODUCT_NOT_FOUND, 'Peça não encontrada.', { status: 404 })
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const depois = await tx.product.update({
+      where: { id: productId },
+      data: { status: 'ARCHIVED', deletedAt: new Date(), featured: false },
+      select: { id: true },
+    })
+
+    await registrarAuditoria(
+      {
+        userId: ctx.userId,
+        action: 'product.archive',
+        entityType: 'Product',
+        entityId: productId,
+        before: antes,
+        after: { status: 'ARCHIVED', arquivada: true },
+        ip: ctx.ip,
+      },
+      tx,
+    )
+
+    return depois
+  })
+}

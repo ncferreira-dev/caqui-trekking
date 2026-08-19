@@ -40,14 +40,27 @@ import type { ProdutoDetalheDTO } from '@/server/dto/public-dto'
  * Aqui a COR manda: escolher uma cor mantém todos os tamanhos visíveis e marca
  * como indisponíveis os que aquela cor não tem. Nada some, nada mente.
  */
-export function SeletorDeVariante({ produto }: { produto: ProdutoDetalheDTO }) {
+export function SeletorDeVariante({
+  produto,
+  cor,
+  aoTrocarCor,
+}: {
+  produto: ProdutoDetalheDTO
+  /**
+   * A cor escolhida, CONTROLADA por `PecaComCor`.
+   *
+   * Ela subiu daqui para o pai em 18/08/2026: a galeria precisa da mesma cor
+   * para trocar a foto junto com o preço, e as duas são irmãs na grade.
+   */
+  cor: string | null
+  aoTrocarCor: (nova: string) => void
+}) {
   const cores = produto.cores
   const tamanhos = ordenarTamanhos([...new Set(produto.variantes.map((v) => v.tamanho))])
   const soUmTamanho = tamanhos.length === 1 && tamanhos[0] === 'UNICO'
 
   const primeiraDisponivel = produto.variantes.find((v) => v.disponivel)
 
-  const [cor, setCor] = useState<string | null>(primeiraDisponivel?.cor ?? cores[0]?.nome ?? null)
   const [tamanho, setTamanho] = useState<string | null>(
     primeiraDisponivel?.tamanho ?? tamanhos[0] ?? null,
   )
@@ -63,7 +76,7 @@ export function SeletorDeVariante({ produto }: { produto: ProdutoDetalheDTO }) {
   const preco = selecionada?.precoCentavos ?? produto.precoCentavos
 
   function escolherCor(nova: string) {
-    setCor(nova)
+    aoTrocarCor(nova)
     setAdicionada(false)
 
     // Se o tamanho atual não existe na cor nova, pula para o primeiro que

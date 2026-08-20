@@ -60,8 +60,6 @@ const CATEGORIAS = [
 
 const TAMANHOS = ['UNICO', 'PP', 'P', 'M', 'G', 'GG', 'XG']
 
-const MAX_FOTOS = 6
-
 type Variante = {
   size: string
   colorName: string
@@ -90,12 +88,28 @@ export function CadastroDePeca() {
   const [categoria, setCategoria] = useState('')
   const [preco, setPreco] = useState('')
   const [publicar, setPublicar] = useState(false)
-  const [destaque, setDestaque] = useState(false)
   const [variantes, setVariantes] = useState<Variante[]>([varianteVazia()])
 
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState<string | null>(null)
+
+  /**
+   * As cores distintas que a peça tem AGORA, na ordem em que foram escritas.
+   *
+   * É o que liga a grade de fotos à grade de variantes: escreveu uma cor nova
+   * lá embaixo, aparece um quadro de foto aqui em cima. A dedução é sem
+   * distinção de caixa, para "Azul Marinho" e "azul marinho" não abrirem dois
+   * quadros da mesma cor — e a grafia que vale é a primeira digitada.
+   */
+  const coresDaPeca = Array.from(
+    new Map(
+      variantes
+        .map((v) => v.colorName.trim())
+        .filter((c) => c !== '')
+        .map((c) => [c.toLowerCase(), c] as const),
+    ).values(),
+  )
 
   function mudarVariante(indice: number, campo: Partial<Variante>) {
     setVariantes((atual) => atual.map((v, i) => (i === indice ? { ...v, ...campo } : v)))
@@ -160,7 +174,6 @@ export function CadastroDePeca() {
         category: categoria,
         priceCents: centavos,
         status: publicar ? 'PUBLISHED' : 'DRAFT',
-        featured: destaque,
         variantes: preparadas,
       })
 
@@ -283,27 +296,6 @@ export function CadastroDePeca() {
             </div>
           </div>
 
-          {/* Os cartões de seleção com borda grossa, no lugar da "Coleção
-              Hexa" do Dália. */}
-          <label
-            className={cn(
-              'flex cursor-pointer items-center gap-3 rounded-lg border-2 p-4 transition-colors',
-              destaque
-                ? 'border-caqui-orange-500 bg-caqui-orange-500/5'
-                : 'border-caqui-sand-200 hover:border-caqui-orange-400',
-            )}
-          >
-            <input
-              type="checkbox"
-              checked={destaque}
-              onChange={(e) => setDestaque(e.target.checked)}
-              className="accent-caqui-orange-500 size-5"
-            />
-            <span className="text-sm">
-              <strong>Destaque na loja.</strong> A peça aparece antes de todas as outras.
-            </span>
-          </label>
-
           <label
             className={cn(
               'flex cursor-pointer items-center gap-3 rounded-lg border-2 p-4 transition-colors',
@@ -324,28 +316,73 @@ export function CadastroDePeca() {
             </span>
           </label>
 
-          {/* A grade de fotos do Dália: cartões quadrados e um tracejado para
-              adicionar. O upload só liga quando o Cloudinary tiver credencial,
-              e a moldura diz isso em vez de falhar no clique. */}
+          {/* ── UM QUADRO DE FOTO POR COR ────────────────────────────────
+              O Dália faz isso quando o material é "Ambas": ele parte a grade
+              em "Imagens · Dourado" e "Imagens · Prata", na ordem fixa.
+
+              Aqui a mesma ideia, mas dirigida pelas cores que a pessoa
+              escreveu — escreveu uma cor nova lá embaixo, nasce um quadro aqui
+              em cima. É o que o `colorName` de `MediaAsset` existe para
+              guardar, a pedido registrado no schema: "a cor amarela pode ser
+              imagem dois, a cor azul pode ser imagem um".
+
+              A REGRA QUE DECIDE O RESTO, e ela está no schema: na dúvida, foto
+              NEUTRA, nunca a cor errada. Foto genérica é informação faltando;
+              foto da cor errada é informação falsa. Por isso o quadro neutro
+              existe sempre, mesmo com cores cadastradas. */}
           <div>
-            <label className={ROTULO}>Imagens da Peça (máx. {MAX_FOTOS})</label>
+            <label className={ROTULO}>Imagens da Peça</label>
+            <p className="text-caqui-ink-500 mb-4 text-xs">
+              Cada cor que você escrever em <strong>Tamanhos e Cores</strong> ganha o próprio quadro
+              aqui. A foto de cada cor é a que o cliente vê ao escolher aquela cor na loja.
+            </p>
+
             <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-              <div
-                className={cn(
-                  'border-caqui-sand-200 flex aspect-square flex-col items-center justify-center gap-2',
-                  'rounded-lg border-2 border-dashed p-3 text-center',
-                )}
-              >
-                <span aria-hidden="true" className="text-caqui-ink-500 text-2xl leading-none">
-                  +
-                </span>
-                <span className="text-caqui-ink-500 text-xs">
-                  Entra depois de configurar o storage
-                </span>
+              {coresDaPeca.map((cor, i) => (
+                <div key={cor.toLowerCase()} className="flex flex-col gap-2">
+                  <div
+                    className={cn(
+                      'border-caqui-sand-200 flex aspect-square flex-col items-center justify-center gap-2',
+                      'rounded-lg border-2 border-dashed p-3 text-center',
+                    )}
+                  >
+                    <span aria-hidden="true" className="text-caqui-ink-500 text-2xl leading-none">
+                      +
+                    </span>
+                    <span className="text-caqui-ink-500 text-xs">Foto {i + 1}</span>
+                  </div>
+                  <p className="text-caqui-ink-700 truncate text-center text-xs font-medium">
+                    {cor}
+                  </p>
+                </div>
+              ))}
+
+              <div className="flex flex-col gap-2">
+                <div
+                  className={cn(
+                    'border-caqui-sand-200 flex aspect-square flex-col items-center justify-center gap-2',
+                    'rounded-lg border-2 border-dashed p-3 text-center',
+                  )}
+                >
+                  <span aria-hidden="true" className="text-caqui-ink-500 text-2xl leading-none">
+                    +
+                  </span>
+                  <span className="text-caqui-ink-500 text-xs">Foto neutra</span>
+                </div>
+                <p className="text-caqui-ink-500 text-center text-xs">serve para qualquer cor</p>
               </div>
             </div>
-            <p className="text-caqui-ink-500 text-xs">
-              JPG ou PNG. A primeira foto é a capa da peça na loja.
+
+            {coresDaPeca.length === 0 && (
+              <p className="border-caqui-sand-200 bg-caqui-sand-100 rounded-lg border px-3 py-2 text-xs">
+                Escreva uma cor em <strong>Tamanhos e Cores</strong> e um quadro para a foto dela
+                aparece aqui.
+              </p>
+            )}
+
+            <p className="text-caqui-ink-500 mt-3 text-xs">
+              JPG ou PNG. O envio liga quando o storage estiver configurado. Na dúvida entre uma
+              foto genérica e a da cor errada, use a neutra: foto errada é informação falsa.
             </p>
           </div>
 

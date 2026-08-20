@@ -3,14 +3,13 @@ import Link from 'next/link'
 
 import { BotaoCadastrarProduto, BotaoEditarProduto } from '@/components/crm/acoes-de-produto'
 import { ArquivarItem } from '@/components/crm/arquivar-item'
-import { FotosDaPeca, type FotoDaPeca } from '@/components/crm/fotos-da-peca'
+import { FiltroDeCategoria } from '@/components/crm/filtro-de-categoria'
 import { BotaoDestaque, BotoesDeOrdem } from '@/components/crm/ordem-e-destaque'
-import { Paginacao } from '@/components/crm/paginacao'
 import { CabecalhoDeSecao, Painel, Rotulo, Vazio } from '@/components/crm/pecas'
-import { TabelaDeVariantes, type VarianteDoPainel } from '@/components/crm/tabela-de-variantes'
+import { VALORES_DE_CATEGORIA } from '@/lib/crm/categorias'
 import { centavosParaReais, formatarBRL } from '@/lib/money'
-import { fatiar } from '@/lib/crm/paginacao'
 import { prisma } from '@/lib/prisma'
+import { cn } from '@/lib/ui/cn'
 import { ROTULO_CATEGORIA } from '@/server/services/product-service'
 import { exigirSessaoDaPagina } from '@/server/crm/sessao-da-pagina'
 
@@ -18,68 +17,97 @@ export const metadata: Metadata = { title: 'Produtos', robots: { index: false, f
 export const dynamic = 'force-dynamic'
 
 /**
- * A Caqui Wear no painel.
+ * A Caqui Wear no painel, em GRADE DE QUADRADOS.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * POR QUE DEIXOU DE SER UMA LISTA VERTICAL
+ * ════════════════════════════════════════════════════════════════════════════
+ * Pedido do cliente em 20/08/2026, olhando a tela: "assim tá muito feio, deixe
+ * em quadrados".
+ *
+ * E o problema era medível, não só estético. A tela desenhava UMA LINHA POR
+ * VARIANTE, com botão de 44px em cada. Treze peças com três tamanhos e três
+ * cores dão 117 linhas — mais de dois mil pixels de rolagem para responder
+ * "quais peças eu tenho?", que é a primeira pergunta de quem abre a tela.
+ *
+ * Agora cada PEÇA é um quadrado. A variante vira bolinha de cor e etiqueta de
+ * tamanho dentro dele, e a grade inteira cabe numa tela.
  *
  * ────────────────────────────────────────────────────────────────────────────
- * A TELA É A GRADE DE VARIANTES, NÃO A FICHA DO PRODUTO
+ * O QUE ISSO CUSTOU, DITO SEM MAQUIAGEM
  * ────────────────────────────────────────────────────────────────────────────
- * Nome, descrição e preço de uma camiseta mudam uma vez por temporada.
- * Disponibilidade por tamanho e cor muda toda semana — é ela que a Caqui vem
- * mexer aqui, e por isso ela é o conteúdo da tela, não um detalhe dentro de um
- * formulário de edição.
+ * "Marcar esgotada" era um toque na própria linha. Agora é: abrir a peça,
+ * marcar, fechar. Um toque virou três.
  *
- * Cada produto abre já com a grade aberta. Sem acordeão: com 13 produtos,
- * fechar tudo obrigaria a abrir um por um para achar a variante que acabou.
+ * A troca foi consciente e é do cliente: ver o catálogo inteiro passou a valer
+ * mais que economizar dois toques numa operação semanal. O quadrado avisa
+ * quando há variante esgotada, então a peça que PRECISA ser aberta se anuncia
+ * — ninguém varre a grade procurando.
  *
- * O cadastro completo — criar peça, subir foto, editar descrição — depende de
- * upload funcionando, e o Cloudinary ainda não tem credencial neste projeto.
- * Ver o mesmo argumento em `roteiros/page.tsx` e em docs/10-crm.md.
+ * ────────────────────────────────────────────────────────────────────────────
+ * O FILTRO É POR ENDEREÇO
+ * ────────────────────────────────────────────────────────────────────────────
+ * `?categoria=` e não estado local: esta tela dá `router.refresh()` a cada
+ * ação, e um filtro em memória sumiria junto. Ver `filtro-de-categoria.tsx`.
  */
-/** Mesma régua da tela de roteiros. Ver `lib/crm/paginacao.ts`. */
-const POR_PAGINA = 50
 
 export default async function PaginaProdutos({ searchParams }: PageProps<'/crm/produtos'>) {
   const sessao = await exigirSessaoDaPagina()
   const ehOwner = sessao.role === 'OWNER'
 
   const params = await searchParams
-  const total = await prisma.product.count({ where: { deletedAt: null } })
-  const fatia = fatiar(params['pagina'], total, POR_PAGINA)
+  const pedida = Array.isArray(params['categoria']) ? params['categoria'][0] : params['categoria']
+  // Categoria desconhecida no endereço cai em "todas", em vez de devolver uma
+  // grade vazia que parece catálogo apagado.
+  const categoria = pedida && VALORES_DE_CATEGORIA.has(pedida) ? pedida : ''
 
-  const produtos = await prisma.product.findMany({
-    where: { deletedAt: null },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      description: true,
-      category: true,
-      priceCents: true,
-      status: true,
-      featured: true,
-      // As fotos e a cor de cada uma. Ver `fotos-da-peca.tsx`.
-      images: {
-        select: { id: true, url: true, alt: true, colorName: true },
-        orderBy: { sortOrder: 'asc' },
-      },
-      variants: {
-        select: {
-          id: true,
-          size: true,
-          colorName: true,
-          colorHex: true,
-          priceCents: true,
-          available: true,
+  const onde = { deletedAt: null, ...(categoria ? { category: categoria as never } : {}) }
+
+  const [porCategoria, produtos] = await Promise.all([
+    // A contagem de TODAS as categorias, sempre — é ela que enche o seletor, e
+    // ela não pode depender do filtro atual senão o número muda ao filtrar.
+    prisma.product.groupBy({
+      by: ['category'],
+      where: { deletedAt: null },
+      _count: { _all: true },
+    }),
+
+    prisma.product.findMany({
+      where: onde,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        category: true,
+        priceCents: true,
+        status: true,
+        featured: true,
+        images: {
+          select: { id: true, url: true, alt: true, colorName: true },
+          orderBy: { sortOrder: 'asc' },
+          take: 1,
         },
-        orderBy: { sortOrder: 'asc' },
+        variants: {
+          select: {
+            id: true,
+            size: true,
+            colorName: true,
+            colorHex: true,
+            priceCents: true,
+            available: true,
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
       },
-    },
-    // A mesma ordem da vitrine, pelo mesmo motivo da tela de roteiros: as
-    // setas de subir/descer não podem mostrar uma posição e gravar outra.
-    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    take: fatia.tamanho,
-    skip: fatia.offset,
-  })
+      // A mesma ordem da vitrine, pelo mesmo motivo da tela de roteiros: as
+      // setas de subir/descer não podem mostrar uma posição e gravar outra.
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
+  ])
+
+  const contagem: Record<string, number> = {}
+  for (const linha of porCategoria) contagem[linha.category] = linha._count._all
 
   const ordemAtual = produtos.map((p) => p.id)
 
@@ -90,7 +118,7 @@ export default async function PaginaProdutos({ searchParams }: PageProps<'/crm/p
     <>
       <CabecalhoDeSecao
         titulo="Produtos"
-        descricao="Um toque para marcar uma variante como esgotada. Vale na loja na hora."
+        descricao="Cada quadrado é uma peça. Abra para mexer em tamanho, cor e disponibilidade."
         acao={
           <Rotulo>
             {totalVariantes} variante(s) · {esgotadas} esgotada(s)
@@ -100,33 +128,22 @@ export default async function PaginaProdutos({ searchParams }: PageProps<'/crm/p
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <BotaoCadastrarProduto />
-        {/* Mesma honestidade da tela de roteiros: as setas mandam na ordem
-            manual, e o destaque passa na frente dela na loja. */}
-        <p className="text-caqui-ink-700 text-corpo-sm">
-          As setas definem a ordem da loja. Peça em destaque aparece antes de todas.
-        </p>
+        <FiltroDeCategoria categoria={categoria} contagem={contagem} />
       </div>
 
       {produtos.length === 0 ? (
         <Painel>
-          <Vazio titulo="Nenhum produto cadastrado">
-            <p>A página da Caqui Wear fica vazia até existir peça publicada.</p>
+          <Vazio titulo={categoria ? 'Nenhuma peça nesta categoria' : 'Nenhuma peça cadastrada'}>
+            <p>
+              {categoria
+                ? 'Troque a categoria no seletor acima, ou cadastre uma peça nova.'
+                : 'A página da Caqui Wear fica vazia até existir peça publicada.'}
+            </p>
           </Vazio>
         </Painel>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {produtos.map((p) => {
-            const variantes: VarianteDoPainel[] = p.variants.map((v) => ({
-              id: v.id,
-              tamanho: v.size,
-              cor: v.colorName,
-              corHex: v.colorHex,
-              precoProprioCentavos: v.priceCents,
-              disponivel: v.available,
-            }))
-
-            // Uma vez só: alimenta tanto o "Editar" do cabeçalho quanto o de
-            // cada linha da grade — os dois abrem o mesmo formulário.
             const produtoParaEditar = {
               id: p.id,
               name: p.name,
@@ -143,47 +160,85 @@ export default async function PaginaProdutos({ searchParams }: PageProps<'/crm/p
               })),
             }
 
+            // Cor aparece UMA vez no quadrado, não uma por tamanho: "P Laranja,
+            // M Laranja, G Laranja" são três variantes e uma cor só.
+            const cores = [
+              ...new Map(p.variants.map((v) => [v.colorName.toLowerCase(), v] as const)).values(),
+            ]
+            const tamanhos = [...new Set(p.variants.map((v) => v.size))]
+            const semEstoque = p.variants.filter((v) => !v.available).length
+            const capa = p.images[0]
+
             return (
-              <Painel
+              <article
                 key={p.id}
-                titulo={p.name}
-                acao={
-                  <div className="flex flex-wrap items-center gap-3">
-                    <BotoesDeOrdem colecao="products" ids={ordemAtual} id={p.id} rotulo={p.name} />
-
-                    <BotaoDestaque
-                      colecao="products"
-                      id={p.id}
-                      destacado={p.featured}
-                      rotulo={p.name}
+                className="border-caqui-ink-900 flex flex-col overflow-hidden rounded-xs border bg-white"
+              >
+                {/* A CAPA, quadrada. Sem foto, a moldura diz o que falta em vez
+                    de mostrar um cinza mudo. */}
+                <div className="bg-caqui-sand-100 border-caqui-rule relative aspect-square border-b">
+                  {capa ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={capa.url}
+                      alt={capa.alt}
+                      className="size-full object-cover"
+                      loading="lazy"
                     />
+                  ) : (
+                    <div className="text-caqui-ink-500 text-micro flex size-full items-center justify-center px-3 text-center font-mono uppercase">
+                      sem foto
+                    </div>
+                  )}
 
-                    <Rotulo>
-                      {ROTULO_CATEGORIA[p.category] ?? p.category} · {formatarBRL(p.priceCents)}
-                    </Rotulo>
+                  <div className="absolute top-2 left-2 flex flex-wrap gap-1">
                     {p.status === 'DRAFT' && (
-                      <span className="border-caqui-ink-900 text-micro border px-1.5 py-0.5 font-mono uppercase">
+                      <span className="border-caqui-ink-900 text-micro border bg-white px-1.5 py-0.5 font-mono uppercase">
                         Rascunho
                       </span>
                     )}
-                    <BotaoEditarProduto produto={produtoParaEditar} />
-                    {ehOwner && (
-                      <ArquivarItem
-                        colecao="products"
-                        id={p.id}
-                        nome={p.name}
-                        consequencia="Ela sai da loja e desta lista."
-                      >
-                        <p>
-                          As {p.variants.length} variante(s) somem junto. A mochila de quem já tinha
-                          adicionado avisa que a peça saiu de linha, em vez de quebrar.
-                        </p>
-                        <p className="mt-2">
-                          Se for falta de estoque, marque as variantes como esgotadas em vez de
-                          arquivar. Aquilo volta em um toque.
-                        </p>
-                      </ArquivarItem>
+                    {semEstoque > 0 && (
+                      <span className="bg-caqui-danger text-micro px-1.5 py-0.5 font-mono text-white uppercase">
+                        {semEstoque} esgotada(s)
+                      </span>
                     )}
+                  </div>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-2 p-3">
+                  <div>
+                    <p className="font-display text-corpo-sm uppercase">{p.name}</p>
+                    <p className="text-caqui-ink-500 text-micro font-mono uppercase">
+                      {ROTULO_CATEGORIA[p.category] ?? p.category} · {formatarBRL(p.priceCents)}
+                    </p>
+                  </div>
+
+                  {/* As bolinhas de cor e as etiquetas de tamanho: é o resumo
+                      da grade que ocupava dezenas de linhas antes. */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {cores.map((v) => (
+                      <span
+                        key={v.colorName.toLowerCase()}
+                        title={v.colorName}
+                        className={cn(
+                          'border-caqui-ink-900 size-4 rounded-xs border',
+                          !v.available && 'opacity-30',
+                        )}
+                        style={{ backgroundColor: v.colorHex ?? '#ffffff' }}
+                      />
+                    ))}
+                    <span className="sr-only">
+                      Cores: {cores.map((v) => v.colorName).join(', ')}
+                    </span>
+                    {tamanhos.length > 0 && (
+                      <span className="text-caqui-ink-500 text-micro ml-1 font-mono uppercase">
+                        {tamanhos.join(' · ')}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="border-caqui-rule mt-auto flex flex-wrap items-center gap-2 border-t pt-2">
+                    <BotaoEditarProduto produto={produtoParaEditar} />
 
                     <Link
                       href={`/wear/${p.slug}`}
@@ -192,49 +247,55 @@ export default async function PaginaProdutos({ searchParams }: PageProps<'/crm/p
                     >
                       Ver
                     </Link>
-                  </div>
-                }
-              >
-                <TabelaDeVariantes
-                  variantes={variantes}
-                  precoBaseCentavos={p.priceCents}
-                  produto={produtoParaEditar}
-                />
 
-                {/* ── Qual foto é de qual cor ──────────────────────────────
-                    Pedido do cliente em 18/08/2026. Fica junto das variantes
-                    de propósito: a cor que o seletor oferece É a da tabela
-                    acima, e ver as duas na mesma tela é o que impede alguém de
-                    procurar uma cor que ainda não cadastrou. */}
-                <div className="border-caqui-rule border-t">
-                  <FotosDaPeca
-                    fotos={fotosDaPeca(p.images)}
-                    cores={[...new Set(p.variants.map((v) => v.colorName))]}
-                    nomeDaPeca={p.name}
-                  />
+                    {ehOwner && (
+                      <ArquivarItem
+                        colecao="products"
+                        id={p.id}
+                        nome={p.name}
+                        consequencia="Ela sai da loja e desta grade."
+                      >
+                        <p>
+                          As {p.variants.length} variante(s) somem junto. A mochila de quem já tinha
+                          adicionado avisa que a peça saiu de linha, em vez de quebrar.
+                        </p>
+                        <p className="mt-2">
+                          Se for falta de estoque, marque as variantes como esgotadas pelo “Editar”.
+                          Aquilo volta em um toque.
+                        </p>
+                      </ArquivarItem>
+                    )}
+
+                    <span className="ml-auto flex items-center gap-1">
+                      <BotoesDeOrdem
+                        colecao="products"
+                        ids={ordemAtual}
+                        id={p.id}
+                        rotulo={p.name}
+                      />
+                      <BotaoDestaque
+                        colecao="products"
+                        id={p.id}
+                        destacado={p.featured}
+                        rotulo={p.name}
+                      />
+                    </span>
+                  </div>
                 </div>
-              </Painel>
+              </article>
             )
           })}
         </div>
       )}
 
-      {/* Fora do ramo vazio/cheio de propósito: a contagem precisa aparecer
-          nos dois casos. "Nenhuma peça" é informação, não ausência dela. */}
-      <Painel className="mt-3">
-        <Paginacao
-          fatia={fatia}
-          itens="peças"
-          href={(p) => (p <= 1 ? '/crm/produtos' : `/crm/produtos?pagina=${p}`)}
-        />
-      </Painel>
+      {/* A ordem manual só faz sentido sem filtro: com `?categoria=` a grade
+          mostra um recorte, e subir uma peça dentro do recorte gravaria uma
+          ordem que a loja não tem. Dito aqui em vez de escondido. */}
+      {categoria !== '' && (
+        <p className="text-caqui-ink-500 text-micro mt-3 font-mono uppercase">
+          Filtrando por categoria. A ordem da loja é a da lista completa.
+        </p>
+      )}
     </>
   )
-}
-
-/** Do banco para o que o seletor de cor precisa. */
-function fotosDaPeca(
-  imagens: { id: number; url: string; alt: string; colorName: string | null }[],
-): FotoDaPeca[] {
-  return imagens.map((m) => ({ id: m.id, url: m.url, alt: m.alt, cor: m.colorName }))
 }

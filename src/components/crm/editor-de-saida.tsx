@@ -276,7 +276,7 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [], dataInic
             placeholder="120,00"
             value={precoDe}
             onChange={(e) => setPrecoDe(e.target.value)}
-            dica="Opcional. Mostra um preço mais alto riscado do lado, como se fosse um desconto — ex: R$ 500,00 riscado ao lado de R$ 425,00. Só aparece se for maior que o preço por pessoa."
+            dica="Opcional. Mostra um preço mais alto riscado do lado, como se fosse um desconto. Ex.: R$ 500,00 riscado ao lado de R$ 425,00. Só aparece se for maior que o preço por pessoa."
           />
         </div>
 

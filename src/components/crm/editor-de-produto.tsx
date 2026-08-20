@@ -176,7 +176,7 @@ export function EditorDeProduto({
       aberto={aberto}
       aoFechar={aoFechar}
       titulo={editando ? 'Editar peça' : 'Cadastrar peça'}
-      className="w-[min(44rem,calc(100vw-2rem))]"
+      className="w-[min(64rem,calc(100vw-2rem))]"
       rodape={
         <>
           <Button variante="ghost" onClick={aoFechar} disabled={enviando}>
@@ -189,15 +189,17 @@ export function EditorDeProduto({
       }
     >
       <form id={idBase} onSubmit={enviar} noValidate className="flex flex-col gap-5">
-        <Input
-          rotulo="Nome da peça"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Camiseta Dry Fit Caqui"
-          obrigatorio
-        />
-
-        <div className="grid grid-cols-2 gap-4">
+        {/* Identificação da peça numa linha só, como no formulário de
+            referência: nome larga, categoria e preço ao lado. Empilha no
+            celular, onde o CRM também é usado. */}
+        <div className="grid gap-4 sm:grid-cols-[2fr_1fr_1fr]">
+          <Input
+            rotulo="Nome da peça"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Camiseta Dry Fit Caqui"
+            obrigatorio
+          />
           <Select
             rotulo="Categoria"
             value={categoria}
@@ -242,7 +244,7 @@ export function EditorDeProduto({
             {variantes.map((v, i) => (
               <li
                 key={i}
-                className="border-caqui-rule grid grid-cols-[5rem_1fr_6rem_auto_auto] items-center gap-2 border px-2 py-2"
+                className="border-caqui-rule grid grid-cols-[5rem_1fr_6rem_6rem_auto_auto] items-center gap-2 border px-2 py-2"
               >
                 <select
                   aria-label={`Tamanho da variante ${i + 1}`}
@@ -274,10 +276,28 @@ export function EditorDeProduto({
                   className="border-caqui-ink-900 text-corpo-sm min-h-11 rounded-xs border bg-white px-2"
                 />
 
+                {/* O código da cor, digitável.
+                    O seletor nativo do navegador abre um painel sem botão de
+                    confirmar, e quem não quer caçar o tom na roda de cor fica
+                    preso nele. Com o campo ao lado dá para colar o código que
+                    veio da estamparia e ver a amostra mudar na hora. */}
+                <input
+                  aria-label={`Código da cor da variante ${i + 1}`}
+                  value={v.colorHex}
+                  onChange={(e) => {
+                    const bruto = e.target.value.trim()
+                    const texto = bruto.startsWith('#') ? bruto : `#${bruto}`
+                    mudarVariante(i, { colorHex: texto.slice(0, 7) })
+                  }}
+                  placeholder="#000000"
+                  spellCheck={false}
+                  className="border-caqui-ink-900 min-h-11 rounded-xs border bg-white px-2 font-mono text-sm uppercase"
+                />
+
                 <input
                   type="color"
                   aria-label={`Amostra de cor da variante ${i + 1}`}
-                  value={v.colorHex}
+                  value={/^#[0-9a-fA-F]{6}$/.test(v.colorHex) ? v.colorHex : '#000000'}
                   onChange={(e) => mudarVariante(i, { colorHex: e.target.value })}
                   className="border-caqui-ink-900 size-11 shrink-0 rounded-xs border bg-white"
                 />

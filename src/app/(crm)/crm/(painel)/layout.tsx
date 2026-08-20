@@ -74,6 +74,9 @@ export default async function LayoutPainel({ children }: LayoutProps<'/crm'>) {
     // e a região viva precisa existir no DOM antes da primeira mensagem.
     <ProvedorDeToast>
       <div className="flex min-h-svh flex-col bg-white">
+        {/* Cabeçalho e abas viajam JUNTOS no `sticky`. Separados, a barra de
+            abas rolaria para fora e a pessoa perderia a troca de seção no meio
+            de uma lista longa — que é exatamente onde ela quer trocar. */}
         <header className="border-caqui-ink-900 sticky top-0 z-30 border-b bg-white">
           <div className="flex items-center justify-between gap-4 px-4 py-2.5">
             <div className="flex items-center gap-2.5">
@@ -94,15 +97,15 @@ export default async function LayoutPainel({ children }: LayoutProps<'/crm'>) {
               <BotaoSair nome={usuario.nome} />
             </div>
           </div>
+
+          {/* No desktop, as abas. No celular, este componente só monta a barra
+              inferior `fixed`, que não ocupa espaço aqui. */}
+          <Navegacao itens={itens} papel={usuario.role} />
         </header>
 
-        <div className="flex flex-1">
-          <Navegacao itens={itens} papel={usuario.role} />
-
-          {/* `pb-20` no celular: a barra inferior é `fixed` e cobriria a última
-            linha da tabela — que é justamente onde ficam os botões de ação. */}
-          <main className="min-w-0 flex-1 px-4 pt-4 pb-20 lg:px-6 lg:pb-6">{children}</main>
-        </div>
+        {/* `pb-20` no celular: a barra inferior é `fixed` e cobriria a última
+          linha da tabela — que é justamente onde ficam os botões de ação. */}
+        <main className="min-w-0 flex-1 px-4 pt-4 pb-20 lg:px-6 lg:pb-6">{children}</main>
 
         {/* Volta para o site. O CRM não tem link para a loja em lugar nenhum, e
           a Caqui vai querer conferir como ficou o que acabou de publicar. */}

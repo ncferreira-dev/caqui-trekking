@@ -20,8 +20,14 @@ import { cn } from '@/lib/ui/cn'
  * Barra inferior fixa: um toque, na zona onde o polegar já está. É por isso
  * que todo aplicativo que se usa em movimento tem barra embaixo.
  *
- * Em `lg` ela vira coluna à esquerda, onde há espaço e o mouse não tem
- * preferência de altura.
+ * Em `lg` ela vira uma FILA DE ABAS abaixo do cabeçalho. Foi coluna à esquerda
+ * até 20/08/2026; a coluna reservava 224px de largura em toda tela do painel,
+ * e a linha de saída — que carrega data, preço, título, o controle de vagas e
+ * cinco botões — é justamente a que mais sofria com isso.
+ *
+ * Aba no topo também casa com o modelo mental de "janela por assunto" que o
+ * cliente descreveu: Saídas, Roteiros, Produtos e Mensagens são destinos
+ * irmãos, e irmãos ficam lado a lado.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * SEIS ITENS É O TETO
@@ -78,12 +84,19 @@ export function Navegacao({
         </ul>
       </nav>
 
-      {/* ── Desktop: coluna à esquerda ──────────────────────────────────── */}
+      {/* ── Desktop: abas horizontais, logo abaixo do cabeçalho ─────────── */}
+      {/* Era coluna à esquerda até 20/08/2026. Virou aba no topo a pedido do
+          cliente: a coluna comia 224px de largura permanente numa tela cuja
+          linha de saída já disputava espaço entre data, preço, título, o
+          controle de vagas e cinco botões. Tirar a coluna devolve essa largura
+          para o conteúdo, que é onde a leitura acontece.
+          A barra inferior do celular NÃO muda: lá o polegar manda, e ela já
+          era horizontal. */}
       <nav
         aria-label="Seções do painel"
-        className="border-caqui-rule hidden w-56 shrink-0 border-r bg-white lg:block"
+        className="border-caqui-rule hidden border-t bg-white lg:block"
       >
-        <ul className="sticky top-0 flex flex-col gap-0.5 p-3">
+        <ul className="flex gap-0.5 px-4 py-1.5 lg:px-6">
           {visiveis.map((item) => (
             <li key={item.href}>
               <Item item={item} caminho={caminho} />

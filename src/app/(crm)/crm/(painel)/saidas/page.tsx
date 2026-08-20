@@ -101,7 +101,37 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
 
   // O calendário não pagina; a lista sim. `fatiar` sobre o total do calendário
   // devolveria uma fatia que a grade ignoraria, então ele recebe o mês inteiro.
-  const totalDeSaidas = await prisma.departure.count({ where: ondeBuscar })
+  // ──────────────────────────────────────────────────────────────────────────
+  // AS DUAS QUE NÃO DEPENDEM UMA DA OUTRA VÃO JUNTAS
+  // ──────────────────────────────────────────────────────────────────────────
+  // A lista de roteiros alimenta o seletor de "nova saída" e não olha para as
+  // saídas em nenhum momento; a contagem não olha para os roteiros. Em fila,
+  // eram duas travessias de rede; aqui é uma.
+  //
+  // Localmente a diferença some no ruído, porque o Postgres está na mesma
+  // máquina. Em produção o banco é o Neon e a aplicação é a Vercel, e cada
+  // consulta em fila é uma ida e volta que ninguém vê no relatório de consulta
+  // lenta — porque nenhuma delas é lenta.
+  //
+  // A `findMany` das saídas continua depois: ela precisa da fatia, que precisa
+  // do total. Essa dependência é real.
+  const [totalDeSaidas, roteiros] = await Promise.all([
+    prisma.departure.count({ where: ondeBuscar }),
+
+    // Só roteiros publicados ou em rascunho podem receber saída nova —
+    // arquivado não. Ordenados por título, que é como a Caqui procura na hora
+    // de criar.
+    prisma.trip.findMany({
+      where: { deletedAt: null, status: { in: ['PUBLISHED', 'DRAFT'] } },
+      select: {
+        id: true,
+        title: true,
+        departures: { select: { priceCents: true }, take: 1, orderBy: { startAt: 'desc' } },
+      },
+      orderBy: { title: 'asc' },
+    }),
+  ])
+
   const fatia = fatiar(params['pagina'], totalDeSaidas, mesDoCalendario ? 500 : POR_PAGINA)
 
   const linhas = await prisma.departure.findMany({
@@ -215,17 +245,8 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
     trip: { id: d.trip.id, slug: d.trip.slug, titulo: d.trip.title },
   }))
 
-  // Só roteiros publicados ou em rascunho podem receber saída nova — arquivado
-  // não. Ordenados por título, que é como a Caqui procura na hora de criar.
-  const roteiros = await prisma.trip.findMany({
-    where: { deletedAt: null, status: { in: ['PUBLISHED', 'DRAFT'] } },
-    select: {
-      id: true,
-      title: true,
-      departures: { select: { priceCents: true }, take: 1, orderBy: { startAt: 'desc' } },
-    },
-    orderBy: { title: 'asc' },
-  })
+  // `roteiros` foi buscado lá em cima, junto com a contagem. Aqui só vira a
+  // forma que o seletor consome.
   const roteirosOpcao = roteiros.map((r) => ({
     id: r.id,
     titulo: r.title,

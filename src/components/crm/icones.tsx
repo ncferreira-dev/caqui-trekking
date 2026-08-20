@@ -103,3 +103,11 @@ export function IconeSair() {
     </svg>
   )
 }
+
+export function IconeMenu() {
+  return (
+    <svg {...BASE}>
+      <path d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13" strokeLinecap="square" />
+    </svg>
+  )
+}

@@ -103,9 +103,12 @@ export default async function LayoutPainel({ children }: LayoutProps<'/crm'>) {
           <Navegacao itens={itens} papel={usuario.role} />
         </header>
 
-        {/* `pb-20` no celular: a barra inferior é `fixed` e cobriria a última
-          linha da tabela — que é justamente onde ficam os botões de ação. */}
-        <main className="min-w-0 flex-1 px-4 pt-4 pb-20 lg:px-6 lg:pb-6">{children}</main>
+        {/* `pb-20` SÓ no celular: a barra inferior é `fixed` e cobriria a
+          última linha da tabela, que é justamente onde ficam os botões de
+          ação. De `sm` para cima a barra não existe mais — quem navega é o
+          hambúrguer ou as abas — e reservar a faixa deixaria um rodapé vazio
+          de 80px em toda página. */}
+        <main className="min-w-0 flex-1 px-4 pt-4 pb-20 sm:pb-6 lg:px-6">{children}</main>
 
         {/* Volta para o site. O CRM não tem link para a loja em lugar nenhum, e
           a Caqui vai querer conferir como ficou o que acabou de publicar. */}

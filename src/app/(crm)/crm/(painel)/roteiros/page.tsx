@@ -182,7 +182,7 @@ export default async function PaginaRoteiros({ searchParams }: PageProps<'/crm/r
                     key={t.id}
                     className={cn('px-4 py-3', semAgenda && 'border-caqui-orange-500 border-l-4')}
                   >
-                    <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                       {/* Piso de largura: mesma armadilha da linha de saida,
                           medida em 19/08/2026. `flex-1` tem base ZERO, e o
                           bloco de acoes ao lado (ordem, destaque, dificuldade,
@@ -208,88 +208,107 @@ export default async function PaginaRoteiros({ searchParams }: PageProps<'/crm/r
                           {t.city} · {t.state}
                           {t.durationMinutes ? ` · ${formatarDuracao(t.durationMinutes)}` : ''}
                         </p>
+
+                        {/* DIFICULDADE E CONTAGEM DE DATAS SÃO INFORMAÇÃO, E
+                            INFORMAÇÃO MORA DO LADO DO NOME.
+                            Até 20/08/2026 as duas ficavam na tira da direita,
+                            espremidas entre o botão de destaque e o "Editar" —
+                            dois rótulos que não se clicam, no meio de seis
+                            coisas que se clicam. Quem varria a linha atrás de
+                            um comando tropeçava nelas, e quem procurava a
+                            dificuldade tinha que achá-la num campo de botões.
+                            Agora a esquerda responde "o que é este roteiro" e
+                            a direita, "o que dá para fazer com ele". */}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <BadgeDificuldade nivel={t.difficulty as Dificuldade} />
+
+                          <span
+                            className={cn(
+                              'text-micro font-mono uppercase',
+                              semAgenda ? 'text-caqui-danger' : 'text-caqui-ink-500',
+                            )}
+                          >
+                            {t._count.departures} data(s) futura(s)
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-3">
-                        <BotoesDeOrdem
-                          colecao="trips"
-                          ids={ordemAtual}
-                          id={t.id}
-                          rotulo={t.title}
-                        />
+                      {/* AS AÇÕES EMPILHAM, como na lista de saídas: primeiro o
+                          que posiciona o roteiro na vitrine, depois o que se
+                          faz com o roteiro em si. */}
+                      <div className="flex flex-col gap-2 lg:items-end">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <BotoesDeOrdem
+                            colecao="trips"
+                            ids={ordemAtual}
+                            id={t.id}
+                            rotulo={t.title}
+                          />
 
-                        <BotaoDestaque
-                          colecao="trips"
-                          id={t.id}
-                          destacado={t.featured}
-                          rotulo={t.title}
-                          semDataFutura={t._count.departures === 0}
-                        />
-
-                        <BadgeDificuldade nivel={t.difficulty as Dificuldade} />
-
-                        <span
-                          className={cn(
-                            'text-micro font-mono uppercase',
-                            semAgenda ? 'text-caqui-danger' : 'text-caqui-ink-500',
-                          )}
-                        >
-                          {t._count.departures} data(s) futura(s)
-                        </span>
-
-                        <EditarRoteiro
-                          roteiro={{
-                            id: t.id,
-                            title: t.title,
-                            subtitle: t.subtitle,
-                            description: t.description,
-                            city: t.city,
-                            state: t.state,
-                            region: t.region,
-                            difficulty: t.difficulty,
-                            distanceKm: t.distanceKm ? t.distanceKm.toString() : null,
-                            elevationGainM: t.elevationGainM,
-                            maxAltitudeM: t.maxAltitudeM,
-                            durationMinutes: t.durationMinutes,
-                            minAge: t.minAge,
-                            requiresExperience: t.requiresExperience,
-                            highlights: t.highlights,
-                            included: t.included,
-                            notIncluded: t.notIncluded,
-                            whatToBring: t.whatToBring,
-                            cancellationPolicy: t.cancellationPolicy,
-                            status: t.status,
-                            activityTagIds: t.activityTags.map((r) => r.activityTagId),
-                          }}
-                          tags={opcoesDeTag}
-                        />
-
-                        {ehOwner && t.status !== 'ARCHIVED' && (
-                          <ArquivarItem
+                          <BotaoDestaque
                             colecao="trips"
                             id={t.id}
-                            nome={t.title}
-                            consequencia="Ele sai do site e desta lista."
-                          >
-                            <p>
-                              As {t._count.departures} saída(s) futura(s) dele param de aparecer na
-                              agenda. As saídas já realizadas continuam registradas: o histórico não
-                              se reescreve.
-                            </p>
-                            <p className="mt-2">
-                              Se for coisa temporária, ponha em <strong>rascunho</strong> pelo
-                              “Editar”. Aquilo volta em um clique.
-                            </p>
-                          </ArquivarItem>
-                        )}
+                            destacado={t.featured}
+                            rotulo={t.title}
+                            semDataFutura={t._count.departures === 0}
+                          />
+                        </div>
 
-                        <Link
-                          href={`/trekking/${t.slug}`}
-                          target="_blank"
-                          className="text-caqui-ink-700 hover:text-caqui-ink-900 text-micro rounded-xs font-mono uppercase underline underline-offset-4"
-                        >
-                          Ver no site
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <EditarRoteiro
+                            roteiro={{
+                              id: t.id,
+                              title: t.title,
+                              subtitle: t.subtitle,
+                              description: t.description,
+                              city: t.city,
+                              state: t.state,
+                              region: t.region,
+                              difficulty: t.difficulty,
+                              distanceKm: t.distanceKm ? t.distanceKm.toString() : null,
+                              elevationGainM: t.elevationGainM,
+                              maxAltitudeM: t.maxAltitudeM,
+                              durationMinutes: t.durationMinutes,
+                              minAge: t.minAge,
+                              requiresExperience: t.requiresExperience,
+                              highlights: t.highlights,
+                              included: t.included,
+                              notIncluded: t.notIncluded,
+                              whatToBring: t.whatToBring,
+                              cancellationPolicy: t.cancellationPolicy,
+                              status: t.status,
+                              activityTagIds: t.activityTags.map((r) => r.activityTagId),
+                            }}
+                            tags={opcoesDeTag}
+                          />
+
+                          {ehOwner && t.status !== 'ARCHIVED' && (
+                            <ArquivarItem
+                              colecao="trips"
+                              id={t.id}
+                              nome={t.title}
+                              consequencia="Ele sai do site e desta lista."
+                            >
+                              <p>
+                                As {t._count.departures} saída(s) futura(s) dele param de aparecer
+                                na agenda. As saídas já realizadas continuam registradas: o
+                                histórico não se reescreve.
+                              </p>
+                              <p className="mt-2">
+                                Se for coisa temporária, ponha em <strong>rascunho</strong> pelo
+                                “Editar”. Aquilo volta em um clique.
+                              </p>
+                            </ArquivarItem>
+                          )}
+
+                          <Link
+                            href={`/trekking/${t.slug}`}
+                            target="_blank"
+                            className="text-caqui-ink-700 hover:text-caqui-ink-900 text-micro rounded-xs font-mono uppercase underline underline-offset-4"
+                          >
+                            Ver no site
+                          </Link>
+                        </div>
                       </div>
                     </div>
 

@@ -2,12 +2,28 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
+import { IconeMenu } from '@/components/crm/icones'
+import { Drawer } from '@/components/ui/dialogo'
 import { cn } from '@/lib/ui/cn'
 
 /**
  * A navegação do painel.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * TRÊS FAIXAS, PORQUE SÃO TRÊS SITUAÇÕES DIFERENTES
+ * ────────────────────────────────────────────────────────────────────────────
+ * Até 20/08/2026 eram duas, cortadas em `lg`. O resultado é que uma janela de
+ * desktop estreitada para 800px recebia a barra INFERIOR FIXA do celular: um
+ * navegador com mouse, mostrando uma barra desenhada para o polegar.
+ *
+ *   `< sm`    barra inferior fixa  — celular de verdade
+ *   `sm..lg`  hambúrguer + drawer  — janela estreita, tablet
+ *   `>= lg`   abas no topo         — tela larga
+ *
+ * O hambúrguer NÃO desce para o celular, e isso é decisão, não esquecimento:
+ * ver o bloco abaixo.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * NO CELULAR ELA FICA EMBAIXO. NÃO É ADAPTAÇÃO — É O CENÁRIO PRINCIPAL.
@@ -58,11 +74,28 @@ export function Navegacao({
   papel: 'OWNER' | 'ADMIN'
 }) {
   const caminho = usePathname()
+  const [menuAberto, setMenuAberto] = useState(false)
 
   // Esconder item que a pessoa não pode usar é CORTESIA, não barreira: o
   // `fetch` continua chamável do console, e quem barra é o guard da API.
   // O valor aqui é não oferecer um caminho que termina em 403.
   const visiveis = itens.filter((i) => !i.soOwner || papel === 'OWNER')
+
+  const atual = visiveis.find((i) => caminho === i.href || caminho.startsWith(`${i.href}/`))
+
+  // Navegou: o drawer fecha sozinho. Sem isto ele ficaria aberto por cima da
+  // página nova, e a pessoa teria que fechar à mão toda vez que trocasse de
+  // seção — que é a única coisa que se faz nele.
+  //
+  // Ajuste DURANTE O RENDER, e não num `useEffect`: é o mesmo idioma de
+  // `controle-de-vagas.tsx`, e o `react-hooks/set-state-in-effect` do projeto
+  // recusa a outra forma. Fechar por efeito também pintaria um quadro com o
+  // drawer aberto sobre a página nova antes de fechar.
+  const [caminhoAnterior, setCaminhoAnterior] = useState(caminho)
+  if (caminho !== caminhoAnterior) {
+    setCaminhoAnterior(caminho)
+    setMenuAberto(false)
+  }
 
   return (
     <>
@@ -70,7 +103,7 @@ export function Navegacao({
       <nav
         aria-label="Seções do painel"
         className={cn(
-          'border-caqui-ink-900 fixed inset-x-0 bottom-0 z-40 border-t bg-white lg:hidden',
+          'border-caqui-ink-900 fixed inset-x-0 bottom-0 z-40 border-t bg-white sm:hidden',
           // O indicador de home do iPhone come a faixa de baixo.
           'pb-[env(safe-area-inset-bottom)]',
         )}
@@ -83,6 +116,39 @@ export function Navegacao({
           ))}
         </ul>
       </nav>
+
+      {/* ── Janela estreita: hambúrguer ─────────────────────────────────── */}
+      {/* Só entre `sm` e `lg`. Abaixo de `sm` é celular e a barra de baixo
+          ganha; acima de `lg` cabem as seis abas sem aperto, e um menu que
+          esconde o que já cabe é um toque a mais por nada. */}
+      <div className="border-caqui-rule hidden border-t px-4 py-1.5 sm:block lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMenuAberto(true)}
+          aria-expanded={menuAberto}
+          aria-haspopup="dialog"
+          className={cn(
+            'text-corpo-sm inline-flex min-h-11 items-center gap-2.5 rounded-xs px-2',
+            'text-caqui-ink-900 hover:bg-caqui-sand-100 transition-colors',
+          )}
+        >
+          <IconeMenu />
+          {/* O botão diz ONDE A PESSOA ESTÁ, não só "menu". Sem o nome da
+              seção, fechar a navegação também apaga a única pista de lugar que
+              a tela tinha nesta largura. */}
+          <span className="font-mono uppercase">{atual ? atual.rotulo : 'Seções'}</span>
+        </button>
+      </div>
+
+      <Drawer aberto={menuAberto} aoFechar={() => setMenuAberto(false)} titulo="Seções do painel">
+        <ul className="flex flex-col gap-0.5">
+          {visiveis.map((item) => (
+            <li key={item.href}>
+              <Item item={item} caminho={caminho} />
+            </li>
+          ))}
+        </ul>
+      </Drawer>
 
       {/* ── Desktop: abas horizontais, logo abaixo do cabeçalho ─────────── */}
       {/* Era coluna à esquerda até 20/08/2026. Virou aba no topo a pedido do

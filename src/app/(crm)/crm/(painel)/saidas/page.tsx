@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { CalendarioDeSaidas } from '@/components/crm/calendario-de-saidas'
 import { ListaDeSaidas, type SaidaDoPainel } from '@/components/crm/lista-de-saidas'
 import { NovaSaida } from '@/components/crm/nova-saida'
-import { Paginacao } from '@/components/crm/paginacao'
 import { CabecalhoDeSecao, Painel, Rotulo } from '@/components/crm/pecas'
 import { chaveMesSchema } from '@/lib/api/schemas'
 import { fatiar } from '@/lib/crm/paginacao'
@@ -12,14 +11,12 @@ import { chaveDia } from '@/lib/calendario'
 import {
   chaveMes,
   deslocarMes,
-  inicioDoMes,
   intervaloDoMes,
   isoComOffsetLocal,
   jaEncerrada,
   mesPorExtenso,
 } from '@/lib/datetime'
 import { prisma } from '@/lib/prisma'
-import { cn } from '@/lib/ui/cn'
 import { exigirSessaoDaPagina } from '@/server/crm/sessao-da-pagina'
 import { estadoDeVagas } from '@/lib/vagas'
 
@@ -30,40 +27,49 @@ export const dynamic = 'force-dynamic'
  * A agenda administrativa.
  *
  * ────────────────────────────────────────────────────────────────────────────
- * A LISTA É O PADRÃO. O CALENDÁRIO ENTROU COMO SEGUNDA VISTA, E POR UM MOTIVO
+ * GRADE EM CIMA, LISTA EMBAIXO. UMA TELA SÓ, SEM SELETOR
  * ────────────────────────────────────────────────────────────────────────────
  * Esta tela nasceu só com a lista, e o argumento estava escrito aqui: uma
  * grade de 42 células para 6 marcações é 36 quadrados vazios, e numa célula
  * não cabem os três botões de 44px que esta tela existe para oferecer em um
- * toque. Aquele argumento continua VÁLIDO, e é por isso que a lista continua
- * sendo o padrão e continua sendo onde se opera.
+ * toque. O argumento continua VÁLIDO — e é por isso que a lista não foi
+ * embora: é nela que se muda vaga, selo, preço e data.
  *
- * O que mudou foi o pedido do cliente, em 18/08/2026: "aperta na agenda no dia
- * que não tem evento e põe criar evento". Isso não é a mesma tarefa. Marcar
- * uma data nova é a única coisa que se faz olhando para os BURACOS do mês, e
- * buraco é justamente o que uma lista não sabe mostrar: ela lista o que
- * existe. As 36 células vazias, que eram o defeito da grade, são o conteúdo
- * desta tarefa.
+ * O calendário entrou em 18/08/2026, por outro pedido: "aperta na agenda no
+ * dia que não tem evento e põe criar evento". Marcar data nova é a única
+ * tarefa que se faz olhando para os BURACOS do mês, e buraco é o que uma
+ * lista não sabe mostrar: ela lista o que existe. As 36 células vazias, que
+ * eram o defeito da grade, são o conteúdo daquela tarefa.
  *
- * Então são duas vistas, `?vista=calendario` na URL, e nenhuma some. A grade
- * abre o mês e cria; a lista opera o que já existe. Na vista de calendário a
- * lista continua logo abaixo, recortada no mesmo mês.
+ * Por um tempo as duas viveram atrás de um seletor "Lista | Calendário".
+ * Ele saiu em 20/08/2026, a pedido do cliente, e a razão é boa: as duas
+ * respondem perguntas DIFERENTES sobre o mesmo mês. A grade responde "como
+ * está o mês"; a lista responde "o que eu faço com cada data". Escolher entre
+ * elas obrigava a trocar de aba e voltar, e os controles só existem numa das
+ * duas.
+ *
+ * Agora aparecem juntas, sempre, recortadas no mesmo mês. Sem estado para
+ * escolher, não há estado para errar.
  *
  * ────────────────────────────────────────────────────────────────────────────
- * A JANELA COMEÇA NO MÊS CORRENTE
+ * ANDAR NO TEMPO É A SETA DO MÊS, E SÓ ELA
  * ────────────────────────────────────────────────────────────────────────────
- * Mesma decisão da agenda pública: o que já passou continua visível dentro do
- * mês, porque some da tela justo quando alguém pergunta sobre ele. O histórico
- * completo fica atrás de `?tudo=1`.
+ * A paginação e o "ver o histórico completo" (`?tudo=1`) eram conceitos da
+ * lista solta e saíram junto com o seletor. Não é perda de acesso: `?mes=`
+ * chega a qualquer mês, para trás ou para frente.
+ *
+ * Paginar não podia sobreviver: a grade desenha o mês inteiro, e uma fatia
+ * dentro dele produziria dias vazios por acidente — exatamente a mentira que
+ * uma grade não pode contar. Por isso a busca traz o mês fechado.
  */
 /**
- * 50 por página, e SÓ na vista de lista.
+ * Teto de segurança da consulta do mês, não paginação.
  *
- * O calendário é recortado por mês por definição: paginar dentro dele
- * mostraria uma grade com metade dos dias vazios por acidente, o que é
- * exatamente a mentira que uma grade não pode contar.
+ * Nenhum mês real da Caqui chega perto disso. Existe para o dia em que um
+ * `?mes=` esquisito ou um seed maluco tente puxar a tabela inteira para dentro
+ * de uma grade de 42 células.
  */
-const POR_PAGINA = 50
+const TETO_DO_MES = 500
 
 export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/saidas'>) {
   const sessao = await exigirSessaoDaPagina()
@@ -75,32 +81,36 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
   const params = await searchParams
   const texto = (valor: string | string[] | undefined) => (Array.isArray(valor) ? valor[0] : valor)
 
-  const tudo = texto(params['tudo']) === '1'
-  // Qualquer outro valor cai na lista. `?vista=xyz` não pode inventar terceira
-  // tela, e `?mes=abc` não pode chegar em `intervaloDoMes` e derrubar o render
-  // com um RangeError do Intl — o mesmo cuidado da agenda pública.
-  const vista = texto(params['vista']) === 'calendario' ? 'calendario' : 'lista'
+  // `?mes=abc` não pode chegar em `intervaloDoMes` e derrubar o render com um
+  // RangeError do Intl — o mesmo cuidado da agenda pública.
   const mesPedido = chaveMesSchema.safeParse(texto(params['mes'])).data
 
   const agora = new Date()
-  // `inicioDoMes` de `lib/datetime`, não `Date.UTC(...,3,0,0)` escrito à mão.
-  // O `3` seria o offset de São Paulo chumbado no código — exatamente o hack
-  // que o PROMPT 02 encontrou replicado em quatro arquivos no projeto de
-  // referência.
-  const comecoDaJanela = inicioDoMes(agora)
 
-  // A grade só sabe desenhar um mês. Sem `?mes=`, ela abre no corrente.
-  const mesDoCalendario = vista === 'calendario' ? (mesPedido ?? chaveMes(agora)) : null
-  const janelaDoCalendario = mesDoCalendario ? intervaloDoMes(mesDoCalendario) : null
+  // ──────────────────────────────────────────────────────────────────────────
+  // UMA VISTA SÓ: O CALENDÁRIO EM CIMA, A LISTA EMBAIXO
+  // ──────────────────────────────────────────────────────────────────────────
+  // Até 20/08/2026 havia um seletor "Lista | Calendário" no topo, e a vista
+  // vivia em `?vista=`. Duas vistas do mesmo mês obrigavam a escolher entre
+  // ver a forma do mês e ver os controles de cada saída — e os controles só
+  // existem na lista. Quem queria as duas coisas trocava de aba e voltava.
+  //
+  // Agora as duas aparecem juntas, sempre: a grade responde "como está o mês",
+  // a lista logo abaixo responde "o que eu faço com cada data". Não há estado
+  // para escolher, então não há estado para errar.
+  //
+  // O PREÇO, dito claramente: andar no tempo passou a ser SÓ a seta do mês.
+  // A paginação e o "ver o histórico completo" eram conceitos da lista solta e
+  // saíram junto — paginar dentro de um mês desenharia uma grade com metade
+  // dos dias vazios por acidente, que é exatamente a mentira que uma grade não
+  // pode contar.
+  const mesDoCalendario = mesPedido ?? chaveMes(agora)
+  const janelaDoCalendario = intervaloDoMes(mesDoCalendario)
 
-  const ondeBuscar = janelaDoCalendario
-    ? { startAt: { gte: janelaDoCalendario.de, lte: janelaDoCalendario.ate } }
-    : tudo
-      ? {}
-      : { startAt: { gte: comecoDaJanela } }
+  const ondeBuscar = {
+    startAt: { gte: janelaDoCalendario.de, lte: janelaDoCalendario.ate },
+  }
 
-  // O calendário não pagina; a lista sim. `fatiar` sobre o total do calendário
-  // devolveria uma fatia que a grade ignoraria, então ele recebe o mês inteiro.
   // ──────────────────────────────────────────────────────────────────────────
   // AS DUAS QUE NÃO DEPENDEM UMA DA OUTRA VÃO JUNTAS
   // ──────────────────────────────────────────────────────────────────────────
@@ -132,7 +142,7 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
     }),
   ])
 
-  const fatia = fatiar(params['pagina'], totalDeSaidas, mesDoCalendario ? 500 : POR_PAGINA)
+  const fatia = fatiar(params['pagina'], totalDeSaidas, TETO_DO_MES)
 
   const linhas = await prisma.departure.findMany({
     // Sem filtro de `status`: o painel mostra rascunho e cancelada, que é
@@ -264,64 +274,40 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
         acao={<Rotulo>{futuras} data(s) ativa(s)</Rotulo>}
       />
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4">
         <NovaSaida roteiros={roteirosOpcao} />
-
-        {/* Dois LINKS, não dois botões: a vista fica no endereço, então ela
-            sobrevive ao recarregar e ao voltar. Mesma decisão da agenda do
-            site. */}
-        <div
-          role="group"
-          aria-label="Como ver as saídas"
-          className="border-caqui-rule-forte inline-flex border"
-        >
-          <AbaDeVista href={linkDeSaidas({ vista: 'lista', tudo })} ativo={vista === 'lista'}>
-            Lista
-          </AbaDeVista>
-          <AbaDeVista
-            href={linkDeSaidas({ vista: 'calendario', mes: mesDoCalendario ?? chaveMes(agora) })}
-            ativo={vista === 'calendario'}
-          >
-            Calendário
-          </AbaDeVista>
-        </div>
       </div>
 
       <div className="flex flex-col gap-4">
-        {mesDoCalendario && (
-          <Painel
-            titulo={mesPorExtenso(mesDoCalendario)}
-            acao={
-              <span className="flex items-center gap-1">
-                <SetaDeMes
-                  href={linkDeSaidas({
-                    vista: 'calendario',
-                    mes: deslocarMes(mesDoCalendario, -1),
-                  })}
-                  sentido="anterior"
-                  rotulo={mesPorExtenso(deslocarMes(mesDoCalendario, -1))}
-                />
-                <SetaDeMes
-                  href={linkDeSaidas({ vista: 'calendario', mes: deslocarMes(mesDoCalendario, 1) })}
-                  sentido="seguinte"
-                  rotulo={mesPorExtenso(deslocarMes(mesDoCalendario, 1))}
-                />
-              </span>
-            }
-          >
-            <div className="p-2">
-              <CalendarioDeSaidas
-                mes={mesDoCalendario}
-                saidas={saidas}
-                roteiros={roteirosOpcao}
-                // Calculado no SERVIDOR: o relógio do navegador de quem opera
-                // pode estar em outro fuso, e "hoje" mudando entre o HTML e a
-                // hidratação marcaria o dia errado.
-                hoje={chaveDia(agora)}
+        <Painel
+          titulo={mesPorExtenso(mesDoCalendario)}
+          acao={
+            <span className="flex items-center gap-1">
+              <SetaDeMes
+                href={linkDeSaidas({ mes: deslocarMes(mesDoCalendario, -1) })}
+                sentido="anterior"
+                rotulo={mesPorExtenso(deslocarMes(mesDoCalendario, -1))}
               />
-            </div>
-          </Painel>
-        )}
+              <SetaDeMes
+                href={linkDeSaidas({ mes: deslocarMes(mesDoCalendario, 1) })}
+                sentido="seguinte"
+                rotulo={mesPorExtenso(deslocarMes(mesDoCalendario, 1))}
+              />
+            </span>
+          }
+        >
+          <div className="p-2">
+            <CalendarioDeSaidas
+              mes={mesDoCalendario}
+              saidas={saidas}
+              roteiros={roteirosOpcao}
+              // Calculado no SERVIDOR: o relógio do navegador de quem opera
+              // pode estar em outro fuso, e "hoje" mudando entre o HTML e a
+              // hidratação marcaria o dia errado.
+              hoje={chaveDia(agora)}
+            />
+          </div>
+        </Painel>
 
         {meses.length === 0 ? (
           <Painel>
@@ -337,33 +323,6 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
               <ListaDeSaidas saidas={mes.saidas} podeExcluir={ehOwner} />
             </Painel>
           ))
-        )}
-
-        {vista === 'lista' && (
-          <Painel>
-            <Paginacao
-              fatia={fatia}
-              itens="saídas"
-              href={(p) =>
-                linkDeSaidas({ vista: 'lista', tudo }) +
-                (p <= 1 ? '' : `${tudo ? '&' : '?'}pagina=${p}`)
-              }
-            />
-          </Painel>
-        )}
-
-        {/* O histórico completo é um conceito da LISTA. No calendário, andar
-            no tempo é a seta do mês, e oferecer as duas coisas ao mesmo tempo
-            faria a grade discordar da lista logo abaixo dela. */}
-        {vista === 'lista' && (
-          <p className="text-caqui-ink-500 text-micro font-mono uppercase">
-            <Link
-              href={linkDeSaidas({ vista: 'lista', tudo: !tudo })}
-              className={cn('hover:text-caqui-ink-900 rounded-xs underline underline-offset-4')}
-            >
-              {tudo ? 'Ver só do mês atual em diante' : 'Ver o histórico completo'}
-            </Link>
-          </p>
         )}
       </div>
     </>
@@ -391,45 +350,8 @@ function agruparPorMes(saidas: SaidaDoPainel[]) {
  * pessoa de volta ao mês corrente sem explicação. Ver o mesmo helper da agenda
  * pública, em `filtros-agenda.tsx`.
  */
-function linkDeSaidas(estado: {
-  vista: 'lista' | 'calendario'
-  mes?: string
-  tudo?: boolean
-}): string {
-  const busca = new URLSearchParams()
-  if (estado.vista === 'calendario') {
-    busca.set('vista', 'calendario')
-    if (estado.mes) busca.set('mes', estado.mes)
-  } else if (estado.tudo) {
-    busca.set('tudo', '1')
-  }
-  const query = busca.toString()
-  return query ? `/crm/saidas?${query}` : '/crm/saidas'
-}
-
-function AbaDeVista({
-  href,
-  ativo,
-  children,
-}: {
-  href: string
-  ativo: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={ativo ? 'true' : undefined}
-      className={cn(
-        'text-micro inline-flex min-h-11 items-center px-4 font-mono uppercase transition-colors',
-        ativo
-          ? 'bg-caqui-ink-900 text-white'
-          : 'text-caqui-ink-700 hover:bg-caqui-sand-100 bg-white',
-      )}
-    >
-      {children}
-    </Link>
-  )
+function linkDeSaidas(estado: { mes: string }): string {
+  return `/crm/saidas?mes=${estado.mes}`
 }
 
 function SetaDeMes({

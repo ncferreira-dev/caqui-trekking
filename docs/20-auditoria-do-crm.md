@@ -12,6 +12,26 @@
 
 ---
 
+## Situação dos achados (atualizado em 20/08/2026)
+
+| #   | Achado                             | Situação                      |
+| --- | ---------------------------------- | ----------------------------- |
+| A1  | Corrida no lançamento de vagas     | **aberto** — decisão pendente |
+| A2  | `P2002` virava "Erro interno"      | resolvido em `3d7e27d`        |
+| A3  | Nada obrigava o `npm run check`    | resolvido em parte — ver nota |
+| A4  | Três consultas em fila nas saídas  | resolvido em `3d7e27d`        |
+| A5  | `startAt` sem índice próprio       | **aberto** — sem urgência     |
+| A6  | bcrypt dentro da transação         | resolvido em `3d7e27d`        |
+| A7  | O toque de vagas bloqueia o seguin | **aberto** — decisão pendente |
+
+**Nota sobre o A3:** entrou a camada que importa, o GitHub Actions rodando
+`npm run check` em push e pull request (`.github/workflows/check.yml`). O hook
+local de pre-commit **não** entrou: ele exige uma dependência nova
+(`lint-staged`) e muda o `npm install` de todo mundo, e a barreira que não
+depende da máquina de ninguém já está de pé.
+
+---
+
 ## Antes dos achados: o que está sólido
 
 Isto não é cortesia. Os itens abaixo foram conferidos um a um e passaram, e é o

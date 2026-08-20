@@ -68,16 +68,33 @@ type Props = {
    * criação; em edição a data vem da própria saída.
    */
   dataInicial?: string
+  /**
+   * Roteiro já escolhido, na criação.
+   *
+   * É o que o "publicar uma data" da tela de Roteiros passa. Sem ele, aquele
+   * link levava para `/crm/saidas` e a pessoa tinha que reencontrar na lista a
+   * mesma trilha em que ela acabou de clicar.
+   */
+  roteiroInicial?: number
 }
 
-export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [], dataInicial }: Props) {
+export function EditorDeSaida({
+  aberto,
+  aoFechar,
+  saida,
+  roteiros = [],
+  dataInicial,
+  roteiroInicial,
+}: Props) {
   const router = useRouter()
   const { mostrar } = useToast()
   const idBase = useId()
 
   const editando = saida !== undefined
 
-  const [tripId, setTripId] = useState(String(saida?.tripId ?? roteiros[0]?.id ?? ''))
+  const [tripId, setTripId] = useState(
+    String(saida?.tripId ?? roteiroInicial ?? roteiros[0]?.id ?? ''),
+  )
   const [inicio, setInicio] = useState(saida?.inicioParede ?? dataInicial ?? '')
   // ────────────────────────────────────────────────────────────────────────
   // O PREÇO JÁ NASCE SUGERIDO, E NÃO SÓ AO TROCAR O ROTEIRO
@@ -95,9 +112,13 @@ export function EditorDeSaida({ aberto, aoFechar, saida, roteiros = [], dataInic
   )
   const [preco, setPreco] = useState(() => {
     if (saida) return centavosParaReais(saida.precoCentavos)
-    const primeiro = roteiros[0]
-    return primeiro && primeiro.precoSugeridoCentavos > 0
-      ? centavosParaReais(primeiro.precoSugeridoCentavos)
+    // O roteiro que o seletor vai abrir mostrando, e NAO `roteiros[0]` fixo:
+    // com `roteiroInicial` os dois divergem, e o campo abriria com o preco de
+    // outra trilha. Sugestao errada e pior que campo vazio, porque parece
+    // conferida.
+    const escolhido = roteiros.find((r) => r.id === roteiroInicial) ?? roteiros[0]
+    return escolhido && escolhido.precoSugeridoCentavos > 0
+      ? centavosParaReais(escolhido.precoSugeridoCentavos)
       : ''
   })
   const [ponto, setPonto] = useState(saida?.meetingPoint ?? '')

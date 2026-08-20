@@ -85,6 +85,12 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
   // RangeError do Intl — o mesmo cuidado da agenda pública.
   const mesPedido = chaveMesSchema.safeParse(texto(params['mes'])).data
 
+  // `?trilha=<id>` vem do "publicar uma data" da tela de Roteiros: o formulário
+  // já abre com aquela trilha escolhida. Só aceita inteiro positivo — um id
+  // esquisito não pode virar `NaN` no seletor.
+  const trilhaPedida = Number(texto(params['trilha']))
+  const abrirCom = Number.isInteger(trilhaPedida) && trilhaPedida > 0 ? trilhaPedida : undefined
+
   const agora = new Date()
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -275,7 +281,7 @@ export default async function PaginaSaidas({ searchParams }: PageProps<'/crm/sai
       />
 
       <div className="mb-4">
-        <NovaSaida roteiros={roteirosOpcao} />
+        <NovaSaida roteiros={roteirosOpcao} {...(abrirCom !== undefined ? { abrirCom } : {})} />
       </div>
 
       <div className="flex flex-col gap-4">

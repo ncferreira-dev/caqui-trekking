@@ -316,7 +316,7 @@ export default async function PaginaRoteiros({ searchParams }: PageProps<'/crm/r
                       <p className="text-caqui-ink-700 text-micro mt-2 font-mono uppercase">
                         Está no ar e ninguém consegue comprar:{' '}
                         <Link
-                          href="/crm/saidas"
+                          href={`/crm/saidas?trilha=${t.id}`}
                           className="rounded-xs underline underline-offset-4"
                         >
                           publicar uma data

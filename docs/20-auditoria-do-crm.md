@@ -16,13 +16,25 @@
 
 | #   | Achado                             | Situação                      |
 | --- | ---------------------------------- | ----------------------------- |
-| A1  | Corrida no lançamento de vagas     | **aberto** — decisão pendente |
+| A1  | Corrida no lançamento de vagas     | resolvido — ver nota          |
 | A2  | `P2002` virava "Erro interno"      | resolvido em `3d7e27d`        |
 | A3  | Nada obrigava o `npm run check`    | resolvido em parte — ver nota |
 | A4  | Três consultas em fila nas saídas  | resolvido em `3d7e27d`        |
 | A5  | `startAt` sem índice próprio       | **aberto** — sem urgência     |
 | A6  | bcrypt dentro da transação         | resolvido em `3d7e27d`        |
 | A7  | O toque de vagas bloqueia o seguin | **aberto** — decisão pendente |
+
+**Nota sobre o A1:** resolvido preservando a decisão de o campo ser um TOTAL,
+que continua certa — é o número que a pessoa tem na cabeça depois de desligar o
+telefone. O que entrou foi uma trava otimista: quem lança declara o valor que
+estava na tela, e o `UPDATE` só casa a linha se ela ainda estiver nele. Não
+estando, a resposta é 409 dizendo o número atual, em vez de apagar o lançamento
+do outro.
+
+A leitura também veio para dentro da transação, o que corrige o `from` do
+histórico. Sozinha ela não resolveria a perda: no isolamento padrão do Postgres
+as duas transações leem o mesmo valor e as duas gravam. A condição precisa
+fazer parte do próprio `UPDATE`.
 
 **Nota sobre o A3:** entrou a camada que importa, o GitHub Actions rodando
 `npm run check` em push e pull request (`.github/workflows/check.yml`). O hook

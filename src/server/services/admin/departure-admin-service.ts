@@ -238,12 +238,40 @@ async function registrarSelo(
  */
 export async function lancarVagas(
   departureId: number,
-  entrada: { seatsTaken: number; capacity?: number | null; lastSpotsAt?: number },
+  entrada: {
+    seatsTaken: number
+    capacity?: number | null
+    lastSpotsAt?: number
+    /**
+     * O valor que QUEM ESTÁ LANÇANDO tinha na tela quando decidiu o número.
+     *
+     * ────────────────────────────────────────────────────────────────────────
+     * A TRAVA OTIMISTA, E POR QUE ELA PRECISOU EXISTIR
+     * ────────────────────────────────────────────────────────────────────────
+     * Achado A1 da auditoria de 20/08/2026 (docs/20-auditoria-do-crm.md). Este
+     * campo é um TOTAL, e a decisão de ser total continua certa: é o número
+     * que a pessoa tem na cabeça depois de desligar o telefone. Ver o
+     * comentário do schema da rota.
+     *
+     * Só que total é, por definição, uma escrita cega. Dois guias lançando ao
+     * mesmo tempo — cenário que o próprio `schema.prisma` cita para justificar
+     * aceitar overbooking — e o segundo `PATCH` sobrescrevia o primeiro. Uma
+     * venda sumia do livro, sem erro, sem log e sem ninguém perceber.
+     *
+     * Mover a leitura para dentro da transação NÃO resolveria: no isolamento
+     * padrão do Postgres as duas transações leem o mesmo 6 e as duas gravam 7.
+     * A condição precisa fazer parte do próprio UPDATE, e é o que o
+     * `updateMany` abaixo faz — a segunda transação encontra 7 onde esperava 6,
+     * casa zero linhas, e vira 409 em vez de sobrescrever.
+     *
+     * OPCIONAL de propósito: ausente, o comportamento é o de antes. Um script
+     * ou um seed que lança um número absoluto não tem valor anterior para
+     * declarar, e exigir um faria inventarem.
+     */
+    seatsTakenEsperado?: number
+  },
   ctx: Contexto,
 ): Promise<LinhaDeVagas> {
-  const atual = await exigirSaida(departureId)
-  const seloAntes = seloDe(atual)
-
   const dados = {
     seatsTaken: entrada.seatsTaken,
     ...(entrada.capacity !== undefined ? { capacity: entrada.capacity } : {}),
@@ -251,9 +279,42 @@ export async function lancarVagas(
   }
 
   return prisma.$transaction(async (tx) => {
-    const depois = (await tx.departure.update({
+    // A LEITURA VEM PARA DENTRO DA TRANSAÇÃO.
+    //
+    // Ela ficava fora, e `seloAntes` saía dela: o histórico em
+    // `DepartureAvailabilityChange` podia gravar um `from` que nunca existiu —
+    // o registro que existe justamente para responder "por que essa saída
+    // ficou esgotada no dia 3?" dando a resposta errada.
+    const atual = (await tx.departure.findUnique({
       where: { id: departureId },
-      data: dados,
+      select: SELECT_VAGAS,
+    })) as LinhaDeVagas | null
+
+    if (!atual) {
+      throw new AppError(ErrorCode.DEPARTURE_NOT_FOUND, 'Saída não encontrada.', { status: 404 })
+    }
+
+    const seloAntes = seloDe(atual)
+
+    if (entrada.seatsTakenEsperado !== undefined) {
+      const alcance = await tx.departure.updateMany({
+        where: { id: departureId, seatsTaken: entrada.seatsTakenEsperado },
+        data: dados,
+      })
+
+      if (alcance.count === 0) {
+        throw new AppError(
+          ErrorCode.CONFLICT,
+          `Alguém lançou vagas nesta saída enquanto você digitava. Agora são ${atual.seatsTaken}. Confira e lance de novo.`,
+          { status: 409 },
+        )
+      }
+    } else {
+      await tx.departure.update({ where: { id: departureId }, data: dados })
+    }
+
+    const depois = (await tx.departure.findUniqueOrThrow({
+      where: { id: departureId },
       select: SELECT_VAGAS,
     })) as LinhaDeVagas
 

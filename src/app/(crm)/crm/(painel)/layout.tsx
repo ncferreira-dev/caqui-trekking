@@ -79,13 +79,27 @@ export default async function LayoutPainel({ children }: LayoutProps<'/crm'>) {
             de uma lista longa — que é exatamente onde ela quer trocar. */}
         <header className="border-caqui-ink-900 sticky top-0 z-30 border-b bg-white">
           <div className="flex items-center justify-between gap-4 px-4 py-2.5">
-            <div className="flex items-center gap-2.5">
+            {/* O BRASÃO É O CAMINHO DE VOLTA PARA O SITE.
+                Pedido do cliente em 20/08/2026, e é a convenção que todo mundo
+                já traz de fora: logo no canto leva para casa.
+                Antes existia só um "Ver o site" no rodapé, e ele era
+                `lg:block` — ou seja, quem estava no celular, que é o cenário
+                principal deste painel, não tinha caminho de volta nenhum. */}
+            <Link
+              href="/"
+              className="hover:bg-caqui-sand-100 -mx-1 flex items-center gap-2.5 rounded-xs px-1 py-0.5 transition-colors"
+            >
               <Brasao className="w-8" titulo="" />
               <div className="leading-tight">
                 <p className="font-display text-corpo-sm uppercase">Painel</p>
                 <p className="text-caqui-ink-500 text-micro font-mono uppercase">Caqui Trekking</p>
               </div>
-            </div>
+              {/* O texto visível diz onde a pessoa ESTÁ; o link leva para outro
+                  lugar. Sem esta linha, quem navega por leitor de tela ouve
+                  "Painel, Caqui Trekking, link" e não tem como saber que ele
+                  sai do painel. */}
+              <span className="sr-only">, ver o site</span>
+            </Link>
 
             <div className="flex items-center gap-2">
               <div className="hidden text-right leading-tight sm:block">
@@ -110,16 +124,9 @@ export default async function LayoutPainel({ children }: LayoutProps<'/crm'>) {
           de 80px em toda página. */}
         <main className="min-w-0 flex-1 px-4 pt-4 pb-20 sm:pb-6 lg:px-6">{children}</main>
 
-        {/* Volta para o site. O CRM não tem link para a loja em lugar nenhum, e
-          a Caqui vai querer conferir como ficou o que acabou de publicar. */}
-        <p className="text-caqui-ink-500 text-micro hidden px-4 py-3 font-mono uppercase lg:block">
-          <Link
-            href="/"
-            className="hover:text-caqui-ink-900 rounded-xs underline underline-offset-4"
-          >
-            Ver o site
-          </Link>
-        </p>
+        {/* O "Ver o site" que ficava aqui saiu em 20/08/2026: o brasão do
+            cabeçalho faz a mesma coisa, em todas as larguras, e dois caminhos
+            para o mesmo lugar num painel deste tamanho é ruído. */}
       </div>
     </ProvedorDeToast>
   )

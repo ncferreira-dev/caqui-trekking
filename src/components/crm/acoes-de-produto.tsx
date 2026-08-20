@@ -3,25 +3,25 @@
 import { useState } from 'react'
 
 import { EditorDeProduto, type ProdutoParaEditar } from '@/components/crm/editor-de-produto'
-import { Button } from '@/components/ui/button'
+import { LinkBotao } from '@/components/ui/button'
 
 /**
- * Os botões que abrem o editor de peça.
+ * Os botões da peça.
  *
- * Dois pontos de entrada, o mesmo formulário: "Cadastrar peça" no topo da tela
- * (sem produto) e "Editar" no cabeçalho de cada peça (com o produto). Ficam num
- * componente cliente fino para a página de produtos continuar sendo servidor —
- * ela só busca dados e desenha a grade.
+ * ────────────────────────────────────────────────────────────────────────────
+ * CADASTRAR É PÁGINA. EDITAR É MODAL.
+ * ────────────────────────────────────────────────────────────────────────────
+ * Os dois eram o mesmo modal até 20/08/2026. A divisão veio do projeto de
+ * referência, a pedido do cliente, e ela se sustenta sozinha: cadastrar é uma
+ * sessão de trabalho — nome, descrição, foto, uma grade de variantes — e um
+ * modal aperta tudo isso numa caixa com rolagem própria. Editar é ajuste
+ * pontual, e tirar a pessoa da lista para isso seria pior.
  */
 
 export function BotaoCadastrarProduto() {
-  const [aberto, setAberto] = useState(false)
-  return (
-    <>
-      <Button onClick={() => setAberto(true)}>+ Cadastrar peça</Button>
-      {aberto && <EditorDeProduto aberto={aberto} aoFechar={() => setAberto(false)} />}
-    </>
-  )
+  // Link, não botão com estado: o cadastro tem endereço próprio, então ele
+  // sobrevive ao recarregar, ao voltar e ao ser mandado por mensagem.
+  return <LinkBotao href="/crm/produtos/nova">+ Cadastrar peça</LinkBotao>
 }
 
 export function BotaoEditarProduto({ produto }: { produto: ProdutoParaEditar }) {

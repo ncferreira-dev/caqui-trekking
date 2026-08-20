@@ -12,9 +12,18 @@
 # =============================================================================
 name: check
 
+# TODA branch, e não só a `main`.
+#
+# A primeira versão disto filtrava `branches: [main]` mais `pull_request`, e o
+# primeiro push provou o buraco: o trabalho acontece em branch, o PR só nasce no
+# fim, e a barreira ficava justamente ausente durante os dias em que o código
+# está sendo escrito. Um `check` que só roda depois que a decisão foi tomada
+# chega tarde.
+#
+# O custo é aceitável: o `concurrency` abaixo cancela a execução anterior a cada
+# push novo, então uma sequência de commits não empilha runs.
 on:
   push:
-    branches: [main]
   pull_request:
 
 # Um push novo na mesma branch cancela a execução anterior: o resultado dela já

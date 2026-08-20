@@ -30,7 +30,18 @@ import { PrismaPg } from '@prisma/adapter-pg'
  */
 export function createPgAdapter(connectionString: string): PrismaPg {
   return new PrismaPg({
-    connectionString,
+    connectionString: comSslModeExplicito(connectionString),
     options: '-c TimeZone=UTC',
   })
+}
+
+/**
+ * O driver `pg` avisa (mas conecta normalmente) quando `sslmode` é um dos
+ * apelidos antigos de `verify-full` — `prefer`, `require` ou `verify-ca`.
+ * O próprio aviso já diz que o comportamento de conexão É `verify-full`;
+ * só nomeamos explicitamente pra calar o warning, sem tocar em mais nada
+ * da string (credenciais, `channel_binding`, etc. ficam como estão).
+ */
+function comSslModeExplicito(connectionString: string): string {
+  return connectionString.replace(/sslmode=(prefer|require|verify-ca)\b/, 'sslmode=verify-full')
 }

@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/dialogo'
 import { useToast } from '@/components/ui/toast'
 import { api, ErroDaApi } from '@/lib/crm/api'
 import { rotuloDeTamanho } from '@/lib/formato'
-import { centavosParaDecimal } from '@/lib/money'
+import { centavosParaReais, reaisParaCentavos } from '@/lib/money'
 import { cn } from '@/lib/ui/cn'
 
 /**
@@ -48,6 +48,8 @@ export type VarianteForm = {
   colorName: string
   colorHex: string
   available: boolean
+  /** Texto em reais, como o preço da peça. Vazio = usa o preço base. */
+  precoProprio: string
 }
 
 export type ProdutoParaEditar = {
@@ -60,16 +62,8 @@ export type ProdutoParaEditar = {
   variantes: VarianteForm[]
 }
 
-const centavosParaReais = (c: number) => centavosParaDecimal(c).replace('.', ',')
-
-function reaisParaCentavos(texto: string): number | null {
-  const limpo = texto.trim().replace(/\./g, '').replace(',', '.')
-  if (!/^\d+(\.\d{1,2})?$/.test(limpo)) return null
-  return Math.round(Number(limpo) * 100)
-}
-
 function varianteVazia(): VarianteForm {
-  return { size: 'UNICO', colorName: '', colorHex: '#000000', available: true }
+  return { size: 'UNICO', colorName: '', colorHex: '#000000', available: true, precoProprio: '' }
 }
 
 export function EditorDeProduto({
@@ -118,18 +112,39 @@ export function EditorDeProduto({
       return setErro('Cadastre ao menos uma variante com cor. É o que torna a peça comprável.')
     }
 
+    // Preço próprio é opcional por variante: valida antes de montar o corpo
+    // pra não gravar metade das variantes e falhar na última.
+    const variantesPreparadas: {
+      size: string
+      colorName: string
+      colorHex: string | null
+      available: boolean
+      priceCents: number | null
+    }[] = []
+    for (const v of limpas) {
+      let precoVariante: number | null = null
+      if (v.precoProprio.trim() !== '') {
+        precoVariante = reaisParaCentavos(v.precoProprio)
+        if (precoVariante === null) {
+          return setErro(`Preço próprio de "${v.colorName.trim()}" inválido. Use o formato 50,00.`)
+        }
+      }
+      variantesPreparadas.push({
+        size: v.size,
+        colorName: v.colorName.trim(),
+        colorHex: /^#[0-9a-fA-F]{6}$/.test(v.colorHex) ? v.colorHex : null,
+        available: v.available,
+        priceCents: precoVariante,
+      })
+    }
+
     const corpo = {
       name: nome.trim(),
       description: descricao.trim() || null,
       category: categoria,
       priceCents: centavos,
       status: publicar ? 'PUBLISHED' : 'DRAFT',
-      variantes: limpas.map((v) => ({
-        size: v.size,
-        colorName: v.colorName.trim(),
-        colorHex: /^#[0-9a-fA-F]{6}$/.test(v.colorHex) ? v.colorHex : null,
-        available: v.available,
-      })),
+      variantes: variantesPreparadas,
     }
 
     setEnviando(true)
@@ -220,13 +235,14 @@ export function EditorDeProduto({
           <p className="text-caqui-ink-500 text-corpo-sm -mt-2">
             Cada combinação de tamanho e cor é uma variante. Óculos e caneca são{' '}
             <strong>Único</strong>; camiseta tem P, M, G. É o que aparece para o cliente escolher.
+            Preço próprio é opcional: em branco, a variante usa o preço base da peça.
           </p>
 
           <ul className="flex flex-col gap-2">
             {variantes.map((v, i) => (
               <li
                 key={i}
-                className="border-caqui-rule grid grid-cols-[5rem_1fr_auto_auto] items-center gap-2 border px-2 py-2"
+                className="border-caqui-rule grid grid-cols-[5rem_1fr_6rem_auto_auto] items-center gap-2 border px-2 py-2"
               >
                 <select
                   aria-label={`Tamanho da variante ${i + 1}`}
@@ -247,6 +263,15 @@ export function EditorDeProduto({
                   onChange={(e) => mudarVariante(i, { colorName: e.target.value })}
                   placeholder="Cor (ex.: Azul Marinho)"
                   className="border-caqui-ink-900 text-corpo-sm min-h-11 rounded-xs border bg-white px-3"
+                />
+
+                <input
+                  aria-label={`Preço próprio da variante ${i + 1}`}
+                  inputMode="decimal"
+                  value={v.precoProprio}
+                  onChange={(e) => mudarVariante(i, { precoProprio: e.target.value })}
+                  placeholder="base"
+                  className="border-caqui-ink-900 text-corpo-sm min-h-11 rounded-xs border bg-white px-2"
                 />
 
                 <input

@@ -8,7 +8,7 @@ import { BotaoDestaque, BotoesDeOrdem } from '@/components/crm/ordem-e-destaque'
 import { Paginacao } from '@/components/crm/paginacao'
 import { CabecalhoDeSecao, Painel, Rotulo, Vazio } from '@/components/crm/pecas'
 import { TabelaDeVariantes, type VarianteDoPainel } from '@/components/crm/tabela-de-variantes'
-import { formatarBRL } from '@/lib/money'
+import { centavosParaReais, formatarBRL } from '@/lib/money'
 import { fatiar } from '@/lib/crm/paginacao'
 import { prisma } from '@/lib/prisma'
 import { ROTULO_CATEGORIA } from '@/server/services/product-service'
@@ -125,6 +125,24 @@ export default async function PaginaProdutos({ searchParams }: PageProps<'/crm/p
               disponivel: v.available,
             }))
 
+            // Uma vez só: alimenta tanto o "Editar" do cabeçalho quanto o de
+            // cada linha da grade — os dois abrem o mesmo formulário.
+            const produtoParaEditar = {
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              category: p.category,
+              priceCentavos: p.priceCents,
+              status: p.status === 'PUBLISHED' ? ('PUBLISHED' as const) : ('DRAFT' as const),
+              variantes: p.variants.map((v) => ({
+                size: v.size,
+                colorName: v.colorName,
+                colorHex: v.colorHex ?? '#000000',
+                available: v.available,
+                precoProprio: v.priceCents !== null ? centavosParaReais(v.priceCents) : '',
+              })),
+            }
+
             return (
               <Painel
                 key={p.id}
@@ -148,22 +166,7 @@ export default async function PaginaProdutos({ searchParams }: PageProps<'/crm/p
                         Rascunho
                       </span>
                     )}
-                    <BotaoEditarProduto
-                      produto={{
-                        id: p.id,
-                        name: p.name,
-                        description: p.description,
-                        category: p.category,
-                        priceCentavos: p.priceCents,
-                        status: p.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT',
-                        variantes: p.variants.map((v) => ({
-                          size: v.size,
-                          colorName: v.colorName,
-                          colorHex: v.colorHex ?? '#000000',
-                          available: v.available,
-                        })),
-                      }}
-                    />
+                    <BotaoEditarProduto produto={produtoParaEditar} />
                     {ehOwner && (
                       <ArquivarItem
                         colecao="products"
@@ -192,7 +195,11 @@ export default async function PaginaProdutos({ searchParams }: PageProps<'/crm/p
                   </div>
                 }
               >
-                <TabelaDeVariantes variantes={variantes} precoBaseCentavos={p.priceCents} />
+                <TabelaDeVariantes
+                  variantes={variantes}
+                  precoBaseCentavos={p.priceCents}
+                  produto={produtoParaEditar}
+                />
 
                 {/* ── Qual foto é de qual cor ──────────────────────────────
                     Pedido do cliente em 18/08/2026. Fica junto das variantes

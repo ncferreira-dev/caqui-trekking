@@ -350,6 +350,19 @@ model Departure {
   @@unique([tripId, startAt])
   /// A consulta central do site: agenda cronológica das saídas publicadas.
   @@index([status, startAt])
+  /// `startAt` SOZINHO, e não só como segunda coluna dos índices compostos.
+  ///
+  /// Achado A5 da auditoria de 20/08/2026. A tela de Trilhas busca a janela do
+  /// mês SEM filtrar `status` — de propósito, para rascunho e cancelada
+  /// aparecerem no painel. Nenhum dos índices compostos serve para essa
+  /// varredura: nos três, `startAt` é coluna secundária, e um índice só é
+  /// usado a partir da coluna da esquerda.
+  ///
+  /// Com 6 saídas isso é irrelevante e o Postgres varre a tabela de qualquer
+  /// jeito. Entra agora porque a regra do topo deste arquivo é "índice em toda
+  /// coluna usada em filtro ou ordenação", e esta era uma exceção não
+  /// intencional que só cobraria a conta com anos de agenda acumulada.
+  @@index([startAt])
   @@index([tripId, startAt])
   /// A fila do fechamento: saída publicada, com data no passado e sem
   /// `closedAt`. É a consulta que o painel faz toda vez que abre.

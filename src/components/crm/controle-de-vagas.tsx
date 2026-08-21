@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useToast } from '@/components/ui/toast'
 import { api, ErroDaApi } from '@/lib/crm/api'
@@ -43,6 +43,23 @@ import { cn } from '@/lib/ui/cn'
  * O número pinta na hora. Esperar a resposta faz a pessoa tocar de novo achando
  * que não pegou. Se falhar, o valor VOLTA e um aviso explica: uma tela dizendo
  * "9 de 10" com o banco em 8 é pior que uma tela lenta.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * A RAJADA: SEIS TOQUES, UMA GRAVAÇÃO
+ * ════════════════════════════════════════════════════════════════════════════
+ * Achado A7 da auditoria de 20/08/2026. O botão TRAVAVA a cada toque até o
+ * servidor responder: quem fechou seis vagas numa conversa tocava, esperava,
+ * tocava, esperava — seis idas e voltas em fila, cada uma re-renderizando a
+ * página inteira.
+ *
+ * Agora os toques se acumulam na tela e UMA gravação sai depois da pausa. Seis
+ * toques viram uma requisição com o total final.
+ *
+ * O que torna isso seguro é o campo ser um TOTAL e não um delta: mandar "sete"
+ * é idempotente, e uma rajada perdida no meio não soma errado. E o
+ * `vagasFechadasAnteriores` continua sendo o último valor CONFIRMADO pelo
+ * servidor, não o da tela — é ele que faz a trava otimista do A1 continuar
+ * valendo mesmo com a gravação atrasada.
  */
 export function ControleDeVagas({
   saidaId,
@@ -61,7 +78,25 @@ export function ControleDeVagas({
   const { mostrar } = useToast()
   const [valor, setValor] = useState(vagasFechadas)
   const [rascunho, setRascunho] = useState(String(vagasFechadas))
-  const [ocupado, setOcupado] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+
+  /**
+   * O último valor que o SERVIDOR confirmou.
+   *
+   * É o que vai como `vagasFechadasAnteriores`, e não o número da tela: durante
+   * uma rajada a tela já está adiantada, e mandar o valor adiantado faria a
+   * trava otimista comparar contra algo que o banco nunca teve.
+   */
+  const confirmado = useRef(vagasFechadas)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Um timer pendente num componente desmontado grava depois que a linha saiu
+  // da tela, e o `aoMudar` cai num componente que não existe mais.
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current)
+    }
+  }, [])
 
   // O valor do servidor mandou, e o rascunho local está desatualizado: acontece
   // depois de `router.refresh()`. Ajuste durante o render, sem efeito.
@@ -70,21 +105,35 @@ export function ControleDeVagas({
     setUltimoDoServidor(vagasFechadas)
     setValor(vagasFechadas)
     setRascunho(String(vagasFechadas))
+    confirmado.current = vagasFechadas
   }
 
   const restantes = capacidade === null ? null : Math.max(0, capacidade - valor)
   const excedente = capacidade === null ? 0 : Math.max(0, valor - capacidade)
 
-  async function gravar(novo: number) {
-    if (ocupado || novo === valor || novo < 0) return
+  /** Quanto esperar depois do último toque antes de gravar. */
+  const PAUSA_MS = 700
 
-    const anterior = valor
-    setValor(novo)
-    setRascunho(String(novo))
-    setOcupado(true)
+  /** Toque no + ou no −: pinta na hora e agenda a gravação. Não trava. */
+  function tocar(novoValor: number) {
+    if (novoValor < 0) return
+    setValor(novoValor)
+    setRascunho(String(novoValor))
+    agendar(novoValor)
+  }
 
+  function agendar(alvo: number) {
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => void gravar(alvo), PAUSA_MS)
+  }
+
+  async function gravar(alvo: number) {
+    const anterior = confirmado.current
+    if (alvo === anterior) return
+
+    setSalvando(true)
     try {
-      // `vagasFechadasAnteriores` é o valor que ESTA ABA está mostrando. O
+      // `vagasFechadasAnteriores` é o último valor CONFIRMADO pelo servidor. O
       // servidor só grava se a linha ainda estiver nele; caso contrário devolve
       // 409 e o lançamento de quem chegou primeiro fica de pé.
       //
@@ -92,11 +141,14 @@ export function ControleDeVagas({
       // duas abas — perdiam uma venda em silêncio. Ver o achado A1 em
       // docs/20-auditoria-do-crm.md.
       await api.patch(`/api/admin/departures/${saidaId}/vagas`, {
-        vagasFechadas: novo,
+        vagasFechadas: alvo,
         vagasFechadasAnteriores: anterior,
       })
+      confirmado.current = alvo
       aoMudar()
     } catch (causa) {
+      // Volta para o que o servidor tem, e não para o penúltimo toque: a rajada
+      // inteira falhou, então o estado verdadeiro é o último confirmado.
       setValor(anterior)
       setRascunho(String(anterior))
 
@@ -112,7 +164,7 @@ export function ControleDeVagas({
         descricao: causa instanceof ErroDaApi ? causa.message : 'As vagas continuam como estavam.',
       })
     } finally {
-      setOcupado(false)
+      setSalvando(false)
     }
   }
 
@@ -126,8 +178,8 @@ export function ControleDeVagas({
         <BotaoDePasso
           rotulo={`Uma vaga a menos em ${titulo}`}
           sinal="menos"
-          onClick={() => gravar(valor - 1)}
-          disabled={ocupado || valor === 0}
+          onClick={() => tocar(valor - 1)}
+          disabled={valor === 0}
         />
 
         {/* O campo aceita digitar o total. `inputMode="numeric"` abre o teclado
@@ -144,23 +196,29 @@ export function ControleDeVagas({
               setRascunho(String(valor))
               return
             }
+            if (timer.current) clearTimeout(timer.current)
+            setValor(n)
             void gravar(n)
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') e.currentTarget.blur()
           }}
           aria-label={`Vagas fechadas em ${titulo}`}
-          disabled={ocupado}
-          className="numeral text-dado border-caqui-ink-900 w-12 border-x bg-white text-center outline-none disabled:opacity-60"
+          className="numeral text-dado border-caqui-ink-900 w-12 border-x bg-white text-center outline-none"
         />
 
         <BotaoDePasso
           rotulo={`Uma vaga a mais em ${titulo}`}
           sinal="mais"
-          onClick={() => gravar(valor + 1)}
-          disabled={ocupado}
+          onClick={() => tocar(valor + 1)}
         />
       </div>
+
+      {/* Sem travar nada: só conta que a gravação está a caminho. Quem opera
+          continua tocando enquanto isso, que é o ponto da mudança. */}
+      <span aria-live="polite" className="text-caqui-ink-500 text-micro font-mono uppercase">
+        {salvando ? 'salvando…' : ''}
+      </span>
 
       {/* A leitura em palavras, ao lado do número. É o que a pessoa confere
           antes de responder na conversa. */}
@@ -195,12 +253,12 @@ function BotaoDePasso({
   rotulo,
   sinal,
   onClick,
-  disabled,
+  disabled = false,
 }: {
   rotulo: string
   sinal: 'mais' | 'menos'
   onClick: () => void
-  disabled: boolean
+  disabled?: boolean
 }) {
   return (
     <button

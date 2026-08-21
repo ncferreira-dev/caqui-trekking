@@ -1,0 +1,15 @@
+-- Achado A5 da auditoria de 20/08/2026 (docs/20-auditoria-do-crm.md).
+--
+-- `startAt` já aparece em três índices, e em todos como coluna SECUNDÁRIA:
+--   (status, startAt), (tripId, startAt), (status, closedAt, startAt)
+-- Um índice B-tree só serve a partir da coluna da esquerda, então nenhum dos
+-- três atende a varredura que a tela de Trilhas faz: a janela do mês SEM
+-- filtro de `status` — de propósito, para rascunho e cancelada aparecerem no
+-- painel.
+--
+-- Medido em 20/08: `EXPLAIN` daquela consulta devolvia `Seq Scan`.
+--
+-- CONCURRENTLY de propósito: criar índice trava a tabela para escrita, e esta
+-- é a tabela onde a Caqui lança vaga. Numa tabela pequena isso dura
+-- milissegundos, mas o hábito é o que importa quando a tabela crescer.
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "departures_startAt_idx" ON "departures" ("startAt");

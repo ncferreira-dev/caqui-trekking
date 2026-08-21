@@ -2,7 +2,6 @@ import Link from 'next/link'
 
 import {
   IconeAjustes,
-  IconeCalendario,
   IconeCamiseta,
   IconeMensagem,
   IconePainel,
@@ -23,7 +22,7 @@ import { exigirSessaoDaPagina } from '@/server/crm/sessao-da-pagina'
  * ────────────────────────────────────────────────────────────────────────────
  * `/crm` continua sendo o login, com layout próprio (sem sidebar — pedir para
  * entrar dentro de um painel é absurdo). Tudo dentro de `(painel)` herda esta
- * casca: `/crm/painel`, `/crm/saidas`, `/crm/roteiros`, `/crm/produtos`,
+ * casca: `/crm/painel`, `/crm/trilhas`, `/crm/produtos`,
  * `/crm/mensagens`, `/crm/config`.
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -55,8 +54,10 @@ export default async function LayoutPainel({ children }: LayoutProps<'/crm'>) {
 
   const itens: ItemDeNavegacao[] = [
     { href: '/crm/painel', rotulo: 'Painel', curto: 'Painel', icone: <IconePainel /> },
-    { href: '/crm/saidas', rotulo: 'Saídas', curto: 'Saídas', icone: <IconeCalendario /> },
-    { href: '/crm/roteiros', rotulo: 'Roteiros', curto: 'Roteiros', icone: <IconeTrilha /> },
+    // UMA aba para trilha e data, desde 20/08/2026. Eram duas, e a divisão
+    // era a do banco (`Trip` 1:N `Departure`) vazando para quem opera — no
+    // site o cliente vê a trilha e as datas dela na mesma página.
+    { href: '/crm/trilhas', rotulo: 'Trilhas', curto: 'Trilhas', icone: <IconeTrilha /> },
     { href: '/crm/produtos', rotulo: 'Produtos', curto: 'Wear', icone: <IconeCamiseta /> },
     {
       href: '/crm/mensagens',

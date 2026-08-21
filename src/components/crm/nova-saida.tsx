@@ -25,9 +25,14 @@ export function NovaSaida({
    * de clicar — no roteiro que o alerta acabou de dizer que está sem data.
    */
   abrirCom,
+  rotulo = '+ Nova saída',
+  variante = 'primary',
 }: {
   roteiros: RoteiroOpcao[]
   abrirCom?: number | undefined
+  /** Dentro do bloco de uma trilha o botão vira "+ Nova data". */
+  rotulo?: string
+  variante?: 'primary' | 'secondary'
 }) {
   const [aberto, setAberto] = useState(abrirCom !== undefined)
 
@@ -44,7 +49,9 @@ export function NovaSaida({
 
   return (
     <>
-      <Button onClick={() => setAberto(true)}>+ Nova saída</Button>
+      <Button variante={variante} tamanho="sm" onClick={() => setAberto(true)}>
+        {rotulo}
+      </Button>
       {aberto && (
         <EditorDeSaida
           aberto={aberto}

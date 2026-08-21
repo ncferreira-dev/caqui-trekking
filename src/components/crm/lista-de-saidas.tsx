@@ -98,10 +98,19 @@ const ESTADOS = [
 export function ListaDeSaidas({
   saidas,
   podeExcluir = false,
+  mostrarRoteiro = true,
 }: {
   saidas: SaidaDoPainel[]
   /** OWNER pode excluir saída passada/cancelada. A rota é a barreira real. */
   podeExcluir?: boolean
+  /**
+   * Desligado quando a lista já vive DENTRO do bloco de uma trilha.
+   *
+   * Repetir "Pedra Grande de Quatinga" em cada data, embaixo do título que já
+   * diz "Pedra Grande de Quatinga", é ruído que empurra data e preço para
+   * baixo — e data e preço são o que se lê ali.
+   */
+  mostrarRoteiro?: boolean
 }) {
   const router = useRouter()
   const { mostrar } = useToast()
@@ -231,7 +240,9 @@ export function ListaDeSaidas({
                       </span>
                     )}
                   </div>
-                  <p className="text-corpo-sm mt-0.5 truncate">{saida.trip.titulo}</p>
+                  {mostrarRoteiro && (
+                    <p className="text-corpo-sm mt-0.5 truncate">{saida.trip.titulo}</p>
+                  )}
                 </div>
 
                 {/* Ações. Só para saída que ainda vai acontecer: mudar a

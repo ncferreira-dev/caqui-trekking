@@ -610,6 +610,20 @@ async function main() {
     throw new Error('SEED_OWNER_PASSWORD precisa ter pelo menos 12 caracteres.')
   }
 
+  // ── `update: {}` É DE PROPÓSITO, E PRECISA SER DITO EM VOZ ALTA ───────────
+  // O seed NÃO troca a senha de um usuário que já existe, e isso está certo:
+  // rodar o seed é operação de dados, e não pode derrubar a credencial de quem
+  // está usando o painel.
+  //
+  // O que estava errado era o SILÊNCIO. Em 20/08/2026 alguém trocou
+  // SEED_OWNER_PASSWORD no .env, rodou o seed, viu "✓ usuário OWNER" e ficou
+  // sem conseguir entrar — porque a senha no banco continuava sendo a primeira.
+  // O seed disse que deu certo. Ele fez o que devia e contou a história errada.
+  const jaExistia = await prisma.user.findUnique({
+    where: { email: ownerEmail },
+    select: { id: true },
+  })
+
   await prisma.user.upsert({
     where: { email: ownerEmail },
     update: {},
@@ -623,7 +637,16 @@ async function main() {
       role: 'OWNER',
     },
   })
-  console.log('  ✓ usuário OWNER')
+
+  if (jaExistia) {
+    console.log('  ✓ usuário OWNER (já existia)')
+    console.log('    ATENÇÃO: a senha NÃO foi alterada. O seed nunca mexe na senha de')
+    console.log('    quem já existe, para não derrubar o acesso de quem está usando o')
+    console.log('    painel. Se SEED_OWNER_PASSWORD mudou no .env, ela NÃO vale ainda.')
+    console.log('    Para trocar de verdade:  npm run senha:resetar -- --ajuda')
+  } else {
+    console.log('  ✓ usuário OWNER (criado com a senha do .env)')
+  }
 
   console.log('\n▸ Seed concluído.')
 }

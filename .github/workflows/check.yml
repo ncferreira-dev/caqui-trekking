@@ -1,0 +1,95 @@
+# =============================================================================
+# A BARREIRA QUE NÃO DEPENDE DA MEMÓRIA DE NINGUÉM
+# =============================================================================
+# `npm run check` já existia e era excelente. Era também OPCIONAL, e o próprio
+# repositório provou o custo disso: o commit 4285a2a entrou com o lint vermelho
+# e ficou assim até alguém tropeçar, e no mesmo commit `src/lib/cores.ts` nasceu
+# sem teste nenhum, apesar de exportar `NOMES_DE_COR` com o comentário "só para
+# o teste". Ver docs/20-auditoria-do-crm.md, achado A3.
+#
+# Um projeto com 514 testes, tabela de autorização auditada e nove CHECK no
+# banco não pode confiar a última milha a quem lembra de rodar o comando.
+# =============================================================================
+name: check
+
+# TODA branch, e não só a `main`.
+#
+# A primeira versão disto filtrava `branches: [main]` mais `pull_request`, e o
+# primeiro push provou o buraco: o trabalho acontece em branch, o PR só nasce no
+# fim, e a barreira ficava justamente ausente durante os dias em que o código
+# está sendo escrito. Um `check` que só roda depois que a decisão foi tomada
+# chega tarde.
+#
+# O custo é aceitável: o `concurrency` abaixo cancela a execução anterior a cada
+# push novo, então uma sequência de commits não empilha runs.
+on:
+  push:
+  pull_request:
+
+# Um push novo na mesma branch cancela a execução anterior: o resultado dela já
+# não interessa, e a fila do runner não deve ficar presa a commits superados.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # POSTGRES DE VERDADE, E NÃO UM DUBLÊ
+    # ─────────────────────────────────────────────────────────────────────────
+    # Os testes deste projeto tocam o banco de propósito: eles provam CHECK
+    # constraints, `@@unique`, cascade e transação. Um banco em memória não tem
+    # nada disso, e o CI passaria verde justamente onde o risco mora.
+    #
+    # A versão acompanha a de produção (Postgres 16). Testar em 17 e publicar em
+    # 16 é testar outro banco.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: caqui
+          POSTGRES_PASSWORD: caqui
+          POSTGRES_DB: caqui_trekking_test
+        ports:
+          - 5432:5432
+        # Sem isto, o job começa antes de o Postgres aceitar conexão e falha na
+        # primeira migration, com um erro que não tem nada a ver com o código.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # `_test` no nome não é estética: `src/test/setup.ts` RECUSA rodar se a
+      # URL não contiver `_test`, porque os testes truncam tabelas.
+      DATABASE_URL: postgresql://caqui:caqui@localhost:5432/caqui_trekking_test
+      NODE_ENV: test
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      # Valor de teste, descartável e público de propósito. O segredo real vive
+      # na Vercel; pôr um segredo de verdade aqui seria expô-lo a qualquer
+      # workflow do repositório. O schema exige 32 caracteres.
+      AUTH_SECRET: ci-somente-para-teste-nao-usar-em-producao-32+
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` e não `npm install`: respeita o lockfile exatamente. O
+      # `postinstall` do projeto já gera o cliente Prisma.
+      - run: npm ci
+
+      # As migrations, e não `db push`: é o mesmo caminho que a produção usa no
+      # `vercel-build`. Se uma migration estiver quebrada, o CI descobre aqui e
+      # não no deploy.
+      - run: npx prisma migrate deploy
+
+      # Lint, typecheck, format e os 514 testes. É o mesmo comando que se roda
+      # na máquina — nada de uma variante só do CI, que divergiria em silêncio.
+      - run: npm run check

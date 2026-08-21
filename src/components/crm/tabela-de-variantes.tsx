@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { EditorDeProduto, type ProdutoParaEditar } from '@/components/crm/editor-de-produto'
 import { Rotulo } from '@/components/crm/pecas'
 import { useToast } from '@/components/ui/toast'
 import { api, ErroDaApi } from '@/lib/crm/api'
@@ -43,15 +44,25 @@ export type VarianteDoPainel = {
 export function TabelaDeVariantes({
   variantes,
   precoBaseCentavos,
+  produto,
 }: {
   variantes: VarianteDoPainel[]
   precoBaseCentavos: number
+  /**
+   * Quando presente, cada linha ganha um "Editar" pra cor, tamanho e preço
+   * próprio. Abre o MESMO formulário do "Editar" no cabeçalho da peça — não
+   * existe edição de variante isolada porque o salvamento reconcilia o array
+   * inteiro por `(size, colorName)` (ver `atualizarProduto`), e dois caminhos
+   * de escrita pra variante disputariam a mesma linha.
+   */
+  produto?: ProdutoParaEditar
 }) {
   const router = useRouter()
   const { mostrar } = useToast()
 
   const [otimista, setOtimista] = useState<Record<number, boolean>>({})
   const [ocupadas, setOcupadas] = useState<Record<number, boolean>>({})
+  const [editando, setEditando] = useState(false)
 
   async function alternar(v: VarianteDoPainel) {
     const atual = otimista[v.id] ?? v.disponivel
@@ -86,69 +97,89 @@ export function TabelaDeVariantes({
   }
 
   return (
-    <ul className="divide-caqui-rule divide-y">
-      {variantes.map((v) => {
-        const disponivel = otimista[v.id] ?? v.disponivel
-        const ocupada = ocupadas[v.id] ?? false
+    <>
+      <ul className="divide-caqui-rule divide-y">
+        {variantes.map((v) => {
+          const disponivel = otimista[v.id] ?? v.disponivel
+          const ocupada = ocupadas[v.id] ?? false
 
-        return (
-          <li
-            key={v.id}
-            className={cn(
-              'relative flex flex-wrap items-center gap-3 px-4 py-2.5',
-              !disponivel && 'bg-caqui-sand-100',
-            )}
-          >
-            {!disponivel && (
-              <span className="trama-indisponivel absolute inset-0" aria-hidden="true" />
-            )}
+          return (
+            <li
+              key={v.id}
+              className={cn(
+                'relative flex flex-wrap items-center gap-3 px-4 py-2.5',
+                !disponivel && 'bg-caqui-sand-100',
+              )}
+            >
+              {!disponivel && (
+                <span className="trama-indisponivel absolute inset-0" aria-hidden="true" />
+              )}
 
-            <span
-              aria-hidden="true"
-              className="border-caqui-ink-900 relative block size-4 shrink-0 rounded-xs border"
-              style={v.corHex ? { backgroundColor: v.corHex } : undefined}
-            />
+              <span
+                aria-hidden="true"
+                className="border-caqui-ink-900 relative block size-4 shrink-0 rounded-xs border"
+                style={v.corHex ? { backgroundColor: v.corHex } : undefined}
+              />
 
-            <span className="text-corpo-sm relative">
-              {v.tamanho === 'UNICO' ? 'Único' : v.tamanho} · {v.cor}
-            </span>
+              <span className="text-corpo-sm relative">
+                {v.tamanho === 'UNICO' ? 'Único' : v.tamanho} · {v.cor}
+              </span>
 
-            {/* Preço próprio só aparece quando existe: repetir o preço base em
+              {/* Preço próprio só aparece quando existe: repetir o preço base em
                 toda linha esconderia justamente a variante que foge dele. */}
-            {v.precoProprioCentavos !== null && v.precoProprioCentavos !== precoBaseCentavos && (
-              <span className="relative">
-                <Rotulo>preço próprio {formatarBRL(v.precoProprioCentavos)}</Rotulo>
-              </span>
-            )}
-
-            <span
-              className={cn(
-                'text-micro relative ml-auto font-mono uppercase',
-                disponivel ? 'text-caqui-forest-800' : 'text-caqui-danger',
+              {v.precoProprioCentavos !== null && v.precoProprioCentavos !== precoBaseCentavos && (
+                <span className="relative">
+                  <Rotulo>preço próprio {formatarBRL(v.precoProprioCentavos)}</Rotulo>
+                </span>
               )}
-            >
-              {disponivel ? 'À venda' : 'Esgotada'}
-            </span>
 
-            <button
-              type="button"
-              onClick={() => alternar(v)}
-              disabled={ocupada}
-              className={cn(
-                'text-micro relative min-h-11 rounded-xs border px-3 font-mono uppercase',
-                'transition-colors disabled:cursor-not-allowed disabled:opacity-60',
-                'border-caqui-ink-900 hover:bg-caqui-sand-100 bg-white',
-              )}
-            >
-              {disponivel ? 'Marcar esgotada' : 'Voltar a vender'}
-              <span className="sr-only">
-                {' '}
-                · {v.tamanho === 'UNICO' ? 'tamanho único' : v.tamanho}, {v.cor}
+              <span
+                className={cn(
+                  'text-micro relative ml-auto font-mono uppercase',
+                  disponivel ? 'text-caqui-forest-800' : 'text-caqui-danger',
+                )}
+              >
+                {disponivel ? 'À venda' : 'Esgotada'}
               </span>
-            </button>
-          </li>
-        )
-      })}
-    </ul>
+
+              <button
+                type="button"
+                onClick={() => alternar(v)}
+                disabled={ocupada}
+                className={cn(
+                  'text-micro relative min-h-11 rounded-xs border px-3 font-mono uppercase',
+                  'transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                  'border-caqui-ink-900 hover:bg-caqui-sand-100 bg-white',
+                )}
+              >
+                {disponivel ? 'Marcar esgotada' : 'Voltar a vender'}
+                <span className="sr-only">
+                  {' '}
+                  · {v.tamanho === 'UNICO' ? 'tamanho único' : v.tamanho}, {v.cor}
+                </span>
+              </button>
+
+              {produto && (
+                <button
+                  type="button"
+                  onClick={() => setEditando(true)}
+                  className="text-caqui-ink-700 hover:text-caqui-ink-900 text-micro relative rounded-xs font-mono uppercase underline underline-offset-4"
+                >
+                  Editar
+                  <span className="sr-only">
+                    {' '}
+                    · {v.tamanho === 'UNICO' ? 'tamanho único' : v.tamanho}, {v.cor}
+                  </span>
+                </button>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+
+      {produto && editando && (
+        <EditorDeProduto aberto={editando} aoFechar={() => setEditando(false)} produto={produto} />
+      )}
+    </>
   )
 }

@@ -1,7 +1,12 @@
 import { AppError, ErrorCode } from '@/lib/api/errors'
 import { prisma } from '@/lib/prisma'
 import { registrarAuditoria } from '@/server/services/audit-service'
+import { gravarSaida, type DadosDaSaida } from '@/server/services/admin/departure-admin-service'
 import { slugUnico } from '@/lib/slug'
+
+/** A primeira data, quando ela vem junto do roteiro. Sem `tripId`: o roteiro
+ *  ainda não existe no momento em que o formulário é preenchido. */
+type DadosDaPrimeiraSaida = Omit<DadosDaSaida, 'tripId'>
 
 /**
  * Mutações de conteúdo: Trip, Product, ProductVariant e SiteSetting.
@@ -74,9 +79,36 @@ export type CamposTrip = {
  * `atualizarTrip` já sabe fazê-lo.
  */
 export async function criarTrip(
-  campos: CamposTrip & { title: string; description: string; city: string; state: string },
+  campos: CamposTrip & {
+    title: string
+    description: string
+    city: string
+    state: string
+    /**
+     * A ESTREIA DA TRILHA, opcional.
+     *
+     * ────────────────────────────────────────────────────────────────────────
+     * POR QUE ROTEIRO E DATA NASCEM JUNTOS
+     * ────────────────────────────────────────────────────────────────────────
+     * Pedido do cliente em 20/08/2026, e o argumento dele é melhor que o meu:
+     * no site o cliente final não vê "roteiros" e "saídas" em lugares
+     * separados. Ele abre a página da trilha e escolhe uma data ali mesmo. A
+     * divisão que existia no CRM era a divisão do BANCO, não a de quem usa.
+     *
+     * O efeito colateral importa mais que a comodidade: hoje três dos cinco
+     * roteiros estão publicados sem nenhuma data futura, e o site os mostra
+     * como "sob consulta". Cadastrar os dois no mesmo gesto ataca isso na
+     * origem, em vez de avisar depois que já aconteceu.
+     *
+     * OPCIONAL de propósito. "Sob consulta" é estado legítimo do site, e às
+     * vezes o texto da trilha é escrito antes de a data fechar com o guia.
+     * Exigir a data faria a pessoa inventar uma para conseguir salvar, e data
+     * inventada vira agenda errada.
+     */
+    primeiraSaida?: DadosDaPrimeiraSaida | null | undefined
+  },
   ctx: Contexto,
-): Promise<{ id: number; slug: string }> {
+): Promise<{ id: number; slug: string; saidaId: number | null }> {
   const usados = await prisma.trip.findMany({ select: { slug: true } })
   const slug = slugUnico(
     campos.title,
@@ -124,7 +156,17 @@ export async function criarTrip(
       tx,
     )
 
-    return trip
+    // A data entra na MESMA transação, e é o ponto todo: se ela falhar, o
+    // roteiro não fica salvo pela metade com a impressão de que deu certo. Ou
+    // nascem os dois, ou não nasce nenhum.
+    //
+    // `gravarSaida` recebe o `tx` justamente por isso — `criarSaida` abre a
+    // própria transação e o Prisma não aninha. Ver o comentário lá.
+    const saida = campos.primeiraSaida
+      ? await gravarSaida(tx, { ...campos.primeiraSaida, tripId: trip.id }, ctx)
+      : null
+
+    return { ...trip, saidaId: saida?.id ?? null }
   })
 }
 

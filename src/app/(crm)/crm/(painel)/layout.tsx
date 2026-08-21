@@ -2,7 +2,6 @@ import Link from 'next/link'
 
 import {
   IconeAjustes,
-  IconeCalendario,
   IconeCamiseta,
   IconeMensagem,
   IconePainel,
@@ -23,7 +22,7 @@ import { exigirSessaoDaPagina } from '@/server/crm/sessao-da-pagina'
  * ────────────────────────────────────────────────────────────────────────────
  * `/crm` continua sendo o login, com layout próprio (sem sidebar — pedir para
  * entrar dentro de um painel é absurdo). Tudo dentro de `(painel)` herda esta
- * casca: `/crm/painel`, `/crm/saidas`, `/crm/roteiros`, `/crm/produtos`,
+ * casca: `/crm/painel`, `/crm/trilhas`, `/crm/produtos`,
  * `/crm/mensagens`, `/crm/config`.
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -55,8 +54,10 @@ export default async function LayoutPainel({ children }: LayoutProps<'/crm'>) {
 
   const itens: ItemDeNavegacao[] = [
     { href: '/crm/painel', rotulo: 'Painel', curto: 'Painel', icone: <IconePainel /> },
-    { href: '/crm/saidas', rotulo: 'Saídas', curto: 'Saídas', icone: <IconeCalendario /> },
-    { href: '/crm/roteiros', rotulo: 'Roteiros', curto: 'Roteiros', icone: <IconeTrilha /> },
+    // UMA aba para trilha e data, desde 20/08/2026. Eram duas, e a divisão
+    // era a do banco (`Trip` 1:N `Departure`) vazando para quem opera — no
+    // site o cliente vê a trilha e as datas dela na mesma página.
+    { href: '/crm/trilhas', rotulo: 'Trilhas', curto: 'Trilhas', icone: <IconeTrilha /> },
     { href: '/crm/produtos', rotulo: 'Produtos', curto: 'Wear', icone: <IconeCamiseta /> },
     {
       href: '/crm/mensagens',
@@ -74,15 +75,32 @@ export default async function LayoutPainel({ children }: LayoutProps<'/crm'>) {
     // e a região viva precisa existir no DOM antes da primeira mensagem.
     <ProvedorDeToast>
       <div className="flex min-h-svh flex-col bg-white">
+        {/* Cabeçalho e abas viajam JUNTOS no `sticky`. Separados, a barra de
+            abas rolaria para fora e a pessoa perderia a troca de seção no meio
+            de uma lista longa — que é exatamente onde ela quer trocar. */}
         <header className="border-caqui-ink-900 sticky top-0 z-30 border-b bg-white">
           <div className="flex items-center justify-between gap-4 px-4 py-2.5">
-            <div className="flex items-center gap-2.5">
+            {/* O BRASÃO É O CAMINHO DE VOLTA PARA O SITE.
+                Pedido do cliente em 20/08/2026, e é a convenção que todo mundo
+                já traz de fora: logo no canto leva para casa.
+                Antes existia só um "Ver o site" no rodapé, e ele era
+                `lg:block` — ou seja, quem estava no celular, que é o cenário
+                principal deste painel, não tinha caminho de volta nenhum. */}
+            <Link
+              href="/"
+              className="hover:bg-caqui-sand-100 -mx-1 flex items-center gap-2.5 rounded-xs px-1 py-0.5 transition-colors"
+            >
               <Brasao className="w-8" titulo="" />
               <div className="leading-tight">
                 <p className="font-display text-corpo-sm uppercase">Painel</p>
                 <p className="text-caqui-ink-500 text-micro font-mono uppercase">Caqui Trekking</p>
               </div>
-            </div>
+              {/* O texto visível diz onde a pessoa ESTÁ; o link leva para outro
+                  lugar. Sem esta linha, quem navega por leitor de tela ouve
+                  "Painel, Caqui Trekking, link" e não tem como saber que ele
+                  sai do painel. */}
+              <span className="sr-only">, ver o site</span>
+            </Link>
 
             <div className="flex items-center gap-2">
               <div className="hidden text-right leading-tight sm:block">
@@ -94,26 +112,22 @@ export default async function LayoutPainel({ children }: LayoutProps<'/crm'>) {
               <BotaoSair nome={usuario.nome} />
             </div>
           </div>
+
+          {/* No desktop, as abas. No celular, este componente só monta a barra
+              inferior `fixed`, que não ocupa espaço aqui. */}
+          <Navegacao itens={itens} papel={usuario.role} />
         </header>
 
-        <div className="flex flex-1">
-          <Navegacao itens={itens} papel={usuario.role} />
+        {/* `pb-20` SÓ no celular: a barra inferior é `fixed` e cobriria a
+          última linha da tabela, que é justamente onde ficam os botões de
+          ação. De `sm` para cima a barra não existe mais — quem navega é o
+          hambúrguer ou as abas — e reservar a faixa deixaria um rodapé vazio
+          de 80px em toda página. */}
+        <main className="min-w-0 flex-1 px-4 pt-4 pb-20 sm:pb-6 lg:px-6">{children}</main>
 
-          {/* `pb-20` no celular: a barra inferior é `fixed` e cobriria a última
-            linha da tabela — que é justamente onde ficam os botões de ação. */}
-          <main className="min-w-0 flex-1 px-4 pt-4 pb-20 lg:px-6 lg:pb-6">{children}</main>
-        </div>
-
-        {/* Volta para o site. O CRM não tem link para a loja em lugar nenhum, e
-          a Caqui vai querer conferir como ficou o que acabou de publicar. */}
-        <p className="text-caqui-ink-500 text-micro hidden px-4 py-3 font-mono uppercase lg:block">
-          <Link
-            href="/"
-            className="hover:text-caqui-ink-900 rounded-xs underline underline-offset-4"
-          >
-            Ver o site
-          </Link>
-        </p>
+        {/* O "Ver o site" que ficava aqui saiu em 20/08/2026: o brasão do
+            cabeçalho faz a mesma coisa, em todas as larguras, e dois caminhos
+            para o mesmo lugar num painel deste tamanho é ruído. */}
       </div>
     </ProvedorDeToast>
   )

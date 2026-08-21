@@ -24,6 +24,22 @@ const corpoSchema = z
      * no teclado numérico do celular.
      */
     vagasFechadas: z.number().int().min(0).max(999),
+    /**
+     * O total que a TELA DE QUEM ESTÁ LANÇANDO mostrava antes deste toque.
+     *
+     * Total é escrita cega: quem manda "são cinco" não sabe se alguém mandou
+     * "são seis" um segundo antes. Até 20/08/2026 o segundo PATCH sobrescrevia
+     * o primeiro e uma venda sumia do livro, sem erro e sem log. Ver o achado
+     * A1 em docs/20-auditoria-do-crm.md.
+     *
+     * Com este campo, o UPDATE só casa a linha se ela ainda estiver no valor
+     * que a pessoa viu. Não estando, a resposta é 409 dizendo o número atual,
+     * em vez de apagar o lançamento do outro.
+     *
+     * Opcional: um script ou seed que lança número absoluto não tem valor
+     * anterior para declarar, e exigir um faria inventarem.
+     */
+    vagasFechadasAnteriores: z.number().int().min(0).max(999).optional(),
     /** Quantas cabem. `null` remove o limite e devolve o selo ao modo manual. */
     capacidade: z.number().int().positive().max(999).nullable().optional(),
     /** A partir de quantas restantes o selo vira "últimas vagas". */
@@ -54,14 +70,16 @@ export const PATCH = rota(async (request: Request, contexto: Contexto) => {
   const departureId = validarOuFalhar(idSchema.safeParse(id))
 
   const corpo: unknown = await request.json().catch(() => null)
-  const { vagasFechadas, capacidade, limiarUltimasVagas } = validarOuFalhar(
-    corpoSchema.safeParse(corpo),
-  )
+  const { vagasFechadas, vagasFechadasAnteriores, capacidade, limiarUltimasVagas } =
+    validarOuFalhar(corpoSchema.safeParse(corpo))
 
   const resultado = await lancarVagas(
     departureId,
     {
       seatsTaken: vagasFechadas,
+      ...(vagasFechadasAnteriores !== undefined
+        ? { seatsTakenEsperado: vagasFechadasAnteriores }
+        : {}),
       ...(capacidade !== undefined ? { capacity: capacidade } : {}),
       ...(limiarUltimasVagas !== undefined ? { lastSpotsAt: limiarUltimasVagas } : {}),
     },

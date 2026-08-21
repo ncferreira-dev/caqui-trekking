@@ -64,12 +64,23 @@ export const POST = rota(async (request: NextRequest) => {
     throw new AppError(ErrorCode.CONFLICT, 'Já existe um usuário com este e-mail.', { status: 409 })
   }
 
+  // O HASH FICA FORA DA TRANSAÇÃO, DE PROPÓSITO.
+  //
+  // O bcrypt com custo 12 leva algumas centenas de milissegundos de CPU. Dentro
+  // do `$transaction` ele segurava uma conexão do pool aberta esse tempo todo,
+  // fazendo trabalho que não é de banco nenhum.
+  //
+  // Criar usuário é raro e é só do OWNER, então na prática não doía. O que
+  // custa caro é o padrão: copiado para uma rota movimentada, vira contenção de
+  // pool com a transação sem culpa nenhuma no relatório.
+  const passwordHash = await gerarHash(dados.senha)
+
   const criado = await prisma.$transaction(async (tx) => {
     const usuario = await tx.user.create({
       data: {
         name: dados.nome,
         email: dados.email,
-        passwordHash: await gerarHash(dados.senha),
+        passwordHash,
         role: dados.role,
       },
       select: { id: true, name: true, email: true, role: true },

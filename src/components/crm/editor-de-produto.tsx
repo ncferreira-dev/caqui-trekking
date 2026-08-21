@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/dialogo'
 import { useToast } from '@/components/ui/toast'
 import { api, ErroDaApi } from '@/lib/crm/api'
 import { rotuloDeTamanho } from '@/lib/formato'
-import { centavosParaDecimal } from '@/lib/money'
+import { centavosParaReais, reaisParaCentavos } from '@/lib/money'
 import { cn } from '@/lib/ui/cn'
 
 /**
@@ -48,6 +48,8 @@ export type VarianteForm = {
   colorName: string
   colorHex: string
   available: boolean
+  /** Texto em reais, como o preço da peça. Vazio = usa o preço base. */
+  precoProprio: string
 }
 
 export type ProdutoParaEditar = {
@@ -60,16 +62,8 @@ export type ProdutoParaEditar = {
   variantes: VarianteForm[]
 }
 
-const centavosParaReais = (c: number) => centavosParaDecimal(c).replace('.', ',')
-
-function reaisParaCentavos(texto: string): number | null {
-  const limpo = texto.trim().replace(/\./g, '').replace(',', '.')
-  if (!/^\d+(\.\d{1,2})?$/.test(limpo)) return null
-  return Math.round(Number(limpo) * 100)
-}
-
 function varianteVazia(): VarianteForm {
-  return { size: 'UNICO', colorName: '', colorHex: '#000000', available: true }
+  return { size: 'UNICO', colorName: '', colorHex: '#000000', available: true, precoProprio: '' }
 }
 
 export function EditorDeProduto({
@@ -118,18 +112,39 @@ export function EditorDeProduto({
       return setErro('Cadastre ao menos uma variante com cor. É o que torna a peça comprável.')
     }
 
+    // Preço próprio é opcional por variante: valida antes de montar o corpo
+    // pra não gravar metade das variantes e falhar na última.
+    const variantesPreparadas: {
+      size: string
+      colorName: string
+      colorHex: string | null
+      available: boolean
+      priceCents: number | null
+    }[] = []
+    for (const v of limpas) {
+      let precoVariante: number | null = null
+      if (v.precoProprio.trim() !== '') {
+        precoVariante = reaisParaCentavos(v.precoProprio)
+        if (precoVariante === null) {
+          return setErro(`Preço próprio de "${v.colorName.trim()}" inválido. Use o formato 50,00.`)
+        }
+      }
+      variantesPreparadas.push({
+        size: v.size,
+        colorName: v.colorName.trim(),
+        colorHex: /^#[0-9a-fA-F]{6}$/.test(v.colorHex) ? v.colorHex : null,
+        available: v.available,
+        priceCents: precoVariante,
+      })
+    }
+
     const corpo = {
       name: nome.trim(),
       description: descricao.trim() || null,
       category: categoria,
       priceCents: centavos,
       status: publicar ? 'PUBLISHED' : 'DRAFT',
-      variantes: limpas.map((v) => ({
-        size: v.size,
-        colorName: v.colorName.trim(),
-        colorHex: /^#[0-9a-fA-F]{6}$/.test(v.colorHex) ? v.colorHex : null,
-        available: v.available,
-      })),
+      variantes: variantesPreparadas,
     }
 
     setEnviando(true)
@@ -161,7 +176,7 @@ export function EditorDeProduto({
       aberto={aberto}
       aoFechar={aoFechar}
       titulo={editando ? 'Editar peça' : 'Cadastrar peça'}
-      className="w-[min(44rem,calc(100vw-2rem))]"
+      className="w-[min(64rem,calc(100vw-2rem))]"
       rodape={
         <>
           <Button variante="ghost" onClick={aoFechar} disabled={enviando}>
@@ -174,15 +189,17 @@ export function EditorDeProduto({
       }
     >
       <form id={idBase} onSubmit={enviar} noValidate className="flex flex-col gap-5">
-        <Input
-          rotulo="Nome da peça"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Camiseta Dry Fit Caqui"
-          obrigatorio
-        />
-
-        <div className="grid grid-cols-2 gap-4">
+        {/* Identificação da peça numa linha só, como no formulário de
+            referência: nome larga, categoria e preço ao lado. Empilha no
+            celular, onde o CRM também é usado. */}
+        <div className="grid gap-4 sm:grid-cols-[2fr_1fr_1fr]">
+          <Input
+            rotulo="Nome da peça"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Camiseta Dry Fit Caqui"
+            obrigatorio
+          />
           <Select
             rotulo="Categoria"
             value={categoria}
@@ -220,13 +237,14 @@ export function EditorDeProduto({
           <p className="text-caqui-ink-500 text-corpo-sm -mt-2">
             Cada combinação de tamanho e cor é uma variante. Óculos e caneca são{' '}
             <strong>Único</strong>; camiseta tem P, M, G. É o que aparece para o cliente escolher.
+            Preço próprio é opcional: em branco, a variante usa o preço base da peça.
           </p>
 
           <ul className="flex flex-col gap-2">
             {variantes.map((v, i) => (
               <li
                 key={i}
-                className="border-caqui-rule grid grid-cols-[5rem_1fr_auto_auto] items-center gap-2 border px-2 py-2"
+                className="border-caqui-rule grid grid-cols-[5rem_1fr_6rem_6rem_auto_auto] items-center gap-2 border px-2 py-2"
               >
                 <select
                   aria-label={`Tamanho da variante ${i + 1}`}
@@ -250,9 +268,36 @@ export function EditorDeProduto({
                 />
 
                 <input
+                  aria-label={`Preço próprio da variante ${i + 1}`}
+                  inputMode="decimal"
+                  value={v.precoProprio}
+                  onChange={(e) => mudarVariante(i, { precoProprio: e.target.value })}
+                  placeholder="base"
+                  className="border-caqui-ink-900 text-corpo-sm min-h-11 rounded-xs border bg-white px-2"
+                />
+
+                {/* O código da cor, digitável.
+                    O seletor nativo do navegador abre um painel sem botão de
+                    confirmar, e quem não quer caçar o tom na roda de cor fica
+                    preso nele. Com o campo ao lado dá para colar o código que
+                    veio da estamparia e ver a amostra mudar na hora. */}
+                <input
+                  aria-label={`Código da cor da variante ${i + 1}`}
+                  value={v.colorHex}
+                  onChange={(e) => {
+                    const bruto = e.target.value.trim()
+                    const texto = bruto.startsWith('#') ? bruto : `#${bruto}`
+                    mudarVariante(i, { colorHex: texto.slice(0, 7) })
+                  }}
+                  placeholder="#000000"
+                  spellCheck={false}
+                  className="border-caqui-ink-900 min-h-11 rounded-xs border bg-white px-2 font-mono text-sm uppercase"
+                />
+
+                <input
                   type="color"
                   aria-label={`Amostra de cor da variante ${i + 1}`}
-                  value={v.colorHex}
+                  value={/^#[0-9a-fA-F]{6}$/.test(v.colorHex) ? v.colorHex : '#000000'}
                   onChange={(e) => mudarVariante(i, { colorHex: e.target.value })}
                   className="border-caqui-ink-900 size-11 shrink-0 rounded-xs border bg-white"
                 />

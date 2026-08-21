@@ -14,8 +14,27 @@ import { Vazio } from '@/components/crm/pecas'
  * roteiro publicado, ele explica por que não dá para criar, em vez de abrir um
  * formulário com o seletor de roteiro vazio.
  */
-export function NovaSaida({ roteiros }: { roteiros: RoteiroOpcao[] }) {
-  const [aberto, setAberto] = useState(false)
+export function NovaSaida({
+  roteiros,
+  /**
+   * Trilha escolhida antes de chegar aqui, vinda de `?trilha=` na URL.
+   *
+   * É o "publicar uma data" da tela de Roteiros. O formulário JÁ ABRE, com a
+   * trilha selecionada: até 20/08/2026 aquele link só trazia para esta tela, e
+   * a pessoa tinha que reencontrar na lista a mesma trilha em que ela acabou
+   * de clicar — no roteiro que o alerta acabou de dizer que está sem data.
+   */
+  abrirCom,
+  rotulo = '+ Nova saída',
+  variante = 'primary',
+}: {
+  roteiros: RoteiroOpcao[]
+  abrirCom?: number | undefined
+  /** Dentro do bloco de uma trilha o botão vira "+ Nova data". */
+  rotulo?: string
+  variante?: 'primary' | 'secondary'
+}) {
+  const [aberto, setAberto] = useState(abrirCom !== undefined)
 
   if (roteiros.length === 0) {
     return (
@@ -30,9 +49,16 @@ export function NovaSaida({ roteiros }: { roteiros: RoteiroOpcao[] }) {
 
   return (
     <>
-      <Button onClick={() => setAberto(true)}>+ Nova saída</Button>
+      <Button variante={variante} tamanho="sm" onClick={() => setAberto(true)}>
+        {rotulo}
+      </Button>
       {aberto && (
-        <EditorDeSaida aberto={aberto} aoFechar={() => setAberto(false)} roteiros={roteiros} />
+        <EditorDeSaida
+          aberto={aberto}
+          aoFechar={() => setAberto(false)}
+          roteiros={roteiros}
+          {...(abrirCom !== undefined ? { roteiroInicial: abrirCom } : {})}
+        />
       )}
     </>
   )

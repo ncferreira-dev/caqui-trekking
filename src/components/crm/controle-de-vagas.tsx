@@ -84,14 +84,31 @@ export function ControleDeVagas({
     setOcupado(true)
 
     try {
-      await api.patch(`/api/admin/departures/${saidaId}/vagas`, { vagasFechadas: novo })
+      // `vagasFechadasAnteriores` é o valor que ESTA ABA está mostrando. O
+      // servidor só grava se a linha ainda estiver nele; caso contrário devolve
+      // 409 e o lançamento de quem chegou primeiro fica de pé.
+      //
+      // Sem isso, dois guias lançando ao mesmo tempo — ou a mesma pessoa com
+      // duas abas — perdiam uma venda em silêncio. Ver o achado A1 em
+      // docs/20-auditoria-do-crm.md.
+      await api.patch(`/api/admin/departures/${saidaId}/vagas`, {
+        vagasFechadas: novo,
+        vagasFechadasAnteriores: anterior,
+      })
       aoMudar()
     } catch (causa) {
       setValor(anterior)
       setRascunho(String(anterior))
+
+      // O conflito não é "deu erro": é "o número mudou embaixo de você". A
+      // mensagem do servidor já diz quanto é agora, e o refresh traz o valor
+      // verdadeiro para a tela em vez de deixar a pessoa olhando o antigo.
+      const conflito = causa instanceof ErroDaApi && causa.status === 409
+      if (conflito) aoMudar()
+
       mostrar({
-        tom: 'erro',
-        titulo: 'Não gravou',
+        tom: conflito ? 'aviso' : 'erro',
+        titulo: conflito ? 'Alguém lançou antes' : 'Não gravou',
         descricao: causa instanceof ErroDaApi ? causa.message : 'As vagas continuam como estavam.',
       })
     } finally {

@@ -5,11 +5,15 @@ import { ok } from '@/lib/api/respond'
 import { rota, validarOuFalhar } from '@/lib/api/route-handler'
 import { paginacaoSchema, queryParaObjeto } from '@/lib/api/schemas'
 import { exigirPapel } from '@/lib/auth/guard'
+import { instanteLocal } from '@/lib/datetime'
 import { prisma } from '@/lib/prisma'
 import { criarTrip } from '@/server/services/admin/content-admin-service'
 import { ipDaRequest } from '@/server/services/audit-service'
 
 export const dynamic = 'force-dynamic'
+
+/** Rótulo de parede: "2026-08-20T06:00". O mesmo do POST de saída. */
+const PAREDE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
 
 /**
  * GET /api/admin/trips
@@ -127,6 +131,31 @@ const criarSchema = z
       .nullable()
       .optional(),
     elevationGainM: z.number().int().min(0).nullable().optional(),
+
+    // ────────────────────────────────────────────────────────────────────────
+    // A PRIMEIRA DATA, JUNTO
+    // ────────────────────────────────────────────────────────────────────────
+    // Pedido do cliente em 20/08/2026: no site o cliente final vê a trilha e
+    // as datas dela na MESMA página, então cadastrar em dois lugares é uma
+    // divisão do banco vazando para quem usa.
+    //
+    // Objeto inteiro opcional, e `.strict()` por dentro também: mandar
+    // `primeiraSaida: {}` pela metade tem que dar 400 dizendo o campo, e não
+    // criar uma saída sem preço.
+    primeiraSaida: z
+      .object({
+        startAt: z.string().regex(PAREDE, 'Data e hora em formato inválido.'),
+        priceCents: z.number().int().min(0).max(100_000_00),
+        meetingPoint: z.string().trim().max(300).nullable().optional(),
+        meetingTimeLocal: z
+          .string()
+          .regex(/^\d{2}:\d{2}$/, 'Use o formato HH:MM.')
+          .nullable()
+          .optional(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
   })
   .strict()
 
@@ -150,12 +179,23 @@ export const POST = rota(async (request: NextRequest) => {
   const usuario = await exigirPapel(request, ['OWNER', 'ADMIN'])
 
   const corpo: unknown = await request.json().catch(() => null)
-  const campos = validarOuFalhar(criarSchema.safeParse(corpo))
+  const { primeiraSaida, ...campos } = validarOuFalhar(criarSchema.safeParse(corpo))
 
-  const trip = await criarTrip(campos, {
-    userId: usuario.userId,
-    ip: ipDaRequest(request),
-  })
+  const trip = await criarTrip(
+    {
+      ...campos,
+      // A hora chega como rótulo de parede ("2026-08-20T06:00") e vira instante
+      // em São Paulo aqui, na borda — mesma conversão que o POST de saída faz.
+      // O banco só recebe UTC.
+      ...(primeiraSaida
+        ? { primeiraSaida: { ...primeiraSaida, startAt: instanteLocal(primeiraSaida.startAt) } }
+        : {}),
+    },
+    {
+      userId: usuario.userId,
+      ip: ipDaRequest(request),
+    },
+  )
 
   // `ok` e não um 201 próprio: o projeto inteiro responde 200 com `{ data }` em
   // POST administrativo (ver `criarProduto` e `duplicarSaida`), e um único

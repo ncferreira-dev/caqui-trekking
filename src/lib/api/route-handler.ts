@@ -40,12 +40,31 @@ export function rota<T extends unknown[]>(
       // Prisma P2025: a operação dependia de um registro que não existe (ex.:
       // `update` inline num id já apagado). É 404, não 500 — e vale para a
       // CLASSE toda, não só para a rota onde apareceu.
-      if (
-        erro instanceof Error &&
-        'code' in erro &&
-        (erro as { code?: unknown }).code === 'P2025'
-      ) {
+      if (codigoDoPrisma(erro) === 'P2025') {
         return fail(ErrorCode.NOT_FOUND, 'Registro não encontrado.', { status: 404 })
+      }
+
+      // Prisma P2002: violação de restrição única.
+      //
+      // As rotas conferem antes de inserir e devolvem 409 com texto próprio —
+      // "Já existe uma saída deste roteiro nesta data e hora." Este ramo cobre
+      // a CORRIDA: duas requisições passam pela conferência no mesmo instante e
+      // quem barra é o índice do banco, não o `if`.
+      //
+      // Sem ele o erro caía no ramo do desconhecido e virava 500 "Erro
+      // interno", que é o oposto da verdade. A pessoa dava duplo clique em
+      // "duplicar para o mês seguinte", via um erro de sistema, tentava de novo
+      // e ficava sem saber se tinha criado duas saídas.
+      if (codigoDoPrisma(erro) === 'P2002') {
+        const campos = camposDoP2002(erro)
+        return fail(ErrorCode.CONFLICT, 'Já existe um registro com estes dados.', {
+          status: 409,
+          details: campos.map((field) => ({
+            field,
+            code: 'unique',
+            message: 'Já está em uso.',
+          })),
+        })
       }
 
       // Desconhecido: o cliente recebe um id para reportar, e nada mais.
@@ -57,6 +76,42 @@ export function rota<T extends unknown[]>(
       })
     }
   }
+}
+
+/**
+ * O código de erro do Prisma, ou `null` quando não é um erro do Prisma.
+ *
+ * Existe para o teste de `código === 'P2002'` não repetir a mesma escada de
+ * `instanceof` + `'code' in` + cast em cada ramo. O cliente do Prisma é
+ * gerado em `src/generated`, e importar a classe de erro dele aqui amarraria o
+ * tratador central ao artefato gerado; checar a forma custa menos.
+ */
+function codigoDoPrisma(erro: unknown): string | null {
+  if (!(erro instanceof Error) || !('code' in erro)) return null
+  const codigo = (erro as { code?: unknown }).code
+  return typeof codigo === 'string' ? codigo : null
+}
+
+/**
+ * Os campos que colidiram num P2002.
+ *
+ * O Prisma põe isso em `meta.target`, e o formato VARIA: no Postgres costuma
+ * ser o array de colunas (`['email']`), mas em certos caminhos vem o nome do
+ * índice como string única. Os dois entram aqui; qualquer outra coisa devolve
+ * lista vazia, e a resposta fica só com a mensagem genérica.
+ *
+ * Vale lembrar que `details` aqui é dica de UI, não a barreira. Quem garante a
+ * unicidade é o índice do banco.
+ */
+function camposDoP2002(erro: unknown): string[] {
+  const meta = (erro as { meta?: unknown }).meta
+  if (typeof meta !== 'object' || meta === null) return []
+
+  const alvo = (meta as { target?: unknown }).target
+  if (typeof alvo === 'string') return [alvo]
+  if (Array.isArray(alvo)) return alvo.filter((c): c is string => typeof c === 'string')
+
+  return []
 }
 
 /**

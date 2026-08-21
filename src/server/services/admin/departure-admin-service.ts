@@ -238,12 +238,40 @@ async function registrarSelo(
  */
 export async function lancarVagas(
   departureId: number,
-  entrada: { seatsTaken: number; capacity?: number | null; lastSpotsAt?: number },
+  entrada: {
+    seatsTaken: number
+    capacity?: number | null
+    lastSpotsAt?: number
+    /**
+     * O valor que QUEM ESTÁ LANÇANDO tinha na tela quando decidiu o número.
+     *
+     * ────────────────────────────────────────────────────────────────────────
+     * A TRAVA OTIMISTA, E POR QUE ELA PRECISOU EXISTIR
+     * ────────────────────────────────────────────────────────────────────────
+     * Achado A1 da auditoria de 20/08/2026 (docs/20-auditoria-do-crm.md). Este
+     * campo é um TOTAL, e a decisão de ser total continua certa: é o número
+     * que a pessoa tem na cabeça depois de desligar o telefone. Ver o
+     * comentário do schema da rota.
+     *
+     * Só que total é, por definição, uma escrita cega. Dois guias lançando ao
+     * mesmo tempo — cenário que o próprio `schema.prisma` cita para justificar
+     * aceitar overbooking — e o segundo `PATCH` sobrescrevia o primeiro. Uma
+     * venda sumia do livro, sem erro, sem log e sem ninguém perceber.
+     *
+     * Mover a leitura para dentro da transação NÃO resolveria: no isolamento
+     * padrão do Postgres as duas transações leem o mesmo 6 e as duas gravam 7.
+     * A condição precisa fazer parte do próprio UPDATE, e é o que o
+     * `updateMany` abaixo faz — a segunda transação encontra 7 onde esperava 6,
+     * casa zero linhas, e vira 409 em vez de sobrescrever.
+     *
+     * OPCIONAL de propósito: ausente, o comportamento é o de antes. Um script
+     * ou um seed que lança um número absoluto não tem valor anterior para
+     * declarar, e exigir um faria inventarem.
+     */
+    seatsTakenEsperado?: number
+  },
   ctx: Contexto,
 ): Promise<LinhaDeVagas> {
-  const atual = await exigirSaida(departureId)
-  const seloAntes = seloDe(atual)
-
   const dados = {
     seatsTaken: entrada.seatsTaken,
     ...(entrada.capacity !== undefined ? { capacity: entrada.capacity } : {}),
@@ -251,9 +279,42 @@ export async function lancarVagas(
   }
 
   return prisma.$transaction(async (tx) => {
-    const depois = (await tx.departure.update({
+    // A LEITURA VEM PARA DENTRO DA TRANSAÇÃO.
+    //
+    // Ela ficava fora, e `seloAntes` saía dela: o histórico em
+    // `DepartureAvailabilityChange` podia gravar um `from` que nunca existiu —
+    // o registro que existe justamente para responder "por que essa saída
+    // ficou esgotada no dia 3?" dando a resposta errada.
+    const atual = (await tx.departure.findUnique({
       where: { id: departureId },
-      data: dados,
+      select: SELECT_VAGAS,
+    })) as LinhaDeVagas | null
+
+    if (!atual) {
+      throw new AppError(ErrorCode.DEPARTURE_NOT_FOUND, 'Saída não encontrada.', { status: 404 })
+    }
+
+    const seloAntes = seloDe(atual)
+
+    if (entrada.seatsTakenEsperado !== undefined) {
+      const alcance = await tx.departure.updateMany({
+        where: { id: departureId, seatsTaken: entrada.seatsTakenEsperado },
+        data: dados,
+      })
+
+      if (alcance.count === 0) {
+        throw new AppError(
+          ErrorCode.CONFLICT,
+          `Alguém lançou vagas nesta saída enquanto você digitava. Agora são ${atual.seatsTaken}. Confira e lance de novo.`,
+          { status: 409 },
+        )
+      }
+    } else {
+      await tx.departure.update({ where: { id: departureId }, data: dados })
+    }
+
+    const depois = (await tx.departure.findUniqueOrThrow({
+      where: { id: departureId },
       select: SELECT_VAGAS,
     })) as LinhaDeVagas
 
@@ -623,25 +684,86 @@ export async function excluirSaida(departureId: number, ctx: Contexto): Promise<
   })
 }
 
-/** Cria uma saída a partir de um roteiro, herdando o preço como sugestão. */
-export async function criarSaida(
-  dados: {
-    tripId: number
-    startAt: Date
-    priceCents: number
-    compareAtPriceCents?: number | null
-    // `| null` porque é o que o formulário manda com o campo em branco, e o
-    // que a coluna opcional guarda. O tipo estreito escondia a divergência com
-    // o schema da rota, que respondia 400 em toda criação sem ponto de
-    // encontro. Ver o cabeçalho do schema em `api/admin/departures/route.ts`.
-    meetingPoint?: string | null | undefined
-    meetingTimeLocal?: string | null | undefined
-    meetingLat?: number | null
-    meetingLng?: number | null
-    internalNotes?: string | null | undefined
-  },
+export type DadosDaSaida = {
+  tripId: number
+  startAt: Date
+  priceCents: number
+  compareAtPriceCents?: number | null
+  // `| null` porque é o que o formulário manda com o campo em branco, e o
+  // que a coluna opcional guarda. O tipo estreito escondia a divergência com
+  // o schema da rota, que respondia 400 em toda criação sem ponto de
+  // encontro. Ver o cabeçalho do schema em `api/admin/departures/route.ts`.
+  meetingPoint?: string | null | undefined
+  meetingTimeLocal?: string | null | undefined
+  meetingLat?: number | null
+  meetingLng?: number | null
+  internalNotes?: string | null | undefined
+}
+
+/** A transação já aberta por quem chama. Mesmo tipo usado em `ordem-service`. */
+type Transacao = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+
+/**
+ * Grava a saída DENTRO de uma transação que já existe, com a auditoria junto.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * POR QUE SEPARADO DE `criarSaida`
+ * ────────────────────────────────────────────────────────────────────────────
+ * Desde 20/08/2026 há DOIS caminhos que criam saída: o "+ Nova saída", que
+ * escolhe um roteiro existente, e o "Nova trilha", que cria o roteiro e a
+ * primeira data no mesmo salvamento.
+ *
+ * O segundo não pode chamar `criarSaida`: aquela função abre a própria
+ * `$transaction`, e o Prisma não aninha transação. Chamada de dentro de
+ * `criarTrip`, ou estouraria ou gravaria fora da transação do roteiro — e aí
+ * uma falha na data deixaria o roteiro salvo pela metade.
+ *
+ * Copiar o `create` para o outro serviço resolveria hoje e cobraria depois:
+ * seriam dois caminhos de escrita para a mesma tabela, divergindo no primeiro
+ * campo novo que alguém acrescentasse. O repositório já foi mordido por isso
+ * — ver o comentário de `atualizarProduto` sobre reconciliação de variantes.
+ *
+ * Esta função é o único lugar que monta a linha. Quem chama traz a transação.
+ */
+export async function gravarSaida(
+  tx: Transacao,
+  dados: DadosDaSaida,
   ctx: Contexto,
 ): Promise<{ id: number }> {
+  const nova = await tx.departure.create({
+    data: {
+      tripId: dados.tripId,
+      startAt: dados.startAt,
+      priceCents: dados.priceCents,
+      compareAtPriceCents: dados.compareAtPriceCents ?? null,
+      meetingPoint: dados.meetingPoint ?? null,
+      meetingTimeLocal: dados.meetingTimeLocal ?? null,
+      meetingLat: dados.meetingLat ?? null,
+      meetingLng: dados.meetingLng ?? null,
+      internalNotes: dados.internalNotes ?? null,
+      // Rascunho, sempre — igual ao roteiro. Publicar é um segundo gesto.
+      status: 'DRAFT',
+    },
+    select: { id: true },
+  })
+
+  await registrarAuditoria(
+    {
+      userId: ctx.userId,
+      action: 'departure.create',
+      entityType: 'Departure',
+      entityId: nova.id,
+      after: { tripId: dados.tripId, startAt: dados.startAt, priceCents: dados.priceCents },
+      ip: ctx.ip,
+    },
+    tx,
+  )
+
+  return nova
+}
+
+/** Cria uma saída a partir de um roteiro QUE JÁ EXISTE. */
+export async function criarSaida(dados: DadosDaSaida, ctx: Contexto): Promise<{ id: number }> {
   const trip = await prisma.trip.findFirst({
     where: { id: dados.tripId, deletedAt: null },
     select: { id: true },
@@ -662,35 +784,5 @@ export async function criarSaida(
     })
   }
 
-  return prisma.$transaction(async (tx) => {
-    const nova = await tx.departure.create({
-      data: {
-        tripId: dados.tripId,
-        startAt: dados.startAt,
-        priceCents: dados.priceCents,
-        compareAtPriceCents: dados.compareAtPriceCents ?? null,
-        meetingPoint: dados.meetingPoint ?? null,
-        meetingTimeLocal: dados.meetingTimeLocal ?? null,
-        meetingLat: dados.meetingLat ?? null,
-        meetingLng: dados.meetingLng ?? null,
-        internalNotes: dados.internalNotes ?? null,
-        status: 'DRAFT',
-      },
-      select: { id: true },
-    })
-
-    await registrarAuditoria(
-      {
-        userId: ctx.userId,
-        action: 'departure.create',
-        entityType: 'Departure',
-        entityId: nova.id,
-        after: { tripId: dados.tripId, startAt: dados.startAt, priceCents: dados.priceCents },
-        ip: ctx.ip,
-      },
-      tx,
-    )
-
-    return nova
-  })
+  return prisma.$transaction((tx) => gravarSaida(tx, dados, ctx))
 }

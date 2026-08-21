@@ -98,10 +98,19 @@ const ESTADOS = [
 export function ListaDeSaidas({
   saidas,
   podeExcluir = false,
+  mostrarRoteiro = true,
 }: {
   saidas: SaidaDoPainel[]
   /** OWNER pode excluir saída passada/cancelada. A rota é a barreira real. */
   podeExcluir?: boolean
+  /**
+   * Desligado quando a lista já vive DENTRO do bloco de uma trilha.
+   *
+   * Repetir "Pedra Grande de Quatinga" em cada data, embaixo do título que já
+   * diz "Pedra Grande de Quatinga", é ruído que empurra data e preço para
+   * baixo — e data e preço são o que se lê ali.
+   */
+  mostrarRoteiro?: boolean
 }) {
   const router = useRouter()
   const { mostrar } = useToast()
@@ -194,7 +203,12 @@ export function ListaDeSaidas({
                 <span className="trama-indisponivel absolute inset-0" aria-hidden="true" />
               )}
 
-              <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              {/* `lg:items-start` e não `items-center`: desde que as ações
+                  empilham (20/08/2026), o bloco da direita tem três faixas de
+                  altura e o da esquerda tem duas linhas. Centralizado, a data
+                  flutuava no meio do nada. Alinhados pelo topo, os dois começam
+                  na mesma linha de leitura. */}
+              <div className="relative flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 {/* O PISO DE LARGURA NAO E ENFEITE.
                     Ate 19/08/2026 esta coluna era so `min-w-0 flex-1`, ou
                     seja, base zero. O bloco de acoes ao lado nao declara
@@ -226,14 +240,30 @@ export function ListaDeSaidas({
                       </span>
                     )}
                   </div>
-                  <p className="text-corpo-sm mt-0.5 truncate">{saida.trip.titulo}</p>
+                  {mostrarRoteiro && (
+                    <p className="text-corpo-sm mt-0.5 truncate">{saida.trip.titulo}</p>
+                  )}
                 </div>
 
                 {/* Ações. Só para saída que ainda vai acontecer: mudar a
                     disponibilidade de uma data que já passou não muda nada no
                     site, e cancelar o que já aconteceu não faz sentido. */}
                 {!inativa && (
-                  <div className="flex flex-wrap items-center gap-2">
+                  // ── AS AÇÕES EMPILHAM, UMA FAIXA POR ASSUNTO ──────────────
+                  // Até 20/08/2026 isto era `flex flex-wrap`: o contador de
+                  // vagas, os quatro botões de selo e os três de comando
+                  // dividiam UMA linha. Dez alvos lado a lado, todos em
+                  // caixa-alta e do mesmo tamanho, sem nada separando "quantas
+                  // vagas fechei" de "cancelar a saída".
+                  //
+                  // O `flex-wrap` piorava em vez de salvar: dependendo da
+                  // largura da janela, a quebra caía em lugar diferente e o
+                  // agrupamento mudava de sentido a cada resize.
+                  //
+                  // Agora são três faixas, cada uma com um assunto: o livro de
+                  // vagas, a exceção do selo, e os comandos da saída.
+                  <div className="flex flex-col gap-2 lg:items-end">
+                    {/* A faixa 1 e a 2 são estado; a 3 é ação. */}
                     {/* O LIVRO DE VAGAS vem PRIMEIRO, porque virou a operação
                         do dia a dia. Ver `controle-de-vagas.tsx`. */}
                     <ControleDeVagas
@@ -295,22 +325,29 @@ export function ListaDeSaidas({
                       })}
                     </div>
 
-                    <Button variante="secondary" tamanho="sm" onClick={() => setEditando(saida)}>
-                      Editar
-                    </Button>
+                    {/* FAIXA 3 — os comandos. Continuam lado a lado entre si:
+                        são três, do mesmo peso, e empilhar cada um numa linha
+                        própria transformaria a lista num menu vertical
+                        gigante. O que precisava separar era comando de
+                        estado, e isso já aconteceu. */}
+                    <div className="flex items-center gap-2">
+                      <Button variante="secondary" tamanho="sm" onClick={() => setEditando(saida)}>
+                        Editar
+                      </Button>
 
-                    <Button
-                      variante="secondary"
-                      tamanho="sm"
-                      onClick={() => duplicar(saida)}
-                      disabled={ocupada}
-                    >
-                      Duplicar
-                    </Button>
+                      <Button
+                        variante="secondary"
+                        tamanho="sm"
+                        onClick={() => duplicar(saida)}
+                        disabled={ocupada}
+                      >
+                        Duplicar
+                      </Button>
 
-                    <Button variante="ghost" tamanho="sm" onClick={() => setCancelando(saida)}>
-                      Cancelar
-                    </Button>
+                      <Button variante="ghost" tamanho="sm" onClick={() => setCancelando(saida)}>
+                        Cancelar
+                      </Button>
+                    </div>
                   </div>
                 )}
 

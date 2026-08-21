@@ -65,7 +65,42 @@ function abortar(mensagem: string): never {
   process.exit(1)
 }
 
+function ajuda(): void {
+  console.log(`
+Devolve o acesso a quem se trancou para fora do painel.
+
+  Ensaio (não escreve nada):
+    npm run senha:resetar -- --email=dono@empresa.com --como=voce@empresa.com \\
+      --destino=caqui_trekking_dev
+
+  Valendo:
+    SENHA_NOVA='...' npm run senha:resetar -- --email=dono@empresa.com \\
+      --como=voce@empresa.com --destino=caqui_trekking_dev --aplicar
+
+  --email=    a conta que perdeu o acesso
+  --como=     seu e-mail; vai para a trilha de auditoria
+  --destino=  um trecho da DATABASE_URL, conferido antes de rodar
+  --aplicar   sem ele, é só ensaio
+
+A senha entra por SENHA_NOVA, nunca por argumento: argumento fica no histórico
+do shell e aparece em 'ps' para qualquer processo da máquina.
+
+O caso normal NÃO é este: o dono troca a senha da equipe pelo próprio painel,
+em Configurações, Quem tem acesso. Este script é para quando o único dono
+esqueceu a própria senha.
+
+Vale lembrar: 'npm run db:migrate' e o seed NUNCA trocam a senha de um usuário
+que já existe. Mudar SEED_OWNER_PASSWORD no .env depois do primeiro seed não
+tem efeito nenhum, e é para isso que este script existe.
+`)
+}
+
 async function main(): Promise<void> {
+  if (process.argv.includes('--ajuda') || process.argv.includes('--help')) {
+    ajuda()
+    return
+  }
+
   const email = argumento('email')?.trim().toLowerCase()
   const autor = argumento('como')?.trim().toLowerCase()
   const destino = argumento('destino')?.trim()

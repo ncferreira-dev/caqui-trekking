@@ -190,7 +190,7 @@ export default async function PaginaPainel() {
         titulo="Painel"
         descricao="O que precisa de olho hoje."
         acao={
-          <LinkBotao href="/crm/saidas" tamanho="sm">
+          <LinkBotao href="/crm/trilhas" tamanho="sm">
             Ver saídas
           </LinkBotao>
         }
@@ -210,7 +210,7 @@ export default async function PaginaPainel() {
             <Numero
               rotulo="Resultado do mês"
               valor={formatarBRL(lucroDoMes)}
-              href="/crm/saidas"
+              href="/crm/trilhas"
               nota={
                 incompletas > 0
                   ? `${incompletas} saída(s) sem receita ou custo lançado, fora da conta`
@@ -220,19 +220,19 @@ export default async function PaginaPainel() {
             <Numero
               rotulo="Saídas fechadas"
               valor={fechadasNoMes.length}
-              href="/crm/saidas"
+              href="/crm/trilhas"
               nota="no mês corrente"
             />
             <Numero
               rotulo="Ocupação média"
               valor={ocupacaoMedia === null ? 'sem dado' : `${Math.round(ocupacaoMedia * 100)}%`}
-              href="/crm/saidas"
+              href="/crm/trilhas"
               nota="pessoas que foram, sobre a capacidade"
             />
             <Numero
               rotulo="Por fechar"
               valor={porFechar.length}
-              href="/crm/saidas"
+              href="/crm/trilhas"
               destaque={porFechar.length > 0}
               nota={porFechar.length > 0 ? 'o relatório depende disso' : 'nada pendente'}
             />
@@ -241,8 +241,8 @@ export default async function PaginaPainel() {
 
         {/* ── Números ────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Numero rotulo="Próximas saídas" valor={totalDeProximas} href="/crm/saidas" />
-          <Numero rotulo="Saídas em rascunho" valor={rascunhos} href="/crm/saidas" />
+          <Numero rotulo="Próximas saídas" valor={totalDeProximas} href="/crm/trilhas" />
+          <Numero rotulo="Saídas em rascunho" valor={rascunhos} href="/crm/trilhas" />
           <Numero
             rotulo="Mensagens não lidas"
             valor={naoLidas}
@@ -266,7 +266,7 @@ export default async function PaginaPainel() {
                 <ul className="mt-2 flex flex-col gap-1">
                   {aindaAbertas.map((s) => (
                     <li key={s.id} className="font-mono">
-                      <Link href="/crm/saidas" className="rounded-xs underline underline-offset-4">
+                      <Link href="/crm/trilhas" className="rounded-xs underline underline-offset-4">
                         {diaEMes(s.startAt)} · {s.trip.title}
                       </Link>
                     </li>
@@ -284,7 +284,7 @@ export default async function PaginaPainel() {
                 <ul className="mt-2 flex flex-col gap-1">
                   {porFechar.map((s) => (
                     <li key={s.id} className="font-mono">
-                      <Link href="/crm/saidas" className="rounded-xs underline underline-offset-4">
+                      <Link href="/crm/trilhas" className="rounded-xs underline underline-offset-4">
                         {diaEMes(s.startAt)} · {s.trip.title}
                       </Link>
                     </li>
@@ -302,10 +302,7 @@ export default async function PaginaPainel() {
                 <ul className="mt-2 flex flex-col gap-1">
                   {semAgenda.map((t) => (
                     <li key={t.id} className="font-mono">
-                      <Link
-                        href="/crm/roteiros"
-                        className="rounded-xs underline underline-offset-4"
-                      >
+                      <Link href="/crm/trilhas" className="rounded-xs underline underline-offset-4">
                         {t.title}
                       </Link>
                     </li>

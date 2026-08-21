@@ -21,8 +21,16 @@ const ID_DO_FORM = 'form-cadastrar-peca'
 export function CadastroDePeca() {
   const router = useRouter()
 
-  function terminar() {
-    router.push('/crm/produtos')
+  /**
+   * Cadastrou, vai para as FOTOS daquela peça — não para a lista.
+   *
+   * Decisão de 21/08/2026, com o Cloudinary já ligado: o upload precisa do id,
+   * que só nasce no `INSERT`. Mandar para a lista faria a pessoa procurar a
+   * peça que ela acabou de criar para poder fotografá-la. A lista continua a
+   * um clique, no "Concluir" da tela de fotos.
+   */
+  function terminar(produtoId: number) {
+    router.push(`/crm/produtos/${produtoId}/fotos`)
     router.refresh()
   }
 

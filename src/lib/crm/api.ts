@@ -113,7 +113,14 @@ async function chamar<T>(caminho: string, init?: RequestInit): Promise<T> {
     resposta = await fetch(caminho, {
       ...init,
       headers: {
-        ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+        // `FormData` fica DE FORA de propósito. Quem monta multipart é o
+        // navegador, e ele precisa escrever o próprio `boundary` no
+        // cabeçalho. Declarar `application/json` aqui faria o servidor
+        // receber bytes de multipart anunciados como JSON, e o erro sairia
+        // como "envio inválido" sem dizer por quê.
+        ...(init?.body && !(init.body instanceof FormData)
+          ? { 'Content-Type': 'application/json' }
+          : {}),
         ...init?.headers,
       },
     })
@@ -154,4 +161,14 @@ export const api = {
   put: <T>(caminho: string, corpo: unknown) =>
     chamar<T>(caminho, { method: 'PUT', body: JSON.stringify(corpo) }),
   delete: <T>(caminho: string) => chamar<T>(caminho, { method: 'DELETE' }),
+
+  /**
+   * Envio de arquivo, pelo MESMO caminho de erro dos outros verbos.
+   *
+   * Existe para o upload de foto não precisar de um `fetch` solto, que teria
+   * o próprio jeito de ler o envelope de erro e divergiria na primeira
+   * mudança. O que muda é só o corpo: `FormData` em vez de JSON.
+   */
+  enviar: <T>(caminho: string, formulario: FormData) =>
+    chamar<T>(caminho, { method: 'POST', body: formulario }),
 }

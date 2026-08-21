@@ -231,7 +231,38 @@ export default async function PaginaTrilhas({ searchParams }: PageProps<'/crm/tr
   }))
   const opcoesDeTag = tags.map((t) => ({ id: t.id, label: t.label }))
 
+  /**
+   * A ordem CANÔNICA, a da vitrine do site — e ela não é mais a ordem desta
+   * tela (ver `roteirosNaTela` abaixo).
+   *
+   * As setas continuam certas: elas mexem no `sortOrder`, que é o que a loja
+   * lê, e o rótulo delas já diz "na ordem da vitrine". O que muda é que subir
+   * uma trilha do grupo "sem data no mês" pode não mexer nada AQUI, porque
+   * aqui o agrupamento por mês vem antes. Passar `roteirosNaTela` para as
+   * setas seria pior: gravaria no banco uma ordem que depende do mês aberto.
+   */
   const ordemAtual = roteiros.map((t) => t.id)
+
+  /**
+   * COM DATA NO MÊS PRIMEIRO, e o resto abaixo na ordem original.
+   *
+   * Pedido de 21/08/2026: "não sei nem por que aparece todas". Aparecem porque
+   * o mês filtra as DATAS e não as trilhas — de propósito, para marcar data
+   * nova em qualquer trilha sem trocar de mês. O que estava errado era só a
+   * ordem: uma trilha sem nada em agosto vinha antes de uma com três saídas.
+   *
+   * Ordenar e não ESCONDER, porque esconder tiraria o "+ Nova data" justamente
+   * das trilhas que ainda não têm data — que são as que mais precisam dele.
+   *
+   * `sort` estável (garantido no JS desde o ES2019) preserva a ordem manual de
+   * `sortOrder` dentro de cada grupo. Sem isso, os botões de subir e descer
+   * mexeriam numa ordem que a tela não respeita.
+   */
+  const roteirosNaTela = [...roteiros].sort((a, b) => {
+    const temA = (porTrilha.get(a.id)?.length ?? 0) > 0 ? 0 : 1
+    const temB = (porTrilha.get(b.id)?.length ?? 0) > 0 ? 0 : 1
+    return temA - temB
+  })
   const roteirosOpcao = roteiros
     .filter((t) => t.status !== 'ARCHIVED')
     .map((t) => ({
@@ -299,7 +330,7 @@ export default async function PaginaTrilhas({ searchParams }: PageProps<'/crm/tr
             </Vazio>
           </Painel>
         ) : (
-          roteiros.map((t) => {
+          roteirosNaTela.map((t) => {
             const datas = porTrilha.get(t.id) ?? []
             const semAgenda = t.status === 'PUBLISHED' && t._count.departures === 0
 
@@ -308,90 +339,113 @@ export default async function PaginaTrilhas({ searchParams }: PageProps<'/crm/tr
                 key={t.id}
                 className={cn(semAgenda && 'border-caqui-orange-500 border-l-4')}
                 titulo={t.title}
-                acao={
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <BadgeDificuldade nivel={t.difficulty as Dificuldade} />
-                      <span className="text-caqui-ink-500 text-micro font-mono uppercase">
-                        {t.city} · {t.state}
-                        {t.durationMinutes ? ` · ${formatarDuracao(t.durationMinutes)}` : ''}
+                dobravel
+                // ABERTA SÓ SE TIVER DATA NESTE MÊS. É a regra que resolve a
+                // queixa sem esconder nada: quem abre a tela vê aberto o que
+                // tem conteúdo, e o resto fica em uma linha, a um clique.
+                abertoPorPadrao={datas.length > 0}
+                /* SÓ COISA NÃO INTERATIVA AQUI.
+                  O `resumo` é renderizado DENTRO do `<summary>`, e `<summary>`
+                  já é o próprio alvo de clique que abre e fecha. Um botão ali
+                  dentro herdaria esse clique: apertar "Editar" abriria o modal
+                  E dobraria o cartão junto. Os botões estão no corpo, logo
+                  abaixo, e por isso pedem um clique a mais quando o cartão
+                  está fechado. É o preço certo: ver custa nada, agir custa um
+                  gesto. */
+                resumo={
+                  <span className="flex min-w-0 flex-wrap items-center gap-2">
+                    <BadgeDificuldade nivel={t.difficulty as Dificuldade} />
+                    <span className="text-caqui-ink-500 text-micro font-mono uppercase">
+                      {t.city} · {t.state}
+                      {t.durationMinutes ? ` · ${formatarDuracao(t.durationMinutes)}` : ''}
+                    </span>
+                    {t.status === 'DRAFT' && (
+                      <span className="border-caqui-ink-900 text-micro border px-1.5 py-0.5 font-mono uppercase">
+                        Rascunho
                       </span>
-                      {t.status === 'DRAFT' && (
-                        <span className="border-caqui-ink-900 text-micro border px-1.5 py-0.5 font-mono uppercase">
-                          Rascunho
-                        </span>
-                      )}
-                      {t.status === 'ARCHIVED' && (
-                        <span className="bg-caqui-ink-900 text-micro px-1.5 py-0.5 font-mono text-white uppercase">
-                          Arquivada
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-end gap-3">
-                      <BotoesDeOrdem colecao="trips" ids={ordemAtual} id={t.id} rotulo={t.title} />
-                      <BotaoDestaque
-                        colecao="trips"
-                        id={t.id}
-                        destacado={t.featured}
-                        rotulo={t.title}
-                        semDataFutura={t._count.departures === 0}
-                      />
-                      <EditarRoteiro
-                        roteiro={{
-                          id: t.id,
-                          title: t.title,
-                          subtitle: t.subtitle,
-                          description: t.description,
-                          city: t.city,
-                          state: t.state,
-                          region: t.region,
-                          difficulty: t.difficulty,
-                          distanceKm: t.distanceKm ? t.distanceKm.toString() : null,
-                          elevationGainM: t.elevationGainM,
-                          maxAltitudeM: t.maxAltitudeM,
-                          durationMinutes: t.durationMinutes,
-                          minAge: t.minAge,
-                          requiresExperience: t.requiresExperience,
-                          highlights: t.highlights,
-                          included: t.included,
-                          notIncluded: t.notIncluded,
-                          whatToBring: t.whatToBring,
-                          cancellationPolicy: t.cancellationPolicy,
-                          status: t.status,
-                          activityTagIds: t.activityTags.map((r) => r.activityTagId),
-                        }}
-                        tags={opcoesDeTag}
-                      />
-                      {ehOwner && t.status !== 'ARCHIVED' && (
-                        <ArquivarItem
-                          colecao="trips"
-                          id={t.id}
-                          nome={t.title}
-                          consequencia="Ela sai do site e desta lista."
-                        >
-                          <p>
-                            As {t._count.departures} data(s) futura(s) dela param de aparecer na
-                            agenda. As saídas já realizadas continuam registradas: o histórico não
-                            se reescreve.
-                          </p>
-                          <p className="mt-2">
-                            Se for coisa temporária, ponha em <strong>rascunho</strong> pelo
-                            “Editar”. Aquilo volta em um clique.
-                          </p>
-                        </ArquivarItem>
-                      )}
-                      <Link
-                        href={`/trekking/${t.slug}`}
-                        target="_blank"
-                        className="text-caqui-ink-700 hover:text-caqui-ink-900 text-micro rounded-xs font-mono uppercase underline underline-offset-4"
-                      >
-                        Ver no site
-                      </Link>
-                    </div>
-                  </div>
+                    )}
+                    {t.status === 'ARCHIVED' && (
+                      <span className="bg-caqui-ink-900 text-micro px-1.5 py-0.5 font-mono text-white uppercase">
+                        Arquivada
+                      </span>
+                    )}
+                  </span>
+                }
+                acao={
+                  <span className="text-caqui-ink-500 text-micro shrink-0 font-mono uppercase">
+                    {datas.length > 0
+                      ? `${datas.length} data(s) em ${mesPorExtenso(mes).toLowerCase()}`
+                      : 'sem data no mês'}
+                  </span>
                 }
               >
+                {/* AS AÇÕES DA TRILHA, primeira faixa do corpo. Saíram do
+                  cabeçalho quando ele virou `<summary>` — ver o comentário do
+                  `resumo` acima. */}
+                <div className="border-caqui-rule border-b px-4 py-2.5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <BotoesDeOrdem colecao="trips" ids={ordemAtual} id={t.id} rotulo={t.title} />
+                    <BotaoDestaque
+                      colecao="trips"
+                      id={t.id}
+                      destacado={t.featured}
+                      rotulo={t.title}
+                      semDataFutura={t._count.departures === 0}
+                    />
+                    <EditarRoteiro
+                      roteiro={{
+                        id: t.id,
+                        title: t.title,
+                        subtitle: t.subtitle,
+                        description: t.description,
+                        city: t.city,
+                        state: t.state,
+                        region: t.region,
+                        difficulty: t.difficulty,
+                        distanceKm: t.distanceKm ? t.distanceKm.toString() : null,
+                        elevationGainM: t.elevationGainM,
+                        maxAltitudeM: t.maxAltitudeM,
+                        durationMinutes: t.durationMinutes,
+                        minAge: t.minAge,
+                        requiresExperience: t.requiresExperience,
+                        highlights: t.highlights,
+                        included: t.included,
+                        notIncluded: t.notIncluded,
+                        whatToBring: t.whatToBring,
+                        cancellationPolicy: t.cancellationPolicy,
+                        status: t.status,
+                        activityTagIds: t.activityTags.map((r) => r.activityTagId),
+                      }}
+                      tags={opcoesDeTag}
+                    />
+                    {ehOwner && t.status !== 'ARCHIVED' && (
+                      <ArquivarItem
+                        colecao="trips"
+                        id={t.id}
+                        nome={t.title}
+                        consequencia="Ela sai do site e desta lista."
+                      >
+                        <p>
+                          As {t._count.departures} data(s) futura(s) dela param de aparecer na
+                          agenda. As saídas já realizadas continuam registradas: o histórico não se
+                          reescreve.
+                        </p>
+                        <p className="mt-2">
+                          Se for coisa temporária, ponha em <strong>rascunho</strong> pelo “Editar”.
+                          Aquilo volta em um clique.
+                        </p>
+                      </ArquivarItem>
+                    )}
+                    <Link
+                      href={`/trekking/${t.slug}`}
+                      target="_blank"
+                      className="text-caqui-ink-700 hover:text-caqui-ink-900 text-micro rounded-xs font-mono uppercase underline underline-offset-4"
+                    >
+                      Ver no site
+                    </Link>
+                  </div>
+                </div>
+
                 {/* AS DATAS DESTA TRILHA, no mês que o calendário mostra.
                     `mostrarRoteiro={false}`: o título do painel já diz o nome,
                     e repeti-lo em cada linha empurra data e preço para baixo. */}
@@ -407,9 +461,12 @@ export default async function PaginaTrilhas({ searchParams }: PageProps<'/crm/tr
                 )}
 
                 <div className="border-caqui-rule flex flex-wrap items-center gap-3 border-t px-4 py-3">
+                  {/* `roteiroInicial` e NÃO `comecarAberto`: aqui o botão só
+                    pré-seleciona a trilha. Ver o comentário de `nova-saida.tsx`
+                    sobre por que isto era um parâmetro só. */}
                   <NovaSaida
                     roteiros={roteirosOpcao}
-                    abrirCom={t.id}
+                    roteiroInicial={t.id}
                     rotulo="+ Nova data"
                     variante="secondary"
                   />

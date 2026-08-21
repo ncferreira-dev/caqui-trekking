@@ -1,9 +1,18 @@
 # 14 · Cadastro de produto: cor, imagem e ordem — pedido guardado (18/08/2026)
 
-> **Status: implementado em 19/08/2026.** O modelo, a API, o seletor no CRM, o
-> filtro da loja e o aviso de cor sem foto estão no ar em localhost. O que
-> continua faltando é o UPLOAD (o Cloudinary ainda não tem credencial): as
-> fotos existem no banco por seed de preview, não por envio real.
+> **Status: fechado em 21/08/2026.** O Cloudinary ganhou credencial e o upload
+> funciona ponta a ponta: subir, entregar otimizado e apagar do provedor.
+>
+> A tela mudou de forma junto. Era FOTO PRIMEIRO — a lista das imagens
+> enviadas, cada uma com um seletor "de que cor é esta?". Virou COR PRIMEIRO:
+> uma gaveta por cor cadastrada, sempre visível, mesmo vazia. O motivo está no
+> cabeçalho de `components/crm/fotos-da-peca.tsx`; em resumo, no jeito antigo
+> uma cor sem foto não aparecia em lugar nenhum, e o buraco só era descoberto
+> pela galeria vazia na loja.
+>
+> As fotos vivem em página própria (`/crm/produtos/[id]/fotos`), o segundo
+> passo do cadastro, porque o caminho no provedor é `caqui/product/<id>/…` e o
+> id só nasce no `INSERT`. Ver o cabeçalho daquela página.
 >
 > Ver a seção "Como ficou" no fim deste arquivo.
 

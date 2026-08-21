@@ -124,7 +124,10 @@ aplicada depois do rollback do código. Por isso:
 
 ## Bloqueios que dependem do cliente, não de código
 
-1. **Cloudinary** — destrava galeria, upload no CRM e Open Graph com foto.
+1. ~~**Cloudinary**~~ — resolvido em 21/08/2026. Conta própria da Caqui (não a
+   do projeto de referência), as três variáveis no `.env` local e em
+   Production e Preview na Vercel. **Elas só valem a partir do próximo
+   deploy:** variável nova não entra num build que já aconteceu.
 2. **Fotos de expedição** — nenhuma foi entregue; a loja usa o grafismo da serra
    no lugar. Ver `docs/10-crm.md`.
 3. **Domínio e hospedagem** — quem registra, quem paga, quem renova.

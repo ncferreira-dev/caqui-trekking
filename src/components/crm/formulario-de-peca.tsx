@@ -95,7 +95,15 @@ export function FormularioDePeca({
 }: {
   /** Ausente = cadastrar. Presente = editar. */
   produto?: ProdutoParaEditar
-  aoTerminar: () => void
+  /**
+   * Recebe o id da peça — o RECÉM-CRIADO no cadastro, o mesmo na edição.
+   *
+   * O parâmetro existe por causa das fotos: o caminho do arquivo no provedor
+   * é `caqui/product/<id>/…`, então só depois do `INSERT` há para onde subir.
+   * Quem chama decide o que fazer com ele (a página de cadastro segue para as
+   * fotos; o modal de edição fecha).
+   */
+  aoTerminar: (produtoId: number) => void
   idDoForm: string
 }) {
   const editando = produto !== undefined
@@ -198,11 +206,17 @@ export function FormularioDePeca({
 
     setEnviando(true)
     try {
-      if (editando) await api.patch(`/api/admin/products/${produto.id}`, corpo)
-      else await api.post('/api/admin/products', corpo)
+      let produtoId: number
+      if (editando) {
+        await api.patch(`/api/admin/products/${produto.id}`, corpo)
+        produtoId = produto.id
+      } else {
+        const criado = await api.post<{ id: number }>('/api/admin/products', corpo)
+        produtoId = criado.id
+      }
 
       setSucesso(editando ? 'Peça salva.' : 'Peça cadastrada.')
-      aoTerminar()
+      aoTerminar(produtoId)
     } catch (causa) {
       setErro(
         causa instanceof ErroDaApi ? causa.message : 'Não foi possível salvar. Tente de novo.',
@@ -401,10 +415,25 @@ export function FormularioDePeca({
             </p>
           )}
 
-          <p className="text-caqui-ink-500 mt-3 text-xs">
-            JPG ou PNG. O envio liga quando o storage estiver configurado. Na dúvida entre uma foto
-            genérica e a da cor errada, use a neutra: foto errada é informação falsa.
-          </p>
+          {/* OS QUADROS ACIMA SÃO PRÉVIA, E A TELA DIZ ISSO.
+            Subir a foto exige o id da peça, que só existe depois do `INSERT`
+            (ver o cabeçalho de `produtos/[id]/fotos/page.tsx`). Deixar um "+"
+            clicável aqui, que falhasse ao salvar, seria protótipo disfarçado
+            de pronto. */}
+          {editando ? (
+            <a
+              href={`/crm/produtos/${produto.id}/fotos`}
+              className="border-caqui-sand-200 hover:bg-caqui-sand-100 mt-3 inline-block rounded-lg border px-4 py-2 text-sm transition-colors"
+            >
+              Subir as fotos desta peça
+            </a>
+          ) : (
+            <p className="text-caqui-ink-500 mt-3 text-xs">
+              JPG ou PNG. Os quadros acima são a prévia: ao cadastrar, a próxima tela abre com uma
+              gaveta por cor para você subir as fotos. Na dúvida entre uma foto genérica e a da cor
+              errada, use a neutra: foto errada é informação falsa.
+            </p>
+          )}
         </div>
 
         {/* Tamanhos e cores: é aqui que a Caqui diverge de verdade do Dália,

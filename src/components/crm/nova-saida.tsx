@@ -17,24 +17,43 @@ import { Vazio } from '@/components/crm/pecas'
 export function NovaSaida({
   roteiros,
   /**
-   * Trilha escolhida antes de chegar aqui, vinda de `?trilha=` na URL.
+   * Trilha já selecionada no seletor quando o formulário abrir.
    *
-   * É o "publicar uma data" da tela de Roteiros. O formulário JÁ ABRE, com a
-   * trilha selecionada: até 20/08/2026 aquele link só trazia para esta tela, e
-   * a pessoa tinha que reencontrar na lista a mesma trilha em que ela acabou
-   * de clicar — no roteiro que o alerta acabou de dizer que está sem data.
+   * SOZINHO, NÃO ABRE NADA. Ver `comecarAberto` abaixo.
    */
-  abrirCom,
+  roteiroInicial,
+  /**
+   * Abre o formulário assim que a tela monta.
+   *
+   * ──────────────────────────────────────────────────────────────────────────
+   * POR QUE ISTO É UM PARÂMETRO SEPARADO
+   * ──────────────────────────────────────────────────────────────────────────
+   * Era um só, `abrirCom`, e ele significava as duas coisas ao mesmo tempo:
+   * "pré-selecione esta trilha" E "já abra". Servia bem ao caso que o criou —
+   * o link "publicar uma data" da tela de Roteiros, que trazia para cá com a
+   * trilha escolhida e o formulário aberto.
+   *
+   * Aí a tela de Trilhas passou a repetir o botão DENTRO de cada trilha, com
+   * `abrirCom={t.id}` só para pré-selecionar. Cinco trilhas na tela viraram
+   * CINCO MODAIS ABERTOS, empilhados, e quem abria a tela tinha que fechar um
+   * por um antes de conseguir olhar qualquer coisa. Nenhum erro no console:
+   * cada modal estava fazendo exatamente o que foi mandado.
+   *
+   * Dois parâmetros porque são duas perguntas diferentes, e juntá-las fez a
+   * resposta de uma decidir a outra em silêncio.
+   */
+  comecarAberto = false,
   rotulo = '+ Nova saída',
   variante = 'primary',
 }: {
   roteiros: RoteiroOpcao[]
-  abrirCom?: number | undefined
+  roteiroInicial?: number | undefined
+  comecarAberto?: boolean
   /** Dentro do bloco de uma trilha o botão vira "+ Nova data". */
   rotulo?: string
   variante?: 'primary' | 'secondary'
 }) {
-  const [aberto, setAberto] = useState(abrirCom !== undefined)
+  const [aberto, setAberto] = useState(comecarAberto)
 
   if (roteiros.length === 0) {
     return (
@@ -57,7 +76,7 @@ export function NovaSaida({
           aberto={aberto}
           aoFechar={() => setAberto(false)}
           roteiros={roteiros}
-          {...(abrirCom !== undefined ? { roteiroInicial: abrirCom } : {})}
+          {...(roteiroInicial !== undefined ? { roteiroInicial } : {})}
         />
       )}
     </>

@@ -192,9 +192,10 @@ precisa saber.
 
 O briefing pede editor rico, galeria por arrastar, CRUD completo de produto e
 formulário dos dados da empresa. Eles dependem, todos, de **upload de imagem
-funcionando ponta a ponta** — e o Cloudinary ainda não tem credencial neste
-projeto: `POST /api/admin/media` responde 503 `MEDIA_STORAGE_UNCONFIGURED`
-nomeando as variáveis que faltam.
+funcionando ponta a ponta**, que passou a existir em 21/08/2026: o Cloudinary
+ganhou credencial, e `POST /api/admin/media` sobe de verdade. Sem as variáveis
+no ambiente ele continua respondendo 503 `MEDIA_STORAGE_UNCONFIGURED`,
+nomeando o que falta.
 
 Entregar uma área de arrastar que sempre falha seria pior que não entregar: a
 Caqui tentaria, veria erro, e concluiria que o CRM está quebrado. O que está no
@@ -233,7 +234,8 @@ restaurado.
 
 ## Pendências
 
-- **Cloudinary no `.env`** — destrava galeria, CRUD de produto e roteiro.
+- ~~**Cloudinary no `.env`**~~ — feito em 21/08/2026. Upload, entrega otimizada
+  e remoção provados ponta a ponta; as chaves estão no `.env` e na Vercel.
 - **Criar saída por formulário** — hoje só duplicando uma existente.
 - **Calendário como vista alternativa**, se a operação crescer.
 - Continua valendo: **nenhuma foto de expedição** foi entregue, e a galeria é

@@ -38,18 +38,83 @@ export function CabecalhoDeSecao({
   )
 }
 
-/** Bloco de conteúdo. Sem sombra: numa tela densa, sombra vira sujeira. */
+/**
+ * Bloco de conteúdo. Sem sombra: numa tela densa, sombra vira sujeira.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * `dobravel` USA `<details>`, E NÃO UM `useState`
+ * ────────────────────────────────────────────────────────────────────────────
+ * Pedido de 21/08/2026, sobre a tela de trilhas: "toda vez que entro tenho que
+ * fechar todas as trilhas, uma por uma". Cada trilha ocupava um cartão inteiro,
+ * inclusive as sem data no mês.
+ *
+ * `<details>` é a mesma escolha já feita no rodapé de `lista-de-saidas.tsx`, e
+ * pelos mesmos motivos: o navegador guarda o estado, funciona antes da
+ * hidratação, e o conteúdo fechado continua no DOM — busca da página (⌘F) e
+ * leitor de tela acham o que está dentro. Um `useState` daria um cartão que
+ * pisca fechado depois de renderizar aberto.
+ *
+ * O RESUMO PRECISA BASTAR. Cartão fechado que não diz nada obriga a abrir tudo
+ * de novo, e aí o dobrável só atrapalhou: quem chama passa em `resumo` o que a
+ * pessoa precisa ver sem abrir.
+ */
 export function Painel({
   titulo,
   acao,
   children,
   className,
+  dobravel = false,
+  resumo,
+  abertoPorPadrao = false,
 }: {
   titulo?: string
   acao?: ReactNode
   children: ReactNode
   className?: string
+  /** Fecha o corpo atrás de um clique no título. Exige `titulo`. */
+  dobravel?: boolean
+  /** O que aparece no cabeçalho mesmo fechado. Só faz sentido com `dobravel`. */
+  resumo?: ReactNode
+  abertoPorPadrao?: boolean
 }) {
+  if (dobravel && titulo) {
+    return (
+      <details
+        open={abertoPorPadrao}
+        className={cn('border-caqui-rule group border bg-white', className)}
+      >
+        <summary
+          className={cn(
+            'border-caqui-rule flex cursor-pointer flex-wrap items-center justify-between gap-3',
+            'hover:bg-caqui-sand-100 min-h-11 px-4 py-2.5 transition-colors',
+            // O triângulo nativo sai, porque ele vem antes de tudo e quebra o
+            // alinhamento do cabeçalho. O substituto está no `<span>` abaixo.
+            'list-none [&::-webkit-details-marker]:hidden',
+            // A borda de baixo só existe quando está aberto: fechado, ela
+            // desenharia um risco solto embaixo de um cartão de uma linha.
+            'group-open:border-b',
+          )}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            {/* O substituto do triângulo nativo: gira ao abrir e herda a cor
+              do texto. `aria-hidden` porque o `<details>` já anuncia o estado
+              expandido para o leitor de tela; a seta seria eco. */}
+            <span
+              aria-hidden="true"
+              className="text-caqui-ink-500 shrink-0 transition-transform group-open:rotate-90"
+            >
+              ▸
+            </span>
+            <span className="font-display text-corpo-sm truncate uppercase">{titulo}</span>
+            {resumo}
+          </span>
+          {acao}
+        </summary>
+        {children}
+      </details>
+    )
+  }
+
   return (
     <section className={cn('border-caqui-rule border bg-white', className)}>
       {titulo && (

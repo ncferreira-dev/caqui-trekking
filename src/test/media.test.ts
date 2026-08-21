@@ -12,6 +12,7 @@ import { _resetRateLimit } from '@/lib/api/rate-limit'
 import { detectarFormato } from '@/lib/media/mime'
 import { LARGURAS, srcsetDe, urlVariante } from '@/lib/media/urls'
 import { gerarHash } from '@/lib/auth/password'
+import { env } from '@/lib/env'
 import { prisma } from '@/lib/prisma'
 import { dimensoesDeExibicao, processarImagem } from '@/server/media/processar'
 import { procurarOrfaos } from '@/server/services/admin/media-admin-service'
@@ -664,20 +665,94 @@ describe('Exposição pública', () => {
 
 // =============================================================================
 describe('Storage', () => {
-  it('sem credenciais, o erro NOMEIA as variáveis que faltam', () => {
-    // O ambiente de teste não tem Cloudinary configurado — que é justamente o
-    // caso a provar. "Erro ao enviar a imagem" não ajuda ninguém às 22h.
+  /**
+   * O ambiente é ARRANJADO aqui, e isso é uma correção de 21/08/2026.
+   *
+   * Antes, este bloco dependia da máquina não ter Cloudinary configurado: o
+   * teste passava porque o `.env` de quem rodava estava vazio. No dia em que a
+   * credencial entrou, ele quebrou — e não por regressão nenhuma. Teste que
+   * depende do ambiente prova o ambiente, não o código.
+   *
+   * `env` é o objeto devolvido pelo `safeParse` do Zod, sem `freeze`, então dá
+   * para arranjar os dois cenários e devolver o estado no fim.
+   */
+  function comCredenciais<T>(
+    valores: Partial<Record<Chave, string | undefined>>,
+    corpo: () => T,
+  ): T {
+    const antes = { ...env }
+    Object.assign(env, valores)
     try {
-      exigirCredenciais()
-      throw new Error('deveria ter falhado')
-    } catch (erro) {
-      const e = erro as { code?: string; status?: number; message: string }
-      expect(e.code).toBe('MEDIA_STORAGE_UNCONFIGURED')
-      expect(e.status).toBe(503)
-      expect(e.message).toContain('CLOUDINARY_CLOUD_NAME')
-      expect(e.message).toContain('CLOUDINARY_API_KEY')
-      expect(e.message).toContain('CLOUDINARY_API_SECRET')
+      return corpo()
+    } finally {
+      for (const chave of CHAVES) env[chave] = antes[chave]
     }
+  }
+
+  const CHAVES = ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'] as const
+  type Chave = (typeof CHAVES)[number]
+
+  it('sem credenciais, o erro NOMEIA as variáveis que faltam', () => {
+    // "Erro ao enviar a imagem" não ajuda ninguém às 22h. O erro precisa dizer
+    // QUAL variável falta.
+    comCredenciais(
+      {
+        CLOUDINARY_CLOUD_NAME: undefined,
+        CLOUDINARY_API_KEY: undefined,
+        CLOUDINARY_API_SECRET: undefined,
+      },
+      () => {
+        try {
+          exigirCredenciais()
+          throw new Error('deveria ter falhado')
+        } catch (erro) {
+          const e = erro as { code?: string; status?: number; message: string }
+          expect(e.code).toBe('MEDIA_STORAGE_UNCONFIGURED')
+          expect(e.status).toBe(503)
+          expect(e.message).toContain('CLOUDINARY_CLOUD_NAME')
+          expect(e.message).toContain('CLOUDINARY_API_KEY')
+          expect(e.message).toContain('CLOUDINARY_API_SECRET')
+        }
+      },
+    )
+  })
+
+  it('faltando UMA, o erro nomeia só ela', () => {
+    // O cenário de configuração pela metade, que é o pior dos três: parece
+    // pronta e só falha quando alguém tenta subir uma foto.
+    comCredenciais(
+      {
+        CLOUDINARY_CLOUD_NAME: 'nuvem',
+        CLOUDINARY_API_KEY: 'chave',
+        CLOUDINARY_API_SECRET: undefined,
+      },
+      () => {
+        try {
+          exigirCredenciais()
+          throw new Error('deveria ter falhado')
+        } catch (erro) {
+          const e = erro as { message: string }
+          expect(e.message).toContain('CLOUDINARY_API_SECRET')
+          expect(e.message).not.toContain('CLOUDINARY_CLOUD_NAME')
+          expect(e.message).not.toContain('CLOUDINARY_API_KEY')
+        }
+      },
+    )
+  })
+
+  it('com as três, devolve as credenciais e não levanta', () => {
+    // O outro lado da moeda, que faltava: provar que o caminho feliz existe.
+    // Sem ele, um `throw` incondicional passaria nos testes acima.
+    const creds = comCredenciais(
+      {
+        CLOUDINARY_CLOUD_NAME: 'nuvem',
+        CLOUDINARY_API_KEY: 'chave',
+        CLOUDINARY_API_SECRET: 'segredo',
+      },
+      () => exigirCredenciais(),
+    )
+
+    expect(creds).toEqual({ cloudName: 'nuvem', apiKey: 'chave', apiSecret: 'segredo' })
   })
 
   it('o caçador de órfãos acha arquivo sem registro nos dois sentidos', async () => {

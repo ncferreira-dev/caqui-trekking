@@ -1,3 +1,17 @@
+/**
+ * PARADO — SEM USO DESDE 20/08/2026, DE PROPÓSITO.
+ *
+ * Este componente é o mapa de "qual foto é de qual cor", pedido do cliente em
+ * 18/08. Ele vivia dentro do bloco de cada peça na lista antiga; quando a lista
+ * virou grade de quadrados, saiu junto — e a saída não foi intencional.
+ *
+ * O cliente decidiu, em 20/08, que ele volta JUNTO COM O CLOUDINARY: subir a
+ * foto e declarar a cor dela são a mesma tarefa. Recolocá-lo antes disso
+ * entregaria uma tela sem nenhuma foto para marcar.
+ *
+ * NÃO APAGUE sem retomar essa conversa. Ver docs/14-cadastro-de-produto.md.
+ */
+
 'use client'
 
 import { useRouter } from 'next/navigation'

@@ -189,3 +189,26 @@ npx tsx --env-file=.env scripts/foto-temp.ts
 ```
 
 E para desfazer, o mesmo comando com `--limpar`.
+
+---
+
+## PARADO em 20/08/2026 — o mapa de foto por cor
+
+A tela que dizia **qual foto é de qual cor** (`components/crm/fotos-da-peca.tsx`)
+saiu do painel quando a lista de peças virou grade de quadrados, e a saída não
+foi intencional: ela morava dentro do bloco de cada produto na lista antiga.
+
+O componente **continua no repositório, sem uso**, de propósito. Decisão do
+cliente no mesmo dia: ele volta **junto com o Cloudinary**, porque subir a foto
+e declarar a cor dela são a mesma tarefa e merecem a mesma tela. Recolocá-lo
+antes disso entregaria uma tela que não tem foto nenhuma para marcar.
+
+O que já existe e continua de pé:
+
+- a coluna `MediaAsset.colorName`, com o dado de quem já tiver foto;
+- a leitura pública, que escolhe a foto da cor escolhida na loja;
+- os quadros por cor no formulário de peça, que hoje são molduras inertes e
+  viram o destino do upload quando o storage ligar.
+
+O que NÃO existe hoje: um jeito de, pelo painel, apontar uma foto já existente
+para uma cor. Em produção isso importa se as peças de lá tiverem imagem.

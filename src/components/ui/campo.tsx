@@ -1,6 +1,8 @@
 'use client'
 
 import {
+  useContext,
+  createContext,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
@@ -8,7 +10,13 @@ import {
   useState,
 } from 'react'
 
-import { CLASSES_COM_ERRO, CLASSES_CONTROLE } from '@/components/ui/estilos-de-campo'
+import {
+  CLASSES_COM_ERRO,
+  CLASSES_CONTROLE,
+  CLASSES_CONTROLE_CRM,
+  CLASSES_ROTULO,
+  CLASSES_ROTULO_CRM,
+} from '@/components/ui/estilos-de-campo'
 import { cn } from '@/lib/ui/cn'
 
 /**
@@ -43,8 +51,38 @@ import { cn } from '@/lib/ui/cn'
 // As classes moram em `estilos-de-campo.ts`, um módulo sem `'use client'`.
 // Ver o comentário de lá: os filtros da agenda precisam delas SEM arrastar
 // este arquivo — e este arquivo é de cliente por causa do `useId`.
-const CONTROLE = CLASSES_CONTROLE
 const COM_ERRO = CLASSES_COM_ERRO
+
+/**
+ * O TOM do campo: `site` ou `crm`.
+ *
+ * Ligado UMA vez, no layout do painel, e não campo a campo. Dez formulários
+ * declarando a variante por conta própria divergiriam no primeiro que alguém
+ * esquecesse — e o sintoma seria exatamente o que este contexto existe para
+ * curar: duas caras no mesmo painel.
+ *
+ * O padrão é `site`, então nada muda para quem não liga nada: a vitrine
+ * continua com o controle denso do design system.
+ */
+const TomDoCampo = createContext<'site' | 'crm'>('site')
+
+export function ProvedorDeTomDeCampo({
+  tom,
+  children,
+}: {
+  tom: 'site' | 'crm'
+  children: ReactNode
+}) {
+  return <TomDoCampo.Provider value={tom}>{children}</TomDoCampo.Provider>
+}
+
+function useClasses() {
+  const tom = useContext(TomDoCampo)
+  return {
+    controle: tom === 'crm' ? CLASSES_CONTROLE_CRM : CLASSES_CONTROLE,
+    rotulo: tom === 'crm' ? CLASSES_ROTULO_CRM : CLASSES_ROTULO,
+  }
+}
 
 type CampoBaseProps = {
   rotulo: string
@@ -64,9 +102,10 @@ function Envelope({
   className,
   children,
 }: CampoBaseProps & { id: string; children: ReactNode }) {
+  const { rotulo: classeDoRotulo } = useClasses()
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      <label htmlFor={id} className="text-caqui-ink-900 text-rotulo font-mono uppercase">
+      <label htmlFor={id} className={classeDoRotulo}>
         {rotulo}
         {obrigatorio && (
           <>
@@ -113,6 +152,7 @@ function Envelope({
 export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> & CampoBaseProps
 
 export function Input({ rotulo, dica, erro, obrigatorio, className, ...props }: InputProps) {
+  const { controle } = useClasses()
   const gerado = useId()
   const id = props.id ?? gerado
 
@@ -131,7 +171,7 @@ export function Input({ rotulo, dica, erro, obrigatorio, className, ...props }: 
         aria-invalid={erro ? true : undefined}
         aria-describedby={erro ? `${id}-erro` : dica ? `${id}-dica` : undefined}
         required={obrigatorio}
-        className={cn(CONTROLE, erro && COM_ERRO)}
+        className={cn(controle, erro && COM_ERRO)}
       />
     </Envelope>
   )
@@ -175,6 +215,7 @@ export function InputSenha({
   className,
   ...props
 }: Omit<InputProps, 'type'>) {
+  const { controle } = useClasses()
   const gerado = useId()
   const id = props.id ?? gerado
   const [visivel, setVisivel] = useState(false)
@@ -196,7 +237,7 @@ export function InputSenha({
           aria-invalid={erro ? true : undefined}
           aria-describedby={erro ? `${id}-erro` : dica ? `${id}-dica` : undefined}
           required={obrigatorio}
-          className={cn(CONTROLE, 'pr-12', erro && COM_ERRO)}
+          className={cn(controle, 'pr-12', erro && COM_ERRO)}
         />
 
         <button
@@ -241,6 +282,7 @@ export type TextareaProps = Omit<React.TextareaHTMLAttributes<HTMLTextAreaElemen
   CampoBaseProps
 
 export function Textarea({ rotulo, dica, erro, obrigatorio, className, ...props }: TextareaProps) {
+  const { controle } = useClasses()
   const gerado = useId()
   const id = props.id ?? gerado
 
@@ -260,7 +302,7 @@ export function Textarea({ rotulo, dica, erro, obrigatorio, className, ...props 
         aria-invalid={erro ? true : undefined}
         aria-describedby={erro ? `${id}-erro` : dica ? `${id}-dica` : undefined}
         required={obrigatorio}
-        className={cn(CONTROLE, 'resize-y', erro && COM_ERRO)}
+        className={cn(controle, 'resize-y', erro && COM_ERRO)}
       />
     </Envelope>
   )
@@ -283,6 +325,7 @@ export function Select({
   className,
   ...props
 }: SelectProps) {
+  const { controle } = useClasses()
   const gerado = useId()
   const id = props.id ?? gerado
 
@@ -302,7 +345,7 @@ export function Select({
           aria-invalid={erro ? true : undefined}
           aria-describedby={erro ? `${id}-erro` : dica ? `${id}-dica` : undefined}
           required={obrigatorio}
-          className={cn(CONTROLE, 'cursor-pointer appearance-none pr-10', erro && COM_ERRO)}
+          className={cn(controle, 'cursor-pointer appearance-none pr-10', erro && COM_ERRO)}
         >
           {placeholder && <option value="">{placeholder}</option>}
           {opcoes.map((o) => (
